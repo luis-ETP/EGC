@@ -47,7 +47,7 @@ def run_fifo(SRC, DST):
         supply_cost_mxn = float(row[13])              if row[13] else 0.0
         batch           = row[0]
         try:
-            paid_gals = float(row[6])
+            paid_gals = float(row[6]) if row[6] is not None else float(row[5]) if row[5] is not None else 0.0
         except (TypeError, ValueError):
             paid_gals = 0.0
         if paid_gals <= 0:
@@ -423,10 +423,10 @@ def run_fifo(SRC, DST):
         def _f(v):
             try: return float(v) if v is not None else 0.0
             except: return 0.0
-        sup_inv[sup]["b"] += _f(src[9])   # J Total Invoice USD (formula)
+        sup_inv[sup]["b"] += _f(src[9]) or _f(src[4])   # J Total Invoice USD, fallback to Wired Amount
         sup_inv[sup]["c"] += _f(src[5])   # F Gallons (raw)
         sup_inv[sup]["d"] += _f(src[4])   # E Wired Amount (raw)
-        sup_inv[sup]["e"] += _f(src[6])   # G Paid for Gallons (formula)
+        sup_inv[sup]["e"] += _f(src[6]) or _f(src[5])   # G Paid for Gallons, fallback to Gallons
         sup_inv[sup]["f"] += _f(out[22])  # W Net RTB Gallons (script-written)
         sup_inv[sup]["g"] += _f(out[23])  # X Remainder Gallons (script-written)
 
@@ -437,7 +437,7 @@ def run_fifo(SRC, DST):
     sup_k = _dd(float)
     for i, row in enumerate(ws_bol.iter_rows(values_only=True), start=1):
         if i <= 7: continue
-        if not row[0]: break
+        if not row[2]: break
         sup_raw = str(row[2]).strip()
         try:
             recv = float(row[18]) if row[18] is not None else 0.0  # S(19) Received Payments
