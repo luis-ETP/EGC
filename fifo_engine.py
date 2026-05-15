@@ -175,8 +175,9 @@ def run_fifo(SRC, DST):
     ws_lt.cell(row=1, column=59).value = "BOL Source"
     ws_lt.cell(row=1, column=60).value = "Batch Source"
 
-    inventory = {}   # (product, bulk_plant) → deque of slots
-    fifo_log  = []
+    inventory      = {}   # (product, bulk_plant) → deque of slots
+    fifo_log       = []
+    bol_remaining  = {}   # bol_str → remaining liters (updated as BTCs consume)
 
     for i, row in enumerate(ws_lt_r.iter_rows(values_only=True), start=1):
         if i == 1: continue
@@ -186,6 +187,7 @@ def run_fifo(SRC, DST):
         product       = str(row[15]).strip() if row[15] else "Unknown"
         location_name = str(row[11]).strip() if row[11] else "Unknown"
         terminal_name = str(row[25]).strip().lstrip("* ") if row[25] else "Unknown"
+        customer      = str(row[8]).strip()  if row[8]  else ""
         location_city = str(row[14]).strip() if row[14] else ""
         ld_num        = row[0]
         bol           = str(row[30]).strip() if row[30] else ""
@@ -214,6 +216,7 @@ def run_fifo(SRC, DST):
                 "bol": bol, "batch": batch_str, "inv": inv_str,
                 "supplier_upper": supplier_upper,
             })
+            bol_remaining[bol] = net_liters
 
             ws_lt.cell(row=i, column=44).value = supply_cost
             ws_lt.cell(row=i, column=57).value = batch_str   # BE Batch
@@ -225,10 +228,11 @@ def run_fifo(SRC, DST):
             fifo_log.append({
                 "type": "RTB", "ld": ld_num, "pickup": pickup,
                 "product": product, "bulk_plant": bulk_plant,
-                "delivery_city": location_city, "bol": bol,
-                "liters": net_liters, "cost_per_l": total_cost_l,
+                "customer": customer, "bol": bol,
+                "batch": batch_str, "liters": net_liters, "cost_per_l": total_cost_l,
                 "total_cost": net_liters * total_cost_l,
                 "source_bols": "-", "queue_rem": queue_rem,
+                "remaining_l": net_liters,  # will be updated after BTCs consume
             })
 
         elif grp == "RTC":
@@ -254,6 +258,7 @@ def run_fifo(SRC, DST):
                     if b and b not in source_batches:
                         source_batches.append(b)
                 slot["liters"] -= draw
+                bol_remaining[slot["bol"]] = slot["liters"]   # update remaining
                 remaining      -= draw
                 if slot["liters"] <= 1e-6:
                     q.popleft()
@@ -276,11 +281,17 @@ def run_fifo(SRC, DST):
             fifo_log.append({
                 "type": "BTC", "ld": ld_num, "pickup": pickup,
                 "product": product, "bulk_plant": bulk_plant,
-                "delivery_city": location_city, "bol": bol,
-                "liters": net_liters, "cost_per_l": cost_per_l,
+                "customer": customer, "bol": bol,
+                "batch": batch_str, "liters": net_liters, "cost_per_l": cost_per_l,
                 "total_cost": net_liters * cost_per_l,
                 "source_bols": bols_str, "queue_rem": queue_rem,
+                "remaining_l": None,  # BTCs have no remaining — they consume
             })
+
+    # Backfill remaining_l for RTB entries from bol_remaining
+    for entry in fifo_log:
+        if entry["type"] == "RTB":
+            entry["remaining_l"] = bol_remaining.get(entry["bol"], entry["liters"])
 
     # ══════════════════════════════════════════════════════════════════════════════
     # FIFO sheet
@@ -316,26 +327,20 @@ def run_fifo(SRC, DST):
     ws_f = wb.create_sheet("FIFO")
 
     COLS = [
-        ("Load #",             11), ("Date",              12), ("Type",          7),
-        ("Product",            12), ("Bulk Plant",        12), ("Delivery City", 18),
-        ("BOL",                12), ("Liters",            14), ("Cost / L (MXN)",15),
-        ("Total Cost (MXN)",   17), ("Source BOLs",       36), ("Queue Bal. (L)",17),
+        ("Load #",             11), ("Date",              12), ("Type",           7),
+        ("Product",            12), ("Bulk Plant",        12), ("Customer",       22),
+        ("Batch",               8), ("BOL",               12), ("Liters",         14),
+        ("Cost / L (MXN)",     15), ("Total Cost (MXN)",  17), ("Source BOLs",    36),
+        ("Queue Bal. (L)",     17), ("Remaining L (BOL)", 18),
     ]
 
-    ws_f.merge_cells("A1:L1")
-    c = ws_f["A1"]
-    c.value = "VBP — FIFO Inventory Cost Allocation"
-    c.fill  = FILL_HDR; c.font = Font(bold=True, color="FFFFFF", size=13)
-    c.alignment = Alignment(horizontal="center", vertical="center")
-    ws_f.row_dimensions[1].height = 26
-
     for ci, (name, width) in enumerate(COLS, start=1):
-        hdr(ws_f.cell(row=2, column=ci), name)
+        hdr(ws_f.cell(row=1, column=ci), name)
         ws_f.column_dimensions[get_column_letter(ci)].width = width
-    ws_f.row_dimensions[2].height = 32
+    ws_f.row_dimensions[1].height = 32
 
     running = {}
-    for ri, entry in enumerate(fifo_log, start=3):
+    for ri, entry in enumerate(fifo_log, start=2):
         rkey = (entry["product"], entry["bulk_plant"])
         fill = FILL_RTB if entry["type"] == "RTB" else FILL_BTC
         if rkey not in running: running[rkey] = 0.0
@@ -346,20 +351,22 @@ def run_fifo(SRC, DST):
             (entry["type"],          None),
             (entry["product"],       None),
             (entry["bulk_plant"],    None),
-            (entry["delivery_city"], None),
+            (entry["customer"],      None),
+            (entry["batch"],         None),
             (entry["bol"],           None),
             (entry["liters"],        "#,##0.00"),
             (entry["cost_per_l"],    "#,##0.0000"),
             (entry["total_cost"],    "$#,##0.00"),
             (entry["source_bols"],   None),
             (running[rkey],          "#,##0.00"),
+            (entry["remaining_l"],       "#,##0.00"),
         ], start=1):
             dat(ws_f.cell(row=ri, column=ci), val, num_fmt=fmt, fill=fill)
         ws_f.row_dimensions[ri].height = 16
 
-    ws_f.freeze_panes = "A3"
+    ws_f.freeze_panes = "A2"
 
-    sr = len(fifo_log) + 4
+    sr = len(fifo_log) + 3
     ws_f.cell(row=sr, column=1).value = "INVENTORY REMAINING IN QUEUE"
     ws_f.cell(row=sr, column=1).font  = Font(bold=True, size=10)
     sr += 1
@@ -380,7 +387,7 @@ def run_fifo(SRC, DST):
     # The summary block starts at row (len(fifo_log) + 4); data rows begin 2 after that.
     # We need to find and fill col E for each inventory summary row.
     # Re-derive the summary start row the same way the sheet builder did.
-    summary_data_start = len(fifo_log) + 6   # row 27=label, 28=header, 29+=data
+    summary_data_start = len(fifo_log) + 5   # row 26=label, 27=header, 28+=data
 
     inv_items = [(k, q) for k, q in inventory.items() if q]
     for idx, ((prod, bp), q) in enumerate(inv_items):
