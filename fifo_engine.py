@@ -73,7 +73,7 @@ def run_fifo(SRC, DST):
     bol_info = {}   # bol_str → {supplier, gals, excel_row}
     for i, row in enumerate(ws_bol_r.iter_rows(values_only=True), start=1):
         if i <= 7: continue
-        if not row[0]: break
+        if not row[2]: break
         bol_str  = str(row[5]).strip() if row[5] else ""   # F(6) BOL
         supplier = str(row[2]).strip().upper() if row[2] else ""  # C(3) Supplier
         try:
@@ -146,7 +146,7 @@ def run_fifo(SRC, DST):
     #   T(20)=Balance [formula], U-W=flags [formula] — all left as formulas
     for i, row in enumerate(ws_bol_r.iter_rows(values_only=True), start=1):
         if i <= 7: continue
-        if not row[0]: break
+        if not row[2]: break
         bol_str = str(row[5]).strip() if row[5] else ""  # F(6) BOL, index 5
         alloc   = bol_alloc.get(bol_str, {})
         if not alloc: continue
@@ -203,7 +203,7 @@ def run_fifo(SRC, DST):
 
         if grp == "RTB":
             supply_cost  = float(row[43]) if row[43] else 0.0
-            total_cost_l = float(row[47]) if row[47] else 0.0
+            total_cost_l = float(row[47]) if row[47] else (float(row[43]) if row[43] else 0.0)
             alloc        = bol_alloc.get(bol, {})
             batch_str    = alloc.get("batch_str", "")
             inv_str      = alloc.get("inv_str", "")
