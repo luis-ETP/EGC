@@ -149,18 +149,18 @@ def _extract_meta(wb):
     meta = {}
     if total_row:
         def _f(v): 
-            try: return round(float(v), 2)
+            try: return round(float(v), 4)
             except: return 0
         meta = {
-            "total_invoiced_usd":   _f(total_row[1]),
-            "total_gallons":        _f(total_row[2]),
-            "total_wired":          _f(total_row[3]),
-            "paid_for_gallons":     _f(total_row[4]),
-            "gallons_pulled":       _f(total_row[5]),
-            "remaining_allocation": _f(total_row[6]),
+            "total_invoiced_usd":      _f(total_row[1]),
+            "total_gallons":           _f(total_row[2]),
+            "total_wired":             _f(total_row[3]),
+            "paid_for_gallons":        _f(total_row[4]),
+            "gallons_pulled":          _f(total_row[5]),
+            "remaining_allocation":    _f(total_row[6]),
             "remaining_inventory_gal": _f(total_row[7]),
-            "avg_cost_inventory":   _f(total_row[8]),
-            "amount_paid_back":     _f(total_row[9]),
-            "mexico_balance":       _f(total_row[10]),
+            "avg_cost_inventory":      _f(total_row[8]),
+            "amount_paid_back":        _f(total_row[9]),
+            "mexico_balance":          _f(total_row[10]),
         }
     return meta
