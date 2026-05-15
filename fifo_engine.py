@@ -6,9 +6,6 @@ from openpyxl.utils import get_column_letter
 
 
 def run_fifo(SRC, DST):
-    SRC = "/mnt/user-data/uploads/Investor_Summary_FIFO_7.xlsx"
-    DST = "/mnt/user-data/outputs/Investor_Summary_FIFO.xlsx"
-
     shutil.copy(SRC, DST)
     wb_r = load_workbook(SRC, data_only=True)
     wb   = load_workbook(DST)
