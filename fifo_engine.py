@@ -47,9 +47,24 @@ def run_fifo(SRC, DST):
         supply_cost_mxn = float(row[13])              if row[13] else 0.0
         batch           = row[0]
         try:
-            paid_gals = float(row[6]) if row[6] is not None else float(row[5]) if row[5] is not None else 0.0
+            if row[6] is not None:
+                paid_gals = float(row[6])
+                paid_gals_real = True
+            elif row[22] is not None and row[23] is not None:
+                # W+X = already drawn + remainder = total paid gallons
+                paid_gals = float(row[22]) + float(row[23])
+                paid_gals_real = True
+            elif row[4] is not None and float(row[4]) > 0:
+                # Has wired amount - use Gallons as fallback
+                paid_gals = float(row[5]) if row[5] is not None else 0.0
+                paid_gals_real = True
+            else:
+                # No wired amount (e.g. Rhodes) - skip
+                paid_gals = 0.0
+                paid_gals_real = False
         except (TypeError, ValueError):
             paid_gals = 0.0
+            paid_gals_real = False
         if paid_gals <= 0:
             continue
         entry = {
@@ -84,21 +99,36 @@ def run_fifo(SRC, DST):
             bol_info[bol_str] = {"supplier": supplier, "gals": gals, "excel_row": i}
 
     # ══════════════════════════════════════════════════════════════════════════════
-    # STAGE 1 — Allocate supplier invoices in LOAD TRACKING sheet order
-    # This is the master order for FIFO: RTB/RTC rows drive when gallons are
-    # consumed from each supplier invoice.
+    # STAGE 1 — Allocate supplier invoices to BOLs
+    # Order: Load Tracking RTB/RTC rows (when available) → else Purchase to BOL-RTB order
+    # This supports both workflows:
+    #   Upload 1: User fills Supplier Invoices + Purchase to BOL-RTB only (no LT yet)
+    #             → allocate in Purchase to BOL-RTB row order
+    #   Upload 2: User adds RTBs to Load Tracking
+    #             → allocate in Load Tracking order (master FIFO order)
     # ══════════════════════════════════════════════════════════════════════════════
     bol_alloc = {}   # bol_str → {inv_str, batch_str, cost_usd, cost_mxn}
 
+    # Determine allocation order
+    lt_rtb_bols = []  # BOLs found in Load Tracking RTB/RTC rows, in sheet order
     for i, row in enumerate(ws_lt_r.iter_rows(values_only=True), start=1):
         if i == 1: continue
         if not row[0]: continue
-        grp = row[10]
-        if grp not in ("RTB", "RTC"):
-            continue
+        if row[10] not in ("RTB", "RTC"): continue
+        bol_str = str(row[30]).strip() if row[30] else ""
+        if bol_str and bol_str in bol_info:
+            lt_rtb_bols.append(bol_str)
 
-        bol_str  = str(row[30]).strip() if row[30] else ""
-        info     = bol_info.get(bol_str)
+    # If no RTBs in Load Tracking yet, use Purchase to BOL-RTB row order
+    if lt_rtb_bols:
+        alloc_order = lt_rtb_bols
+    else:
+        alloc_order = [str(row[5]).strip() for _, row in
+                       enumerate(ws_bol_r.iter_rows(values_only=True), start=1)
+                       if _ > 7 and row[2] and row[5]]
+
+    for bol_str in alloc_order:
+        info = bol_info.get(bol_str)
         if not info:
             continue
 
@@ -108,6 +138,8 @@ def run_fifo(SRC, DST):
             continue
 
         queue = supplier_queues.get(supplier, [])
+        if not queue:
+            continue
         remaining = bol_gals
         alloc_usd, alloc_adder, alloc_mxn, inv_labels, batch_labels = [], [], [], [], []
 
@@ -125,6 +157,14 @@ def run_fifo(SRC, DST):
             inv["avail"] -= draw
             inv["drawn"] += draw
             remaining    -= draw
+
+        if remaining > 1e-6:
+            supplier_name = supplier.title()
+            raise ValueError(
+                f"Not enough allocation for BOL {bol_str} ({supplier_name}): "
+                f"need {bol_gals:.2f} gals, short by {remaining:.2f} gals. "
+                f"Please add more paid-for gallons in Supplier Invoices."
+            )
 
         bol_alloc[bol_str] = {
             "inv_str":   join_unique(inv_labels),
@@ -150,10 +190,11 @@ def run_fifo(SRC, DST):
         bol_str = str(row[5]).strip() if row[5] else ""  # F(6) BOL, index 5
         alloc   = bol_alloc.get(bol_str, {})
         if not alloc: continue
-        ws_bol.cell(row=i, column=4).value  = alloc["inv_str"]    # D Supplier Invoice
-        ws_bol.cell(row=i, column=5).value  = alloc["batch_str"]  # E Batch
-        ws_bol.cell(row=i, column=9).value  = round(alloc["cost_usd"],    6)  # I Cost/Gal USD
-        ws_bol.cell(row=i, column=11).value = round(alloc["cost_adder"],  6)  # K Cost/Gal+Adder
+        ws_bol.cell(row=i, column=4).value  = alloc["inv_str"]      # D Supplier Invoice
+        ws_bol.cell(row=i, column=5).value  = alloc["batch_str"]   # E Batch
+        ws_bol.cell(row=i, column=10).value = round(alloc["cost_usd"],    6)  # J Cost/Gal USD
+        ws_bol.cell(row=i, column=12).value = round(alloc["cost_adder"],  6)  # L Cost/Gal+Adder
+        ws_bol.cell(row=i, column=13).value = round(alloc["cost_mxn"],    6)  # M Supply Cost DashFuel (MXN/L)
 
     # Write Net RTB Gallons, Remainder, and Liter formulas to Supplier Invoices
     # W(23)=NetRTBGallons, X(24)=RemainderGallons, U(21)=formula, V(22)=formula
@@ -203,6 +244,7 @@ def run_fifo(SRC, DST):
 
         if grp == "RTB":
             supply_cost  = float(row[43]) if row[43] else 0.0
+            av_available = row[47] is not None
             total_cost_l = float(row[47]) if row[47] else (float(row[43]) if row[43] else 0.0)
             alloc        = bol_alloc.get(bol, {})
             batch_str    = alloc.get("batch_str", "")
@@ -212,7 +254,7 @@ def run_fifo(SRC, DST):
                 inventory[key] = deque()
             supplier_upper = str(row[28]).strip().upper() if row[28] else ""
             inventory[key].append({
-                "liters": net_liters, "cost": total_cost_l,
+                "liters": net_liters, "cost": total_cost_l, "av_available": av_available,
                 "bol": bol, "batch": batch_str, "inv": inv_str,
                 "supplier_upper": supplier_upper,
             })
@@ -272,7 +314,12 @@ def run_fifo(SRC, DST):
             batch_str  = join_unique(source_batches)
             queue_rem  = sum(s["liters"] for s in inventory.get(key, deque()))
 
-            ws_lt.cell(row=i, column=44).value = round(cost_per_l, 6)
+            # If source RTBs had no AV (Total Cost/L), fall back to existing BTC AR
+            existing_ar = float(row[43]) if row[43] else 0.0
+            any_av = any(s.get("av_available", False) for s in (list(inventory.get(key, [])) or []))
+            used_fallback = not any_av and existing_ar > 0
+            final_cost  = existing_ar if used_fallback else round(cost_per_l, 6)
+            ws_lt.cell(row=i, column=44).value = final_cost
             ws_lt.cell(row=i, column=57).value = ""           # BE Batch (blank for BTC)
             ws_lt.cell(row=i, column=58).value = ""           # BF Supplier Invoice (blank for BTC)
             ws_lt.cell(row=i, column=59).value = bols_str     # BG BOL Source
@@ -410,25 +457,39 @@ def run_fifo(SRC, DST):
     LITERS_PER_GAL = 3.7854
     from collections import defaultdict as _dd
 
-    # Aggregate from Supplier Invoices
+    # Aggregate Overall Summary values
+    # B (Total Invoice USD), C (Total Gallons), E (Paid for Gallons):
+    #   Read directly from source Overall Summary which has cached formula values
+    # D (Total Wired): read from Supplier Invoices col E (always raw)
+    # F (Gallons Pulled), G (Remaining Allocation): from Supplier Invoices W/X (script-written)
     sup_inv = _dd(lambda: {"b":0.0,"c":0.0,"d":0.0,"e":0.0,"f":0.0,"g":0.0})
-    # B,C,D,E from source (formula values calculated); F,G from output (script-written)
-    src_rows = {i: row for i, row in enumerate(ws_inv_r.iter_rows(values_only=True), start=1)
-                if i > 7 and row[0] is not None}
+
+    def _f(v):
+        try: return float(v) if v is not None else 0.0
+        except: return 0.0
+
+    # Read B, C, E from source Overall Summary (cached formula values)
+    ws_os_r = wb_r["Overall Summary"]
+    for i, row in enumerate(ws_os_r.iter_rows(values_only=True), start=1):
+        if i < 4: continue
+        label = str(row[0]).strip() if row[0] else ""
+        if not label or label == "Row Labels": continue
+        if "TOTAL" in label.upper(): continue
+        sup_inv[label]["b"] = _f(row[1])   # B Total Invoice USD (formula cached)
+        sup_inv[label]["c"] = _f(row[2])   # C Total Gallons
+        sup_inv[label]["e"] = _f(row[4])   # E Paid for Gallons (formula cached)
+        sup_inv[label]["h_src"] = _f(row[7])  # H Rem Inventory (cached, fallback)
+        sup_inv[label]["i_src"] = _f(row[8])  # I Avg Cost (cached, fallback)
+
+    # Read D (Wired Amount) from Supplier Invoices col E (raw)
+    # Read F (Pulled) and G (Remaining) from script-written W/X
     out_rows = {i: row for i, row in enumerate(ws_inv.iter_rows(values_only=True), start=1)
                 if i > 7 and row[0] is not None}
-    for i, src in src_rows.items():
-        out = out_rows.get(i, src)
-        sup = str(src[2]).strip()
-        def _f(v):
-            try: return float(v) if v is not None else 0.0
-            except: return 0.0
-        sup_inv[sup]["b"] += _f(src[9]) or _f(src[4])   # J Total Invoice USD, fallback to Wired Amount
-        sup_inv[sup]["c"] += _f(src[5])   # F Gallons (raw)
-        sup_inv[sup]["d"] += _f(src[4])   # E Wired Amount (raw)
-        sup_inv[sup]["e"] += _f(src[6]) or _f(src[5])   # G Paid for Gallons, fallback to Gallons
-        sup_inv[sup]["f"] += _f(out[22])  # W Net RTB Gallons (script-written)
-        sup_inv[sup]["g"] += _f(out[23])  # X Remainder Gallons (script-written)
+    for i, out in out_rows.items():
+        sup = str(out[2]).strip()
+        sup_inv[sup]["d"] += _f(out[4])    # E Wired Amount (raw)
+        sup_inv[sup]["f"] += _f(out[22])   # W Net RTB Gallons (script-written)
+        sup_inv[sup]["g"] += _f(out[23])   # X Remainder Gallons (script-written)
 
     # Aggregate J (Received Payments) and K (Mexico Balance) from BOL output
     # T(Balance) is a formula — compute it: T = (M/G + K)*G - S if P!="" else (M/G+K)*G
@@ -448,7 +509,7 @@ def run_fifo(SRC, DST):
             gals    = float(row[6])  if row[6]  is not None else 0.0  # G(7) Gallons
             freight = float(row[12]) if row[12] is not None else 0.0  # M(13) Freight/Load
             cost_k  = float(row[10]) if row[10] is not None else 0.0  # K(11) Cost/Gal+Adder
-            inv_num = row[15]                                           # P(16) Invoice#
+            inv_num = row[17]                                           # R(18) Invoice#
             inv_amt = (freight + cost_k * gals) if gals else 0.0       # Q = O*G = (N+K)*G
             bal     = (inv_amt - recv) if inv_num else inv_amt
         except (TypeError, ValueError):
@@ -503,6 +564,16 @@ def run_fifo(SRC, DST):
             h_gals = gt["h_l"] / LITERS_PER_GAL
             i_avg  = (sum(l*c for l,c in gt["h_pairs"]) / sum(l for l,_ in gt["h_pairs"])
                       if gt["h_pairs"] else 0.0)
+            # If no real AV-based costs, use source cached Total row H and I
+            slots_have_av = any(s.get("av_available", True) for s in
+                                [slot for (prod,bp),q in inventory.items() for slot in q])
+            if not slots_have_av:
+                # Find cached total row in source Overall Summary
+                for src_row in ws_os_r.iter_rows(values_only=True):
+                    if src_row[0] and "TOTAL" in str(src_row[0]).upper():
+                        if src_row[7]: h_gals = float(src_row[7])
+                        if src_row[8]: i_avg  = float(src_row[8])
+                        break
             ws_os.cell(row=i, column=2).value  = round(gt["b"], 6)
             ws_os.cell(row=i, column=3).value  = round(gt["c"], 6)
             ws_os.cell(row=i, column=4).value  = round(gt["d"], 6)
@@ -522,6 +593,14 @@ def run_fifo(SRC, DST):
         h_l    = sum(l for l,_ in slots)
         h_gals = h_l / LITERS_PER_GAL
         i_avg  = (sum(l*c for l,c in slots)/h_l if h_l else 0.0)
+        # If FIFO slots used fallback costs (AV not cached), use source cached H/I
+        slots_have_av = any(s.get("av_available", True) for s in
+                            [slot for (prod,bp),q in inventory.items()
+                             for slot in q])
+        if not slots_have_av and sd.get("i_src", 0) > 0:
+            i_avg  = sd["i_src"]
+        if not slots_have_av and sd.get("h_src", 0) > 0:
+            h_gals = sd["h_src"]
 
         ws_os.cell(row=i, column=2).value  = round(sd["b"], 6)
         ws_os.cell(row=i, column=3).value  = round(sd["c"], 6)
