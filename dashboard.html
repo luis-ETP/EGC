@@ -407,48 +407,54 @@ function renderOverview() {
   const fmtNum = v => v != null ? Number(v).toLocaleString('en-US', {maximumFractionDigits:0}) : '—';
   const fmtDec = v => v != null ? Number(v).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:4}) : '—';
 
-  // 8 KPI cards — cols D through K from Overall Summary (skip A-C)
+  // 8 KPI cards — use normalised _keys set by extract.py
   const total = s.find(r => r['Row Labels'] && r['Row Labels'].toLowerCase().includes('total')) || {};
-  let html = `<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+  const tv = k => total[k] ?? null;
+  // Row 1: Deployment — what went out
+  // Row 2: Returns & inventory — what came back / what's left
+  let html = `
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:0.75rem">
     <div class="kpi blue">
       <div class="kpi-label">Total Wired Amount</div>
-      <div class="kpi-value">${fmtUSD(total['Total Wired Amount'])}</div>
-      <div class="kpi-sub">USD</div>
+      <div class="kpi-value">${fmtUSD(tv('_wired'))}</div>
+      <div class="kpi-sub">USD deployed to suppliers</div>
     </div>
     <div class="kpi blue">
       <div class="kpi-label">Paid for Gallons (Allocation)</div>
-      <div class="kpi-value">${fmtNum(total['Paid for Gallons (Allocation)'] ?? total['Paid for Gallons '])}</div>
-      <div class="kpi-sub">gallons</div>
+      <div class="kpi-value">${fmtNum(tv('_paid_gal'))}</div>
+      <div class="kpi-sub">gallons available to pull</div>
     </div>
     <div class="kpi green">
       <div class="kpi-label">Gallons Pulled from Allocation</div>
-      <div class="kpi-value">${fmtNum(total['Gallons Pulled from Allocation (RTB & RTC)'] ?? total['Gallons Pulled (RTB & RTC)'])}</div>
-      <div class="kpi-sub">RTB &amp; RTC</div>
-    </div>
-    <div class="kpi purple">
-      <div class="kpi-label">Remaining Gallons in Allocation</div>
-      <div class="kpi-value">${fmtNum(total['Remaining Gallons in Allocation'])}</div>
-      <div class="kpi-sub">gallons</div>
+      <div class="kpi-value">${fmtNum(tv('_pulled'))}</div>
+      <div class="kpi-sub">RTB &amp; RTC delivered</div>
     </div>
     <div class="kpi orange">
+      <div class="kpi-label">Remaining in Allocation</div>
+      <div class="kpi-value">${fmtNum(tv('_rem_alloc'))}</div>
+      <div class="kpi-sub">gallons paid, not pulled yet</div>
+    </div>
+  </div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi purple">
       <div class="kpi-label">Remaining Gallons in Inventory</div>
-      <div class="kpi-value">${fmtNum(total['Remaining Gallons in Inventory'])}</div>
+      <div class="kpi-value">${fmtNum(tv('_rem_inv'))}</div>
       <div class="kpi-sub">gallons at bulk plant</div>
     </div>
     <div class="kpi purple">
       <div class="kpi-label">Weighted Avg Cost in Inventory</div>
-      <div class="kpi-value">${fmtDec(total['Weighted Average Cost in Inventory'])}</div>
+      <div class="kpi-value">${fmtDec(tv('_avg_cost'))}</div>
       <div class="kpi-sub">MXN/L</div>
     </div>
     <div class="kpi green">
       <div class="kpi-label">Amount Paid Back by Mexico</div>
-      <div class="kpi-value">${fmtUSD(total['Amount Paid Back by Mexico '] ?? total['Amount Paid Back by Mexico'])}</div>
-      <div class="kpi-sub">USD</div>
+      <div class="kpi-value">${fmtMXN(tv('_paid_back'))}</div>
+      <div class="kpi-sub">MXN received back</div>
     </div>
     <div class="kpi red">
       <div class="kpi-label">Mexico Balance</div>
-      <div class="kpi-value">${fmtUSD(total['Mexico Balance'])}</div>
-      <div class="kpi-sub">USD outstanding</div>
+      <div class="kpi-value">${fmtMXN(tv('_balance'))}</div>
+      <div class="kpi-sub">MXN outstanding</div>
     </div>
   </div>`;
 
@@ -472,21 +478,21 @@ function renderOverview() {
         <th>Remaining Gallons in Allocation</th>
         <th>Remaining Gallons in Inventory</th>
         <th>Weighted Avg Cost in Inventory (MXN/L)</th>
-        <th>Amount Paid Back by Mexico (USD)</th>
-        <th>Mexico Balance (USD)</th>
+        <th>Amount Paid Back by Mexico (MXN)</th>
+        <th>Mexico Balance (MXN)</th>
       </tr></thead><tbody>`;
 
   rows.forEach(r => {
     html += `<tr>
       <td>${r['Row Labels'] || ''}</td>
-      <td>${fmtUSD(r['Total Wired Amount'])}</td>
-      <td>${fmtNum(r[colPaidGal])}</td>
-      <td>${fmtNum(r[colPulled])}</td>
-      <td>${fmtNum(r['Remaining Gallons in Allocation'])}</td>
-      <td>${fmtNum(r['Remaining Gallons in Inventory'])}</td>
-      <td>${fmtDec(r['Weighted Average Cost in Inventory'])}</td>
-      <td>${fmtUSD(r[colPaidBack])}</td>
-      <td>${fmtUSD(r['Mexico Balance'])}</td>
+      <td>${fmtUSD(r['_wired'])}</td>
+      <td>${fmtNum(r['_paid_gal'])}</td>
+      <td>${fmtNum(r['_pulled'])}</td>
+      <td>${fmtNum(r['_rem_alloc'])}</td>
+      <td>${fmtNum(r['_rem_inv'])}</td>
+      <td>${fmtDec(r['_avg_cost'])}</td>
+      <td>${fmtMXN(r['_paid_back'])}</td>
+      <td>${fmtMXN(r['_balance'])}</td>
     </tr>`;
   });
 
