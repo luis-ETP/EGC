@@ -4,7 +4,7 @@ from datetime import datetime
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres.mgozbmyvrwcsnnwgqpvy:ETP$074!mex@aws-0-us-west-2.pooler.supabase.com:6543/postgres"
+    "postgresql://postgres.mgozbmyvrwcsnnwgqpvy:[password]@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
 )
 
 def get_conn():
