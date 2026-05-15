@@ -109,23 +109,12 @@ def run_fifo(SRC, DST):
     # ══════════════════════════════════════════════════════════════════════════════
     bol_alloc = {}   # bol_str → {inv_str, batch_str, cost_usd, cost_mxn}
 
-    # Determine allocation order
-    lt_rtb_bols = []  # BOLs found in Load Tracking RTB/RTC rows, in sheet order
-    for i, row in enumerate(ws_lt_r.iter_rows(values_only=True), start=1):
-        if i == 1: continue
-        if not row[0]: continue
-        if row[10] not in ("RTB", "RTC"): continue
-        bol_str = str(row[30]).strip() if row[30] else ""
-        if bol_str and bol_str in bol_info:
-            lt_rtb_bols.append(bol_str)
-
-    # If no RTBs in Load Tracking yet, use Purchase to BOL-RTB row order
-    if lt_rtb_bols:
-        alloc_order = lt_rtb_bols
-    else:
-        alloc_order = [str(row[5]).strip() for _, row in
-                       enumerate(ws_bol_r.iter_rows(values_only=True), start=1)
-                       if _ > 7 and row[2] and row[5]]
+    # Allocation order: always use Purchase to BOL-RTB row order.
+    # This is the source of truth for Stage 1 — every BOL listed there must be allocated.
+    # Load Tracking order is used in Stage 2 for BTC FIFO, not here.
+    alloc_order = [str(row[5]).strip() for i, row in
+                   enumerate(ws_bol_r.iter_rows(values_only=True), start=1)
+                   if i > 7 and row[2] and row[5]]
 
     for bol_str in alloc_order:
         info = bol_info.get(bol_str)
@@ -159,12 +148,16 @@ def run_fifo(SRC, DST):
             remaining    -= draw
 
         if remaining > 1e-6:
-            supplier_name = supplier.title()
-            raise ValueError(
-                f"Not enough allocation for BOL {bol_str} ({supplier_name}): "
-                f"need {bol_gals:.2f} gals, short by {remaining:.2f} gals. "
-                f"Please add more paid-for gallons in Supplier Invoices."
-            )
+            # Not enough allocation — flag this BOL, continue processing others
+            bol_alloc[bol_str] = {
+                "inv_str":    "NOT ENOUGH ALLOCATION",
+                "batch_str":  "",
+                "cost_usd":   0.0,
+                "cost_adder": 0.0,
+                "cost_mxn":   0.0,
+                "insufficient": True,
+            }
+            continue
 
         bol_alloc[bol_str] = {
             "inv_str":   join_unique(inv_labels),
@@ -190,11 +183,13 @@ def run_fifo(SRC, DST):
         bol_str = str(row[5]).strip() if row[5] else ""  # F(6) BOL, index 5
         alloc   = bol_alloc.get(bol_str, {})
         if not alloc: continue
-        ws_bol.cell(row=i, column=4).value  = alloc["inv_str"]      # D Supplier Invoice
-        ws_bol.cell(row=i, column=5).value  = alloc["batch_str"]   # E Batch
-        ws_bol.cell(row=i, column=10).value = round(alloc["cost_usd"],    6)  # J Cost/Gal USD
-        ws_bol.cell(row=i, column=12).value = round(alloc["cost_adder"],  6)  # L Cost/Gal+Adder
-        ws_bol.cell(row=i, column=13).value = round(alloc["cost_mxn"],    6)  # M Supply Cost DashFuel (MXN/L)
+        ws_bol.cell(row=i, column=4).value = alloc["inv_str"]   # D Supplier Invoice
+        if not alloc.get("insufficient"):
+            # Only write cost columns when allocation was successful
+            ws_bol.cell(row=i, column=5).value  = alloc["batch_str"]
+            ws_bol.cell(row=i, column=10).value = round(alloc["cost_usd"],    6)  # J Cost/Gal USD
+            ws_bol.cell(row=i, column=12).value = round(alloc["cost_adder"],  6)  # L Cost/Gal+Adder
+            ws_bol.cell(row=i, column=13).value = round(alloc["cost_mxn"],    6)  # M Supply Cost DashFuel
 
     # Write Net RTB Gallons, Remainder, and Liter formulas to Supplier Invoices
     # W(23)=NetRTBGallons, X(24)=RemainderGallons, U(21)=formula, V(22)=formula
@@ -501,16 +496,16 @@ def run_fifo(SRC, DST):
         if not row[2]: break
         sup_raw = str(row[2]).strip()
         try:
-            recv = float(row[18]) if row[18] is not None else 0.0  # S(19) Received Payments
+            recv = float(row[20]) if row[20] is not None else 0.0  # U(21) Received Payments
         except (TypeError, ValueError):
             recv = 0.0
-        # Compute Balance directly from raw values (avoids formula evaluation issue)
+        # Compute Balance: Invoice Amount = (Freight/Load + Cost/Gal+Adder × Gallons)
         try:
             gals    = float(row[6])  if row[6]  is not None else 0.0  # G(7) Gallons
-            freight = float(row[12]) if row[12] is not None else 0.0  # M(13) Freight/Load
-            cost_k  = float(row[10]) if row[10] is not None else 0.0  # K(11) Cost/Gal+Adder
+            freight = float(row[14]) if row[14] is not None else 0.0  # O(15) Freight/Load USD
+            cost_k  = float(row[11]) if row[11] is not None else 0.0  # L(12) Cost/Gal+Adder
             inv_num = row[17]                                           # R(18) Invoice#
-            inv_amt = (freight + cost_k * gals) if gals else 0.0       # Q = O*G = (N+K)*G
+            inv_amt = (freight + cost_k * gals) if gals else 0.0       # S = O + L×G
             bal     = (inv_amt - recv) if inv_num else inv_amt
         except (TypeError, ValueError):
             bal = 0.0
