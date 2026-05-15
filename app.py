@@ -58,7 +58,7 @@ HTML = """
     opacity: 0.95;
   }
   .logo-wrap img {
-    height: 52px;
+    height: 110px;
     width: auto;
     display: block;
   }
