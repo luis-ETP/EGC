@@ -402,93 +402,96 @@ function renderOverview() {
   const s = dashData.overall_summary || [];
   const el = document.getElementById('overview-content');
 
-  const fmt = (v, prefix='', suffix='') => v != null ? prefix + Number(v).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) + suffix : '—';
-  const fmtInt = v => v != null ? Number(v).toLocaleString('en-US', {maximumFractionDigits:0}) : '—';
+  const fmtUSD = v => v != null ? '$' + Number(v).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+  const fmtMXN = v => v != null ? Number(v).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+  const fmtNum = v => v != null ? Number(v).toLocaleString('en-US', {maximumFractionDigits:0}) : '—';
+  const fmtDec = v => v != null ? Number(v).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:4}) : '—';
 
-  // KPI row
-  let html = `<div class="kpi-grid">
-    <div class="kpi blue"><div class="kpi-label">Total Invoiced</div><div class="kpi-value">${fmt(m.total_invoiced_usd,'$')}</div><div class="kpi-sub">USD</div></div>
-    <div class="kpi green"><div class="kpi-label">Gallons Pulled</div><div class="kpi-value">${fmtInt(m.gallons_pulled)}</div><div class="kpi-sub">RTB + RTC</div></div>
-    <div class="kpi orange"><div class="kpi-label">Remaining Inventory</div><div class="kpi-value">${fmtInt(m.remaining_inventory_gal)}</div><div class="kpi-sub">gallons at bulk plant</div></div>
-    <div class="kpi purple"><div class="kpi-label">Avg Cost / L</div><div class="kpi-value">${fmt(m.avg_cost_inventory)}</div><div class="kpi-sub">MXN · weighted avg</div></div>
-    <div class="kpi green"><div class="kpi-label">Paid Back (MX)</div><div class="kpi-value">${fmt(m.amount_paid_back,'$')}</div><div class="kpi-sub">USD received</div></div>
-    <div class="kpi red"><div class="kpi-label">Open Balance</div><div class="kpi-value">${fmt(m.mexico_balance,'$')}</div><div class="kpi-sub">USD outstanding</div></div>
+  // 8 KPI cards — cols D through K from Overall Summary (skip A-C)
+  const total = s.find(r => r['Row Labels'] && r['Row Labels'].toLowerCase().includes('total')) || {};
+  let html = `<div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+    <div class="kpi blue">
+      <div class="kpi-label">Total Wired Amount</div>
+      <div class="kpi-value">${fmtUSD(total['Total Wired Amount'])}</div>
+      <div class="kpi-sub">USD</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kpi-label">Paid for Gallons (Allocation)</div>
+      <div class="kpi-value">${fmtNum(total['Paid for Gallons (Allocation)'] ?? total['Paid for Gallons '])}</div>
+      <div class="kpi-sub">gallons</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Gallons Pulled from Allocation</div>
+      <div class="kpi-value">${fmtNum(total['Gallons Pulled from Allocation (RTB & RTC)'] ?? total['Gallons Pulled (RTB & RTC)'])}</div>
+      <div class="kpi-sub">RTB &amp; RTC</div>
+    </div>
+    <div class="kpi purple">
+      <div class="kpi-label">Remaining Gallons in Allocation</div>
+      <div class="kpi-value">${fmtNum(total['Remaining Gallons in Allocation'])}</div>
+      <div class="kpi-sub">gallons</div>
+    </div>
+    <div class="kpi orange">
+      <div class="kpi-label">Remaining Gallons in Inventory</div>
+      <div class="kpi-value">${fmtNum(total['Remaining Gallons in Inventory'])}</div>
+      <div class="kpi-sub">gallons at bulk plant</div>
+    </div>
+    <div class="kpi purple">
+      <div class="kpi-label">Weighted Avg Cost in Inventory</div>
+      <div class="kpi-value">${fmtDec(total['Weighted Average Cost in Inventory'])}</div>
+      <div class="kpi-sub">MXN/L</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Amount Paid Back by Mexico</div>
+      <div class="kpi-value">${fmtUSD(total['Amount Paid Back by Mexico '] ?? total['Amount Paid Back by Mexico'])}</div>
+      <div class="kpi-sub">USD</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Mexico Balance</div>
+      <div class="kpi-value">${fmtUSD(total['Mexico Balance'])}</div>
+      <div class="kpi-sub">USD outstanding</div>
+    </div>
   </div>`;
 
-  // Supplier summary table
+  // Overall Summary table — exact Excel columns
   const suppliers = s.filter(r => r['Row Labels'] && !r['Row Labels'].toLowerCase().includes('total'));
-  const total = s.find(r => r['Row Labels'] && r['Row Labels'].toLowerCase().includes('total'));
+  const rows = total['Row Labels'] ? [...suppliers, total] : suppliers;
 
-  html += `<div class="charts-grid">
-    <div class="chart-card"><div class="chart-title">Gallons Pulled vs Remaining Inventory</div><div class="chart-wrap"><canvas id="chartPulled"></canvas></div></div>
-    <div class="chart-card"><div class="chart-title">Invoiced vs Paid Back (USD)</div><div class="chart-wrap"><canvas id="chartPayments"></canvas></div></div>
-    <div class="chart-card wide"><div class="chart-title">Allocation Status by Supplier</div><div class="chart-wrap"><canvas id="chartAlloc"></canvas></div></div>
-  </div>`;
+  // Detect column names (handle both old and new naming)
+  const colPaidGal   = suppliers[0]?.['Paid for Gallons (Allocation)'] !== undefined ? 'Paid for Gallons (Allocation)' : 'Paid for Gallons ';
+  const colPulled    = suppliers[0]?.['Gallons Pulled from Allocation (RTB & RTC)'] !== undefined ? 'Gallons Pulled from Allocation (RTB & RTC)' : 'Gallons Pulled (RTB & RTC)';
+  const colPaidBack  = suppliers[0]?.['Amount Paid Back by Mexico'] !== undefined ? 'Amount Paid Back by Mexico' : 'Amount Paid Back by Mexico ';
 
   html += `<div class="table-card">
-    <div class="table-header"><div class="table-title">Overall Summary by Supplier</div></div>
+    <div class="table-header"><div class="table-title">Overall Summary</div></div>
     <div class="table-wrap"><table>
       <thead><tr>
-        <th>Supplier</th><th>Total Invoiced</th><th>Total Gallons</th><th>Paid for Gal</th>
-        <th>Pulled (RTB)</th><th>Rem. Allocation</th><th>Rem. Inventory</th>
-        <th>Avg Cost/L</th><th>Paid Back</th><th>Balance</th>
+        <th>Supplier</th>
+        <th>Total Wired Amount</th>
+        <th>Paid for Gallons (Allocation)</th>
+        <th>Gallons Pulled from Allocation (RTB &amp; RTC)</th>
+        <th>Remaining Gallons in Allocation</th>
+        <th>Remaining Gallons in Inventory</th>
+        <th>Weighted Avg Cost in Inventory (MXN/L)</th>
+        <th>Amount Paid Back by Mexico (USD)</th>
+        <th>Mexico Balance (USD)</th>
       </tr></thead><tbody>`;
 
-  const rows = total ? [...suppliers, total] : suppliers;
   rows.forEach(r => {
-    const isTotal = r['Row Labels']?.toLowerCase().includes('total');
     html += `<tr>
       <td>${r['Row Labels'] || ''}</td>
-      <td>${fmt(r['Total Invoices USD'],'$')}</td>
-      <td>${fmtInt(r['Total Gallons'])}</td>
-      <td>${fmtInt(r['Paid for Gallons '])}</td>
-      <td>${fmtInt(r['Gallons Pulled (RTB & RTC)'])}</td>
-      <td>${fmtInt(r['Remaining Gallons in Allocation'])}</td>
-      <td>${fmtInt(r['Remaining Gallons in Inventory'])}</td>
-      <td>${fmt(r['Weighted Average Cost in Inventory'])}</td>
-      <td>${fmt(r['Amount Paid Back by Mexico '],'$')}</td>
-      <td>${fmt(r['Mexico Balance'],'$')}</td>
+      <td>${fmtUSD(r['Total Wired Amount'])}</td>
+      <td>${fmtNum(r[colPaidGal])}</td>
+      <td>${fmtNum(r[colPulled])}</td>
+      <td>${fmtNum(r['Remaining Gallons in Allocation'])}</td>
+      <td>${fmtNum(r['Remaining Gallons in Inventory'])}</td>
+      <td>${fmtDec(r['Weighted Average Cost in Inventory'])}</td>
+      <td>${fmtUSD(r[colPaidBack])}</td>
+      <td>${fmtUSD(r['Mexico Balance'])}</td>
     </tr>`;
   });
 
   html += `</tbody></table></div></div>`;
   el.innerHTML = html;
-
-  // Charts
-  const colors = ['#4a7cdc','#3fb950','#f0883e','#a371f7','#6e7f96'];
-  const labels = suppliers.map(r => (r['Row Labels']||'').split(' ')[0]);
-
-  new Chart(document.getElementById('chartPulled'), {
-    type: 'bar', data: {
-      labels,
-      datasets: [
-        { label:'Pulled', data: suppliers.map(r=>r['Gallons Pulled (RTB & RTC)']||0), backgroundColor:'rgba(63,185,80,0.7)', borderRadius:4 },
-        { label:'Rem. Inventory', data: suppliers.map(r=>r['Remaining Gallons in Inventory']||0), backgroundColor:'rgba(240,136,62,0.7)', borderRadius:4 },
-      ]
-    }, options: chartOpts('Gallons')
-  });
-
-  new Chart(document.getElementById('chartPayments'), {
-    type: 'bar', data: {
-      labels,
-      datasets: [
-        { label:'Invoiced', data: suppliers.map(r=>r['Total Invoices USD']||0), backgroundColor:'rgba(74,124,220,0.7)', borderRadius:4 },
-        { label:'Paid Back', data: suppliers.map(r=>r['Amount Paid Back by Mexico ']||0), backgroundColor:'rgba(63,185,80,0.7)', borderRadius:4 },
-        { label:'Balance', data: suppliers.map(r=>r['Mexico Balance']||0), backgroundColor:'rgba(248,81,73,0.7)', borderRadius:4 },
-      ]
-    }, options: chartOpts('USD')
-  });
-
-  new Chart(document.getElementById('chartAlloc'), {
-    type: 'bar', data: {
-      labels,
-      datasets: [
-        { label:'Pulled', data: suppliers.map(r=>r['Gallons Pulled (RTB & RTC)']||0), backgroundColor:'rgba(63,185,80,0.7)', borderRadius:4 },
-        { label:'Rem. Allocation', data: suppliers.map(r=>r['Remaining Gallons in Allocation']||0), backgroundColor:'rgba(163,113,247,0.7)', borderRadius:4 },
-        { label:'Rem. Inventory', data: suppliers.map(r=>r['Remaining Gallons in Inventory']||0), backgroundColor:'rgba(240,136,62,0.7)', borderRadius:4 },
-      ]
-    }, options: {...chartOpts('Gallons'), indexAxis:'y'}
-  });
 }
 
 function chartOpts(unit) {
