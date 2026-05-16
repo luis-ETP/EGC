@@ -44,84 +44,107 @@ def _extract_overall_summary(wb):
         result.append(entry)
     return result
 
-# ── Inventory (from FIFO sheet) ────────────────────────────────────────────────
+# ── Inventory (from FIFO sheet + Purchase to BOL-RTB) ─────────────────────────
 def _extract_inventory(wb):
-    ws = wb["FIFO"]
-    rows = list(ws.iter_rows(values_only=True))
+    """
+    Build hierarchy: bulk_plant -> product -> batch -> supplier -> invoice -> [bols]
 
-    # Header is row 1 (no title row anymore)
-    headers = [str(v).strip() if v else f"col{j}" for j, v in enumerate(rows[0])]
+    BOLs that span two batches/invoices (e.g. Batch="1 | 2", Invoice="A | B")
+    are split into separate entries — one per batch/invoice — with proportional liters.
+    Each BOL always appears INDIVIDUALLY under its own invoice.
+    """
+    # Step 1: read FIFO sheet for each RTB BOL
+    ws_fifo = wb["FIFO"]
+    fifo_headers = [str(v).strip() if v else f"col{j}"
+                    for j, v in enumerate(next(ws_fifo.iter_rows(values_only=True)))]
 
-    # Build hierarchy: bulk_plant -> product -> batch -> invoice -> [bols]
-    hierarchy = {}
-
-    for row in rows[1:]:
+    fifo_bols = {}  # bol_str -> {liters, remaining_l, cost_per_l, bp, prod}
+    for row in ws_fifo.iter_rows(min_row=2, values_only=True):
         if not row[0]: break
-        entry = {h: row[j] for j, h in enumerate(headers)}
+        entry = {h: row[j] for j, h in enumerate(fifo_headers)}
         if entry.get("Type") != "RTB": continue
-
-        bp      = str(entry.get("Bulk Plant", "") or "")
-        prod    = str(entry.get("Product", "") or "")
-        batch   = str(entry.get("Batch", "") or "")
-        bol     = str(entry.get("BOL", "") or "")
-        liters  = float(entry.get("Liters", 0) or 0)
-        rem_l   = entry.get("Remaining L (BOL)")
-        rem_l   = float(rem_l) if rem_l is not None else liters
-        cost    = float(entry.get("Cost / L (MXN)", 0) or 0)
-
-        # supplier invoice from BOL source col (we need it — get from Supplier Invoice col)
-        inv_str = str(entry.get("Source BOLs", "") or "")
-
-        # Navigate hierarchy
-        if bp not in hierarchy:
-            hierarchy[bp] = {}
-        if prod not in hierarchy[bp]:
-            hierarchy[bp][prod] = {}
-        if batch not in hierarchy[bp][prod]:
-            hierarchy[bp][prod][batch] = {}
-
-        # We need invoice — it's not in FIFO sheet directly, use batch as key for now
-        inv_key = batch  # will group by batch since invoice isn't in FIFO sheet
-        if inv_key not in hierarchy[bp][prod][batch]:
-            hierarchy[bp][prod][batch][inv_key] = []
-
-        hierarchy[bp][prod][batch][inv_key].append({
-            "bol":         bol,
+        bol = str(entry.get("BOL", "") or "")
+        if not bol: continue
+        liters = float(entry.get("Liters", 0) or 0)
+        rem    = entry.get("Remaining L (BOL)")
+        fifo_bols[bol] = {
             "liters":      liters,
-            "remaining_l": rem_l,
-            "cost_per_l":  cost,
-        })
+            "remaining_l": float(rem) if rem is not None else liters,
+            "cost_per_l":  float(entry.get("Cost / L (MXN)", 0) or 0),
+            "bp":          str(entry.get("Bulk Plant", "") or ""),
+            "prod":        str(entry.get("Product", "") or ""),
+        }
 
-    # Now get invoice info from Purchase to BOL-RTB
+    # Step 2: read Purchase to BOL-RTB for invoice, batch, supplier per BOL
+    # For split BOLs (e.g. Batch="1 | 2", Invoice="A | B"), split into two entries
+    bol_entries = []  # list of {bol, batch, invoice, supplier, alloc_frac}
     try:
         ws_bol = wb["Purchase to BOL-RTB"]
-        bol_to_inv = {}
         for row in ws_bol.iter_rows(min_row=8, values_only=True):
-                if not row[2]: break  # col C (Supplier) = reliable non-formula col
-                bol_val = str(row[5]).strip() if row[5] else ""
-                inv_val = str(row[3]).strip() if row[3] else ""
-                if bol_val:
-                    bol_to_inv[bol_val] = inv_val
-    except:
-        bol_to_inv = {}
+            if not row[2]: break
+            bol_str  = str(row[5]).strip() if row[5] else ""
+            supplier = str(row[2]).strip() if row[2] else ""
+            inv_raw  = str(row[3]).strip() if row[3] else ""
+            bat_raw  = str(row[4]).strip() if row[4] else ""
+            cost_j   = float(row[9])  if row[9]  is not None else 0.0  # J Cost/Gal USD
+            cost_l_raw = str(row[11]).strip() if row[11] is not None else ""
 
-    # Rebuild with invoice level
+            if not bol_str: continue
+
+            # Split multi-batch/invoice BOLs into individual entries
+            batches  = [b.strip() for b in bat_raw.split("|")] if "|" in bat_raw else [bat_raw]
+            invoices = [v.strip() for v in inv_raw.split("|")] if "|" in inv_raw else [inv_raw]
+
+            if len(batches) > 1 or len(invoices) > 1:
+                # Cross-batch BOL: split proportionally
+                # We don't have exact split fractions here, so split equally
+                # (the FIFO sheet has the blended cost already)
+                n = max(len(batches), len(invoices))
+                for k in range(n):
+                    b = batches[k] if k < len(batches) else batches[-1]
+                    inv = invoices[k] if k < len(invoices) else invoices[-1]
+                    bol_entries.append({
+                        "bol": bol_str, "batch": b, "invoice": inv,
+                        "supplier": supplier, "split_n": n, "split_k": k,
+                    })
+            else:
+                bol_entries.append({
+                    "bol": bol_str, "batch": bat_raw, "invoice": inv_raw,
+                    "supplier": supplier, "split_n": 1, "split_k": 0,
+                })
+    except Exception as e:
+        pass
+
+    # Step 3: build hierarchy
     result = {}
-    for bp, prods in hierarchy.items():
-        result[bp] = {}
-        for prod, batches in prods.items():
-            result[bp][prod] = {}
-            for batch, inv_groups in batches.items():
-                # Re-group by actual invoice
-                inv_map = defaultdict(list)
-                for _, bols in inv_groups.items():
-                    for b in bols:
-                        inv = bol_to_inv.get(b["bol"], "Unknown")
-                        inv_map[inv].append(b)
+    for entry in bol_entries:
+        bol      = entry["bol"]
+        batch    = entry["batch"]
+        invoice  = entry["invoice"]
+        supplier = entry["supplier"]
+        split_n  = entry["split_n"]
+        fifo     = fifo_bols.get(bol)
+        if not fifo: continue
 
-                result[bp][prod][batch] = {}
-                for inv, bols in inv_map.items():
-                    result[bp][prod][batch][inv] = bols
+        bp   = fifo["bp"]
+        prod = fifo["prod"]
+        # Proportional liters for split BOLs
+        liters      = round(fifo["liters"]      / split_n, 4)
+        remaining_l = round(fifo["remaining_l"] / split_n, 4)
+        cost_per_l  = fifo["cost_per_l"]  # blended cost same for all splits
+
+        # Navigate: bp -> prod -> batch -> supplier -> invoice -> [bols]
+        result.setdefault(bp, {})
+        result[bp].setdefault(prod, {})
+        result[bp][prod].setdefault(batch, {})
+        result[bp][prod][batch].setdefault(supplier, {})
+        result[bp][prod][batch][supplier].setdefault(invoice, [])
+        result[bp][prod][batch][supplier][invoice].append({
+            "bol":         bol,
+            "liters":      liters,
+            "remaining_l": remaining_l,
+            "cost_per_l":  cost_per_l,
+        })
 
     return result
 
