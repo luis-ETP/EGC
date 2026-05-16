@@ -523,21 +523,24 @@ function renderInventory() {
   for (const [bp, products] of Object.entries(inv)) {
     html += `<div class="inv-section"><div class="inv-bp-title">${bp}</div><div class="inv-product-wrap">`;
     for (const [prod, batches] of Object.entries(products)) {
-      for (const [batch, invoices] of Object.entries(batches)) {
-        // Compute batch totals
-        let totalL = 0, remL = 0, costPairs = [];
-        for (const bols of Object.values(invoices)) {
-          for (const b of bols) {
-            totalL += b.liters || 0;
-            remL   += b.remaining_l || 0;
-            costPairs.push([b.remaining_l || 0, b.cost_per_l || 0]);
-          }
-        }
+      for (const [batch, suppliers] of Object.entries(batches)) {
+        // Compute batch totals across all suppliers/invoices/bols
+        let totalL = 0, remL = 0, allCostPairs = [];
+        for (const invMap of Object.values(suppliers))
+          for (const bols of Object.values(invMap))
+            for (const b of bols) {
+              totalL += b.liters || 0;
+              remL   += b.remaining_l || 0;
+              allCostPairs.push([b.liters || 0, b.cost_per_l || 0]);
+            }
+
         const pct = totalL > 0 ? Math.round(remL / totalL * 100) : 0;
         const fillClass = pct > 60 ? 'high' : pct > 25 ? 'mid' : 'low';
-        const avgCost = costPairs.reduce((s,[l,c])=>s+l*c,0) / (costPairs.reduce((s,[l])=>s+l,0)||1);
+        const totalW = allCostPairs.reduce((s,[l])=>s+l, 0);
+        const avgCost = totalW > 0 ? allCostPairs.reduce((s,[l,c])=>s+l*c, 0) / totalW : 0;
+        const pctColor = pct > 60 ? 'green' : pct > 25 ? 'orange' : 'red';
 
-        const batchId = `batch-${bp}-${prod}-${batch}`.replace(/\s/g,'_');
+        const batchId = `batch-${bp}-${prod}-${batch}`.replace(/[\s|]/g,'_');
         html += `<div class="batch-tank" id="${batchId}">
           <div class="batch-header" onclick="toggleBatch('${batchId}')">
             <div class="batch-left">
@@ -548,7 +551,7 @@ function renderInventory() {
               <div class="batch-stat"><div class="batch-stat-val">${fmtL(remL)}</div><div class="batch-stat-lbl">Remaining L</div></div>
               <div class="batch-stat"><div class="batch-stat-val">${fmtL(totalL)}</div><div class="batch-stat-lbl">Total RTB L</div></div>
               <div class="batch-stat"><div class="batch-stat-val">${avgCost.toFixed(4)}</div><div class="batch-stat-lbl">Avg MXN/L</div></div>
-              <div class="batch-stat"><div class="batch-stat-val" style="color:var(--${fillClass==='high'?'green':fillClass==='mid'?'orange':'red'})">${pct}%</div><div class="batch-stat-lbl">Remaining</div></div>
+              <div class="batch-stat"><div class="batch-stat-val" style="color:var(--${pctColor})">${pct}%</div><div class="batch-stat-lbl">Remaining</div></div>
               <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
           </div>
@@ -557,26 +560,35 @@ function renderInventory() {
             <div class="tank-pct">${fmtL(remL)} of ${fmtL(totalL)} L remaining</div>
           </div>
           <div class="inv-detail">
-            <div class="inv-title">Invoice & BOL breakdown</div>`;
+            <div class="inv-title">Supplier → Invoice → BOL breakdown</div>`;
 
-        for (const [inv_num, bols] of Object.entries(invoices)) {
-          html += `<div class="invoice-group">
-            <div class="invoice-label"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Invoice ${inv_num}</div>
-            <div class="bol-grid">`;
-          for (const b of bols) {
-            const bpct = b.liters > 0 ? Math.round(b.remaining_l / b.liters * 100) : 0;
-            const bfc = bpct > 60 ? 'high' : bpct > 25 ? 'mid' : bpct > 0 ? 'low' : 'empty';
-            html += `<div class="bol-tank">
-              <div class="bol-fill-bg ${bfc}" style="height:${bpct}%"></div>
-              <div class="bol-tank-inner">
-                <div class="bol-num">BOL ${b.bol}</div>
-                <div class="bol-liters">${fmtL(b.remaining_l)}<span style="font-size:0.6rem;color:var(--muted);font-weight:400"> L</span></div>
-                <div class="bol-rem">of ${fmtL(b.liters)} L · ${bpct}%</div>
-                <div class="bol-cost">${b.cost_per_l?.toFixed(4)} MXN/L</div>
+        // Drill: supplier -> invoice -> bols
+        for (const [supplier, invMap] of Object.entries(suppliers)) {
+          html += `<div style="margin-bottom:1rem">
+            <div style="font-size:0.72rem;font-weight:600;color:var(--muted2);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em">${supplier}</div>`;
+          for (const [inv_num, bols] of Object.entries(invMap)) {
+            html += `<div class="invoice-group">
+              <div class="invoice-label">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Invoice ${inv_num}
               </div>
-            </div>`;
+              <div class="bol-grid">`;
+            for (const b of bols) {
+              const bpct = b.liters > 0 ? Math.round(b.remaining_l / b.liters * 100) : 0;
+              const bfc  = bpct > 60 ? 'high' : bpct > 25 ? 'mid' : bpct > 0 ? 'low' : 'empty';
+              html += `<div class="bol-tank">
+                <div class="bol-fill-bg ${bfc}" style="height:${bpct}%"></div>
+                <div class="bol-tank-inner">
+                  <div class="bol-num">BOL ${b.bol}</div>
+                  <div class="bol-liters">${fmtL(b.remaining_l)}<span style="font-size:0.6rem;color:var(--muted);font-weight:400"> L</span></div>
+                  <div class="bol-rem">of ${fmtL(b.liters)} L · ${bpct}%</div>
+                  <div class="bol-cost">${b.cost_per_l?.toFixed(4)} MXN/L</div>
+                </div>
+              </div>`;
+            }
+            html += `</div></div>`;
           }
-          html += `</div></div>`;
+          html += `</div>`;
         }
 
         html += `</div></div>`;
