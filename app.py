@@ -15,8 +15,8 @@ except Exception as e:
     print(f"DB init warning: {e}")
 
 USERS = {
-    "ETP.MEX":    {"password": "ETP$mex2026", "role": "admin"},
-    "B2": {"password": "ETP$inv2026",   "role": "investor"},
+    "admin":    {"password": "ETP@admin2024", "role": "admin"},
+    "investor": {"password": "ETP@inv2024",   "role": "investor"},
 }
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
@@ -115,7 +115,7 @@ def api_data():
             "overall_summary": data["overall_summary"],
             "investment":     data.get("investment", {}),
         })
-    return jsonify(data)
+    return jsonify(data)  # admin gets everything
 
 @app.route('/process', methods=['POST'])
 def process():
@@ -134,12 +134,15 @@ def process():
         try:
             run_fifo(src, dst)
             result = extract(dst, src_path=src)
-            if len(result) == 5:
+            if len(result) == 6:
+                overall_summary, inventory, fifo_rows, meta, investment, bol_tab = result
+            elif len(result) == 5:
                 overall_summary, inventory, fifo_rows, meta, investment = result
+                bol_tab = {}
             else:
                 overall_summary, inventory, fifo_rows, meta = result
-                investment = {}
-            save_data(f.filename, overall_summary, inventory, fifo_rows, meta, investment)
+                investment = {}; bol_tab = {}
+            save_data(f.filename, overall_summary, inventory, fifo_rows, meta, investment, bol_tab)
         except Exception as e:
             return jsonify(error=str(e)), 500
         with open(dst, 'rb') as fh:
