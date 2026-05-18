@@ -1,6 +1,5 @@
 import os, json, psycopg2
 from psycopg2.extras import RealDictCursor
-from datetime import datetime
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
@@ -24,10 +23,10 @@ def init_db():
                     meta JSONB,
                     investment JSONB
                 );
-                DO $$ BEGIN
-                    ALTER TABLE dashboard_data ADD COLUMN IF NOT EXISTS investment JSONB;
-                EXCEPTION WHEN duplicate_column THEN NULL;
-                END $$;
+            """)
+            # Add investment column if missing (idempotent)
+            cur.execute("""
+                ALTER TABLE dashboard_data ADD COLUMN IF NOT EXISTS investment JSONB;
             """)
         conn.commit()
 
@@ -36,14 +35,16 @@ def save_data(filename, overall_summary, inventory, fifo_rows, meta, investment=
         with conn.cursor() as cur:
             cur.execute("DELETE FROM dashboard_data")
             cur.execute("""
-                INSERT INTO dashboard_data (filename, overall_summary, inventory, fifo_rows, meta)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO dashboard_data
+                    (filename, overall_summary, inventory, fifo_rows, meta, investment)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """, (
                 filename,
                 json.dumps(overall_summary),
                 json.dumps(inventory),
                 json.dumps(fifo_rows),
                 json.dumps(meta),
+                json.dumps(investment or {}),
             ))
         conn.commit()
 
@@ -55,11 +56,11 @@ def load_data():
             if not row:
                 return None
             return {
-                "uploaded_at": row["uploaded_at"].isoformat() if row["uploaded_at"] else None,
-                "filename": row["filename"],
+                "uploaded_at":     row["uploaded_at"].isoformat() if row["uploaded_at"] else None,
+                "filename":        row["filename"],
                 "overall_summary": row["overall_summary"],
-                "inventory": row["inventory"],
-                "fifo_rows": row["fifo_rows"],
-                "meta": row["meta"],
-                "investment": row.get("investment") or {},
+                "inventory":       row["inventory"],
+                "fifo_rows":       row["fifo_rows"],
+                "meta":            row["meta"],
+                "investment":      row.get("investment") or {},
             }
