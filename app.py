@@ -15,8 +15,9 @@ except Exception as e:
     print(f"DB init warning: {e}")
 
 USERS = {
-    "ETP.MEX":    {"password": "ETP$mex2026", "role": "admin"},
-    "B2": {"password": "ETP$inv2026",   "role": "investor"},
+    "ETP.MEX": {"password": "ETP$mex2026",  "role": "admin"},
+    "B2":      {"password": "ETP$inv2026",   "role": "investor"},
+    "ETPCO":   {"password": "invest$ETP",    "role": "potential_investor"},
 }
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
@@ -151,6 +152,7 @@ def process():
     return Response(data,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers={'Content-Disposition': f'attachment; filename=FIFO_Output.xlsx'})
+
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
