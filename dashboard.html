@@ -224,10 +224,17 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
       Purchase BOLs
     </button>
     {% endif %}
+    {% if role != 'potential_investor' %}
     <div class="nav-section">Reports</div>
     <button class="nav-item {% if role == 'investor' %}active{% endif %}" onclick="showTab('investor')" id="nav-investor">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Investor Summary
+    </button>
+    {% endif %}
+    <div class="nav-section">Company</div>
+    <button class="nav-item {% if role == 'potential_investor' %}active{% endif %}" onclick="showTab('company')" id="nav-company">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Company Profile
     </button>
   </nav>
   <div class="sidebar-footer">
@@ -294,6 +301,11 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
+    <!-- COMPANY PROFILE TAB -->
+    <div class="tab-panel" id="tab-company">
+      <div id="company-content"></div>
+    </div>
+
     <!-- INVESTOR SUMMARY TAB -->
     <div class="tab-panel {% if role == 'investor' %}active{% endif %}" id="tab-investor">
       <div id="investor-content">
@@ -310,7 +322,7 @@ let dashData = null;
 let fileSelected = null;
 
 // ── Tab switching ──────────────────────────────────────────────────────────────
-const TAB_TITLES = {overview:'Overview',inventory:'Inventory',fifo:'FIFO Log',bol:'Purchase BOLs',investor:'Investor Summary'};
+const TAB_TITLES = {overview:'Overview',inventory:'Inventory',fifo:'FIFO Log',bol:'Purchase BOLs',investor:'Investor Summary',company:'Company Profile'};
 function showTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -375,6 +387,7 @@ async function loadData() {
   renderOverview();
   if (ROLE === 'admin') { renderInventory(); renderFifo(); renderBol(); }
   renderInvestor();
+  renderCompany();
 }
 
 function updateUploadInfo() {
@@ -790,10 +803,10 @@ function renderBol() {
 
   // Cards
   let html = `<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
-    <div class="kpi blue"><div class="kpi-label">Total Invoiced</div><div class="kpi-value">${fu(s.total_invoiced)}</div><div class="kpi-sub">USD</div></div>
-    <div class="kpi green"><div class="kpi-label">Received Payments</div><div class="kpi-value">${fu(s.received_payments)}</div><div class="kpi-sub">USD collected</div></div>
-    <div class="kpi red"><div class="kpi-label">Open Balance</div><div class="kpi-value">${fu(s.open_balance)}</div><div class="kpi-sub">USD outstanding</div></div>
-    <div class="kpi orange"><div class="kpi-label">Not Invoiced Yet</div><div class="kpi-value">${fu(s.total_not_invoiced)}</div><div class="kpi-sub">USD pending invoice</div></div>
+    <div class="kpi blue"><div class="kpi-label">Total Invoiced</div><div class="kpi-value">${fu(s.total_invoiced)}</div><div class="kpi-sub">MXN</div></div>
+    <div class="kpi green"><div class="kpi-label">Received Payments</div><div class="kpi-value">${fu(s.received_payments)}</div><div class="kpi-sub">MXN collected</div></div>
+    <div class="kpi red"><div class="kpi-label">Open Balance</div><div class="kpi-value">${fu(s.open_balance)}</div><div class="kpi-sub">MXN outstanding</div></div>
+    <div class="kpi orange"><div class="kpi-label">Not Invoiced Yet</div><div class="kpi-value">${fu(s.total_not_invoiced)}</div><div class="kpi-sub">MXN pending invoice</div></div>
   </div>`;
 
   // Table
@@ -844,9 +857,217 @@ function renderBol() {
   el.innerHTML = html;
 }
 
+// ── COMPANY PROFILE ───────────────────────────────────────────────────────────
+function renderCompany() {
+  const el = document.getElementById('company-content');
+  el.innerHTML = `
+  <style>
+    .cp-section { margin-bottom: 2rem; }
+    .cp-label { font-size:0.63rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);padding-bottom:0.5rem;border-bottom:1px solid var(--border);margin-bottom:1.1rem; }
+    .cp-p { font-size:0.875rem;color:var(--muted);line-height:1.75;margin-bottom:0.65rem; }
+    .cp-p strong { color:var(--text);font-weight:500; }
+    .cp-metric-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:1rem; }
+    .cp-metric { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem; }
+    .cp-metric-val { font-size:1.45rem;font-weight:700;color:var(--text);letter-spacing:-0.02em; }
+    .cp-metric-lbl { font-size:0.68rem;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em; }
+    .cp-metric-sub { font-size:0.65rem;color:var(--muted2);margin-top:2px; }
+    .cp-permit-entity { font-size:0.7rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;margin-top:1rem; }
+    .cp-permit-entity:first-child { margin-top:0; }
+    .cp-table { width:100%;border-collapse:collapse;font-size:0.78rem; }
+    .cp-table th { font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border); }
+    .cp-table td { padding:7px 8px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top; }
+    .cp-table td:first-child { color:var(--text);font-weight:500; }
+    .cp-table tr:last-child td { border-bottom:none; }
+    .cp-note { font-size:0.7rem;color:var(--muted2);font-style:italic;margin-top:0.5rem; }
+    .cp-two { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+    .cp-card { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem; }
+    .cp-card-title { font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--accent);margin-bottom:0.5rem; }
+    .cp-card p { font-size:0.78rem;color:var(--muted);line-height:1.7;margin-bottom:0.5rem; }
+    .cp-card p:last-child { margin-bottom:0; }
+    .cp-card p strong { color:var(--text);font-weight:500; }
+    .cp-four { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+    .cp-strength { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem; }
+    .cp-strength-title { font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:0.35rem;display:flex;align-items:center;gap:0.45rem; }
+    .cp-dot { width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0; }
+    .cp-strength p { font-size:0.76rem;color:var(--muted);line-height:1.7;margin:0; }
+    .cp-leaders { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+    .cp-leader { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:0.8rem; }
+    .cp-avatar { width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:var(--accent);flex-shrink:0; }
+    .cp-leader-name { font-size:0.85rem;font-weight:600;color:var(--text); }
+    .cp-leader-role { font-size:0.7rem;color:var(--muted);margin-top:2px; }
+    .cp-leader-bio  { font-size:0.72rem;color:var(--muted2);margin-top:5px;font-style:italic; }
+    .cp-offices { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+    .cp-office { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1.1rem; }
+    .cp-office-flag { font-size:1rem;margin-bottom:3px; }
+    .cp-office-city { font-size:0.85rem;font-weight:600;color:var(--text); }
+    .cp-office-addr { font-size:0.72rem;color:var(--muted);margin-top:2px; }
+    .cp-footer { margin-top:2rem;padding-top:1.2rem;border-top:1px solid var(--border);font-size:0.67rem;color:var(--muted2);font-style:italic;text-align:center; }
+    .cp-path-desc { display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;margin-top:1.1rem; }
+    .cp-path-card { background:var(--surface);border-radius:8px;padding:0.65rem 0.85rem; }
+  </style>
+
+  <!-- Overview -->
+  <div class="cp-section">
+    <div class="cp-label">Overview</div>
+    <p class="cp-p">Elevar Trading Partners is a <strong>fully licensed refined fuels trading company</strong> operating across the U.S.–Mexico energy corridor. With active import permits from SENER and commercialization permits from the CRE/CNE, ETP occupies a rare position in a market where <strong>regulatory access has become the primary barrier to entry</strong>.</p>
+    <p class="cp-p">The company sources product from U.S. refiners and terminals, importing directly into Mexico or acquiring locally, guided by real-time pricing and logistics analysis to optimize every transaction.</p>
+  </div>
+
+  <!-- Metrics -->
+  <div class="cp-section">
+    <div class="cp-label">Key Metrics</div>
+    <div class="cp-metric-grid">
+      <div class="cp-metric"><div class="cp-metric-val">$120M</div><div class="cp-metric-lbl">Historical Sales</div><div class="cp-metric-sub">2024 – 2025</div></div>
+      <div class="cp-metric"><div class="cp-metric-val">~40M</div><div class="cp-metric-lbl">Gallons Moved</div><div class="cp-metric-sub">estimated, 2024 – 2025</div></div>
+      <div class="cp-metric"><div class="cp-metric-val">6.1B</div><div class="cp-metric-lbl">Gal Addressable Market</div><div class="cp-metric-sub">Mexico total annual diesel</div></div>
+    </div>
+  </div>
+
+  <!-- Permits -->
+  <div class="cp-section">
+    <div class="cp-label">Regulatory Permits</div>
+    <div class="cp-permit-entity">SENER Import Permits — Petrotal SA de CV</div>
+    <table class="cp-table">
+      <thead><tr><th>Product</th><th>Permit Number</th><th>Volume</th><th>Approx. Gallons</th></tr></thead>
+      <tbody>
+        <tr><td>Diesel</td><td>1701C125001774</td><td>84,000,000 L</td><td>~22.2M gal</td></tr>
+        <tr><td>Regular Gasoline</td><td>1701C125001773</td><td>300,000,000 L</td><td>~79.3M gal</td></tr>
+        <tr><td>Premium Gasoline</td><td>1701C125001772</td><td>24,000,000 L</td><td>~6.3M gal</td></tr>
+      </tbody>
+    </table>
+    <div class="cp-permit-entity" style="margin-top:1rem">SENER Import Permits — FHR Mexico Energia S. de R.L. de C.V.</div>
+    <p class="cp-note">Covers diesel, regular gasoline, and premium gasoline across all product types. No contractual volume cap.</p>
+    <div class="cp-permit-entity" style="margin-top:1rem">CRE / CNE Operating Permits</div>
+    <table class="cp-table">
+      <thead><tr><th>Entity</th><th>Permit Number</th><th>Type</th><th>Authorization</th></tr></thead>
+      <tbody>
+        <tr><td>Importadora Apollo del Norte SA de CV</td><td>H/26101/COM/2024</td><td>Commercialization</td><td>Activity-based</td></tr>
+        <tr><td>Gasolinas y Rendimiento SA de CV</td><td>H/23478/COM/2020</td><td>Commercialization</td><td>Activity-based</td></tr>
+        <tr><td>Gasolinas y Rendimiento SA de CV</td><td>PL/23627/TRA/OM/2020</td><td>Transportation</td><td>Activity-based</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Business Model -->
+  <div class="cp-section">
+    <div class="cp-label">Business Model</div>
+    <div class="cp-two">
+      <div class="cp-card">
+        <div class="cp-card-title">Track 1 — U.S. to Mexico Import</div>
+        <p>ETP sources refined fuels from U.S. refiners and terminals — including <strong>Flint Hills Resources</strong> (Delmita, El Paso) and <strong>Rockport</strong> (Corpus Christi, Port Aransas) — and imports into Mexico through two channels.</p>
+        <p><strong>By truck:</strong> product crosses border points and is stored in bulk facilities in the Matamoros region.</p>
+        <p><strong>By rail:</strong> product ships to terminals in the Mexican interior. Petrotal's SENER permits cover all product types across both channels.</p>
+      </div>
+      <div class="cp-card">
+        <div class="cp-card-title">Track 2 — Domestic Mexico Commercialization</div>
+        <p>When domestic pricing or logistics favor it, ETP purchases fuel already inside Mexico from <strong>PEMEX or other permitted sources</strong>, and distributes it to end customers under the CRE/CNE permits held by <strong>Apollo</strong> and <strong>Gasolinas y Rendimiento</strong>.</p>
+        <p>The choice between import and domestic sourcing is driven by a continuous pricing and logistics analysis, optimizing returns on each transaction.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delivery Paths -->
+  <div class="cp-section">
+    <div class="cp-label">Delivery Paths</div>
+    <div class="cp-card" style="padding:1.2rem">
+      <svg viewBox="0 0 880 310" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:880px;display:block;margin:0 auto">
+        <defs>
+          <marker id="cp-arb" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#4a7cdc"/></marker>
+          <marker id="cp-arg" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#3fb950"/></marker>
+          <marker id="cp-ary" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#d29922"/></marker>
+        </defs>
+        <text x="80"  y="16" text-anchor="middle" font-size="8.5" fill="#6e7681" font-family="Inter,sans-serif">SOURCE</text>
+        <text x="285" y="16" text-anchor="middle" font-size="8.5" fill="#6e7681" font-family="Inter,sans-serif">RACK / TERMINAL</text>
+        <text x="490" y="16" text-anchor="middle" font-size="8.5" fill="#6e7681" font-family="Inter,sans-serif">ETP BULK PLANT</text>
+        <text x="720" y="16" text-anchor="middle" font-size="8.5" fill="#6e7681" font-family="Inter,sans-serif">CUSTOMER</text>
+        <line x1="183" y1="22" x2="183" y2="302" stroke="#1c2128" stroke-width="1"/>
+        <line x1="388" y1="22" x2="388" y2="302" stroke="#1c2128" stroke-width="1"/>
+        <line x1="593" y1="22" x2="593" y2="302" stroke="#1c2128" stroke-width="1"/>
+        <rect x="12"  y="130" width="138" height="38" rx="6" fill="#161b22" stroke="#4a7cdc" stroke-width="1.5"/>
+        <text x="81"  y="153" text-anchor="middle" font-size="10" fill="#e6edf3" font-family="Inter,sans-serif" font-weight="600">U.S. Refiner / Terminal</text>
+        <rect x="198" y="130" width="152" height="38" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+        <text x="274" y="153" text-anchor="middle" font-size="10" fill="#e6edf3" font-family="Inter,sans-serif" font-weight="600">Rack / Border Terminal</text>
+        <rect x="403" y="130" width="152" height="38" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+        <text x="479" y="147" text-anchor="middle" font-size="10" fill="#e6edf3" font-family="Inter,sans-serif" font-weight="600">ETP Bulk Plant</text>
+        <text x="479" y="163" text-anchor="middle" font-size="8" fill="#6e7681" font-family="Inter,sans-serif">Inventory Position</text>
+        <rect x="608" y="38"  width="144" height="34" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+        <text x="680" y="54"  text-anchor="middle" font-size="10" fill="#e6edf3" font-family="Inter,sans-serif" font-weight="500">Customer</text>
+        <text x="680" y="67"  text-anchor="middle" font-size="8"  fill="#8b949e" font-family="Inter,sans-serif">picks up at rack</text>
+        <rect x="608" y="100" width="144" height="34" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+        <text x="680" y="116" text-anchor="middle" font-size="10" fill="#e6edf3" font-family="Inter,sans-serif" font-weight="500">Customer</text>
+        <text x="680" y="129" text-anchor="middle" font-size="8"  fill="#8b949e" font-family="Inter,sans-serif">direct delivery by ETP</text>
+        <rect x="608" y="168" width="144" height="34" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+        <text x="680" y="184" text-anchor="middle" font-size="10" fill="#e6edf3" font-family="Inter,sans-serif" font-weight="500">Customer</text>
+        <text x="680" y="197" text-anchor="middle" font-size="8"  fill="#8b949e" font-family="Inter,sans-serif">picks up at plant</text>
+        <rect x="608" y="220" width="144" height="34" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+        <text x="680" y="236" text-anchor="middle" font-size="10" fill="#e6edf3" font-family="Inter,sans-serif" font-weight="500">Customer</text>
+        <text x="680" y="249" text-anchor="middle" font-size="8"  fill="#8b949e" font-family="Inter,sans-serif">last-mile delivery</text>
+        <rect x="608" y="272" width="144" height="34" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+        <text x="680" y="288" text-anchor="middle" font-size="10" fill="#e6edf3" font-family="Inter,sans-serif" font-weight="500">Customer</text>
+        <text x="680" y="301" text-anchor="middle" font-size="8"  fill="#8b949e" font-family="Inter,sans-serif">picks up at rail terminal</text>
+        <line x1="150" y1="149" x2="196" y2="149" stroke="#4a7cdc" stroke-width="1.5" marker-end="url(#cp-arb)"/>
+        <path d="M350,142 C420,142 420,55 606,55" stroke="#4a7cdc" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#cp-arb)"/>
+        <rect x="378" y="86" width="16" height="16" rx="3" fill="#0d1117" stroke="#4a7cdc" stroke-width="1.2"/>
+        <text x="386" y="98" text-anchor="middle" font-size="8" fill="#4a7cdc" font-family="Inter,sans-serif" font-weight="700">A</text>
+        <line x1="350" y1="149" x2="606" y2="117" stroke="#4a7cdc" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#cp-arb)"/>
+        <rect x="458" y="122" width="16" height="16" rx="3" fill="#0d1117" stroke="#4a7cdc" stroke-width="1.2"/>
+        <text x="466" y="134" text-anchor="middle" font-size="8" fill="#4a7cdc" font-family="Inter,sans-serif" font-weight="700">B</text>
+        <line x1="350" y1="149" x2="401" y2="149" stroke="#4a7cdc" stroke-width="1.5" marker-end="url(#cp-arb)"/>
+        <line x1="555" y1="149" x2="606" y2="185" stroke="#3fb950" stroke-width="1.5" marker-end="url(#cp-arg)"/>
+        <rect x="570" y="153" width="16" height="16" rx="3" fill="#0d1117" stroke="#3fb950" stroke-width="1.2"/>
+        <text x="578" y="165" text-anchor="middle" font-size="8" fill="#3fb950" font-family="Inter,sans-serif" font-weight="700">C</text>
+        <path d="M555,155 C582,155 582,237 606,237" stroke="#3fb950" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#cp-arg)"/>
+        <path d="M150,162 C150,289 605,289 606,289" stroke="#d29922" stroke-width="1.5" fill="none" stroke-dasharray="6,3" marker-end="url(#cp-ary)"/>
+        <rect x="310" y="272" width="16" height="16" rx="3" fill="#0d1117" stroke="#d29922" stroke-width="1.2"/>
+        <text x="318" y="284" text-anchor="middle" font-size="8" fill="#d29922" font-family="Inter,sans-serif" font-weight="700">D</text>
+        <text x="232" y="267" text-anchor="middle" font-size="8" fill="#d29922" font-family="Inter,sans-serif">Rail — import only</text>
+      </svg>
+      <div class="cp-path-desc">
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#4a7cdc;letter-spacing:0.08em;margin-bottom:3px">PATH A — At-Rack Transaction</div><div style="font-size:0.73rem;color:var(--muted)">Customer picks up at the rack. No ETP logistics involved.</div></div>
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#4a7cdc;letter-spacing:0.08em;margin-bottom:3px">PATH B — ETP-Coordinated Delivery</div><div style="font-size:0.73rem;color:var(--muted)">ETP picks up at the rack and delivers directly to the customer.</div></div>
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#3fb950;letter-spacing:0.08em;margin-bottom:3px">PATH C — Inventory Position + Last-Mile</div><div style="font-size:0.73rem;color:var(--muted)">ETP moves product to a bulk plant. Customer picks up at the plant, or ETP dispatches last-mile delivery via third-party carrier.</div></div>
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#d29922;letter-spacing:0.08em;margin-bottom:3px">PATH D — Rail Paper Trade (Import Only)</div><div style="font-size:0.73rem;color:var(--muted)">Product ships by railcar to a Mexican rail terminal. ETP coordinates full rail logistics. Customer picks up at the terminal.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Strengths -->
+  <div class="cp-section">
+    <div class="cp-label">Key Strengths</div>
+    <div class="cp-four">
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Rare Regulatory Access</div><p>ETP holds a permit stack that took years and significant legal effort to assemble. SENER import permits, CRE commercialization licenses, and CNE transportation authorizations are not interchangeable — each requires separate application, compliance history, and ongoing reporting. New entrants cannot replicate this position quickly, which means ETP's competitive advantage compounds over time rather than eroding with it.</p></div>
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Full Vertical Permit Stack</div><p>Most operators in this corridor hold one or two permits and partner out the rest. ETP controls the full chain — import authorization, domestic commercialization, and transportation — across multiple legal entities. This eliminates dependence on third-party permit holders, gives ETP full pricing flexibility, and allows the company to move quickly when market conditions shift.</p></div>
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Supply-Side Flexibility</div><p>ETP is not tied to a single source, product, or entry point. The company can source from U.S. refiners, trade at the rack, import by truck or rail, or purchase domestically inside Mexico. Each transaction is evaluated against current pricing and logistics costs. This optionality allows ETP to capture margin across different market conditions rather than being locked into one operational mode.</p></div>
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Compliant by Design</div><p>ETP was built around the regulatory framework rather than around it. Every entity in the structure holds the permit relevant to its activity. Every product movement is covered by the appropriate authorization. In a market where regulatory enforcement is increasing and informal operators are being squeezed out, being fully compliant is itself a source of durable competitive advantage.</p></div>
+    </div>
+  </div>
+
+  <!-- Leadership -->
+  <div class="cp-section">
+    <div class="cp-label">Leadership</div>
+    <div class="cp-leaders">
+      <div class="cp-leader"><div class="cp-avatar">JD</div><div><div class="cp-leader-name">Jeremy Dickens</div><div class="cp-leader-role">Principal</div><div class="cp-leader-bio">Bio to be added.</div></div></div>
+      <div class="cp-leader"><div class="cp-avatar">PG</div><div><div class="cp-leader-name">Pablo Gonzalez</div><div class="cp-leader-role">Principal</div><div class="cp-leader-bio">Bio to be added.</div></div></div>
+    </div>
+  </div>
+
+  <!-- Offices -->
+  <div class="cp-section">
+    <div class="cp-label">Offices</div>
+    <div class="cp-offices">
+      <div class="cp-office"><div class="cp-office-flag">🇺🇸</div><div class="cp-office-city">The Woodlands, TX</div><div class="cp-office-addr">United States</div></div>
+      <div class="cp-office"><div class="cp-office-flag">🇲🇽</div><div class="cp-office-city">Mexico City, CDMX</div><div class="cp-office-addr">Av. Paseo de la Reforma 333, Suite 703</div></div>
+    </div>
+  </div>
+
+  <div class="cp-footer">This document is confidential and prepared for informational purposes only. It does not constitute an offer or solicitation. All information sourced from ETP operational records.</div>
+  `;
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────────
 loadData();
-if (ROLE === 'investor') showTab('investor');
+if (ROLE === 'potential_investor') showTab('company');
+else if (ROLE === 'investor') showTab('investor');
 </script>
 </body>
 </html>
