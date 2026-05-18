@@ -133,7 +133,12 @@ def process():
         f.save(src)
         try:
             run_fifo(src, dst)
-            overall_summary, inventory, fifo_rows, meta, investment = extract(dst)
+            result = extract(dst)
+            if len(result) == 5:
+                overall_summary, inventory, fifo_rows, meta, investment = result
+            else:
+                overall_summary, inventory, fifo_rows, meta = result
+                investment = {}
             save_data(f.filename, overall_summary, inventory, fifo_rows, meta, investment)
         except Exception as e:
             return jsonify(error=str(e)), 500
