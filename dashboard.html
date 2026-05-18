@@ -648,7 +648,7 @@ function renderInvestor() {
   const fmxnd = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—';
   const fpct = v => v != null ? (Number(v)*100).toFixed(2)+'%' : '—';
   const fnum = (v,d=2) => v != null ? Number(v).toFixed(d) : '—';
-  const date = inv.as_of ? new Date(inv.as_of).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : '—';
+  const date = inv.as_of || '—';
 
   // ── Header ──
   let html = `
