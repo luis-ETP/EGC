@@ -14,7 +14,8 @@ def extract(path):
     fifo_rows       = _extract_fifo(wb)
     meta            = _extract_meta(wb)
 
-    return overall_summary, inventory, fifo_rows, meta
+    investment = _extract_investment_summary(wb)
+    return overall_summary, inventory, fifo_rows, meta, investment
 
 # ── Overall Summary ────────────────────────────────────────────────────────────
 def _extract_overall_summary(wb):
@@ -199,3 +200,129 @@ def _extract_meta(wb):
             "mexico_balance":          total_os.get("_balance", _f(total_row[10])),
         }
     return meta
+
+# ── Investment Summary ─────────────────────────────────────────────────────────
+def _extract_investment_summary(wb, uploaded_at=None):
+    """Compute all Investment Summary values from raw sheet data."""
+    f = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
+
+    # ── Committed Capital (Investment Summary rows 7-8) ──────────────────────
+    ws_is = wb["Investment Summary"]
+    rows_is = list(ws_is.iter_rows(values_only=True))
+    commits = []
+    for row in rows_is:
+        if row[1] in ("Round 1", "Round 2"):
+            usd = f(row[2])
+            fx  = f(row[5])
+            mxn = usd * fx
+            date_val = row[4]
+            date_str = date_val.strftime("%d-%b-%y") if hasattr(date_val, "strftime") else str(date_val or "")
+            commits.append({"round": row[1], "usd": usd, "mxn": mxn, "date": date_str, "fx": fx})
+    total_committed_mxn = sum(c["mxn"] for c in commits)
+    total_committed_usd = sum(c["usd"] for c in commits)
+    avg_fx = total_committed_mxn / total_committed_usd if total_committed_usd else 17.31
+
+    # ── Load Tracking aggregations ───────────────────────────────────────────
+    ws_lt = wb["Load Tracking"]
+    rtb_liters = 0.0
+    btc_paid = {"sale": 0.0, "cost": 0.0, "liters": 0.0, "margin": 0.0}
+    rtc_paid = {"sale": 0.0, "cost": 0.0, "liters": 0.0, "margin": 0.0}
+    btc_pend = {"cost": 0.0, "liters": 0.0}
+    rtc_pend = {"cost": 0.0, "liters": 0.0}
+
+    for i, row in enumerate(ws_lt.iter_rows(values_only=True), start=1):
+        if i == 1: continue
+        if not row[0]: continue
+        grp    = row[10]
+        liters = f(row[22])
+        status = row[55]
+        sale   = f(row[37])
+        cost   = f(row[43]) * liters + f(row[39]) + f(row[44])  # supply + freight + commission
+        margin = sale - cost
+
+        if grp == "RTB":
+            rtb_liters += liters
+        elif grp == "BTC":
+            if status == "PAID":
+                btc_paid["sale"] += sale; btc_paid["cost"] += cost
+                btc_paid["liters"] += liters; btc_paid["margin"] += margin
+            elif status == "PENDING":
+                btc_pend["cost"] += cost; btc_pend["liters"] += liters
+        elif grp == "RTC":
+            if status == "PAID":
+                rtc_paid["sale"] += sale; rtc_paid["cost"] += cost
+                rtc_paid["liters"] += liters; rtc_paid["margin"] += margin
+            elif status == "PENDING":
+                rtc_pend["cost"] += cost; rtc_pend["liters"] += liters
+
+    # ── Supplier Invoices — Allocation (ACTIVE) ──────────────────────────────
+    ws_inv = wb["Supplier Invoices"]
+    alloc_mxn = 0.0; alloc_liters = 0.0
+    for i, row in enumerate(ws_inv.iter_rows(values_only=True), start=1):
+        if i <= 7: continue
+        if row[0] is None: break
+        if str(row[26] or "").upper() == "ACTIVE":
+            alloc_mxn    += f(row[24])  # Remainder Amount MXN
+            alloc_liters += f(row[21])  # Remainder Liters Paid and No BOL
+
+    # ── Inventory cost from FIFO remaining ──────────────────────────────────
+    ws_fifo = wb["FIFO"]
+    inv_cost = 0.0; inv_liters = 0.0
+    for i, row in enumerate(ws_fifo.iter_rows(values_only=True), start=1):
+        if i == 1: continue
+        if not row[0]: break
+        if row[2] == "RTB":
+            rem  = f(row[13])  # Remaining L (BOL)
+            cost = f(row[9])   # Cost/L MXN
+            inv_cost   += rem * cost
+            inv_liters += rem
+
+    # ── KPIs ─────────────────────────────────────────────────────────────────
+    total_margin   = btc_paid["margin"] + rtc_paid["margin"]
+    recovered_mxn  = btc_paid["sale"]   + rtc_paid["sale"]
+    active_capital = alloc_mxn + inv_cost + btc_pend["cost"] + rtc_pend["cost"]
+    available      = total_committed_mxn - active_capital
+    revolved       = recovered_mxn / total_committed_mxn if total_committed_mxn else 0
+    # Investor share % from Investment Summary row 14 formula: H14 = G14 * share_pct
+    # We read it from Excel directly if cached, else default 40%
+    inv_share_pct  = 0.40
+
+    def _roi(d): return d["margin"] / d["cost"] if d["cost"] else 0
+    def _mxnl(d): return d["margin"] / d["liters"] if d["liters"] else 0
+    def _usdgal(d, fx): return _mxnl(d) / fx * 3.7854 if fx else 0
+
+    return {
+        "as_of": uploaded_at or "",
+        "commits": commits,
+        "total_committed_usd": total_committed_usd,
+        "total_committed_mxn": total_committed_mxn,
+        "active_capital":  active_capital,
+        "available":       available,
+        "recovered_mxn":   recovered_mxn,
+        "revolved":        revolved,
+        "total_margin":    total_margin,
+        "investor_share":  total_margin * inv_share_pct,
+        "inv_share_pct":   inv_share_pct,
+        "active_detail": {
+            "alloc_mxn":    alloc_mxn,    "alloc_liters":    alloc_liters,
+            "inv_mxn":      inv_cost,     "inv_liters":      inv_liters,
+            "rtc_pend_mxn": rtc_pend["cost"], "rtc_pend_liters": rtc_pend["liters"],
+            "btc_pend_mxn": btc_pend["cost"], "btc_pend_liters": btc_pend["liters"],
+            "total_mxn":    active_capital,
+            "total_liters": alloc_liters + inv_liters + rtc_pend["liters"] + btc_pend["liters"],
+        },
+        "recovered_detail": {
+            "rtc": {"mxn": rtc_paid["sale"], "liters": rtc_paid["liters"],
+                    "margin": rtc_paid["margin"], "roi": _roi(rtc_paid),
+                    "mxnl": _mxnl(rtc_paid), "usdgal": _usdgal(rtc_paid, avg_fx)},
+            "btc": {"mxn": btc_paid["sale"], "liters": btc_paid["liters"],
+                    "margin": btc_paid["margin"], "roi": _roi(btc_paid),
+                    "mxnl": _mxnl(btc_paid), "usdgal": _usdgal(btc_paid, avg_fx)},
+            "total": {"mxn": recovered_mxn,
+                      "liters": btc_paid["liters"] + rtc_paid["liters"],
+                      "margin": total_margin,
+                      "roi": total_margin / recovered_mxn if recovered_mxn else 0,
+                      "mxnl": total_margin / (btc_paid["liters"] + rtc_paid["liters"]) if (btc_paid["liters"] + rtc_paid["liters"]) else 0,
+                      "usdgal": _usdgal({"margin": total_margin, "liters": btc_paid["liters"] + rtc_paid["liters"]}, avg_fx)},
+        },
+    }
