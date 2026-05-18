@@ -641,7 +641,7 @@ function renderFifo() {
 function renderInvestor() {
   const inv = dashData.investment || {};
   const el = document.getElementById('investor-content');
-  if (!inv.commits) { el.innerHTML = '<div class="empty-state">No investment data.</div>'; return; }
+  if (!inv || !inv.commits || !inv.commits.length) { el.innerHTML = '<div class="empty-state">No investment data yet — upload a file to populate this section.</div>'; return; }
 
   const fmxn = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—';
   const fusd = v => v != null ? '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—';
