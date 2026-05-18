@@ -748,7 +748,7 @@ function renderInvestor() {
     const gc = d.margin>0 ? 'color:var(--green)' : '';
     html += `<tr style="${style}">
       <td style="color:${isTot?'inherit':'var(--muted)'}">${label}</td>
-      <td style="text-align:right;${gc}">${d.mxn>0?'$'+fmxn(d.mxn):'—'}</td>
+      <td style="text-align:right;${gc}">${d.tc>0?'$'+fmxn(d.tc):'—'}</td>
       <td style="text-align:right;color:var(--muted)">${d.liters>0?fmxn(d.liters):'—'}</td>
       <td style="text-align:right;${gc}">${d.margin>0?'$'+fmxn(d.margin):'—'}</td>
       <td style="text-align:right;${gc}">${d.roi>0?fpct(d.roi):'—'}</td>
