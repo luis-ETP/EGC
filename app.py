@@ -15,8 +15,8 @@ except Exception as e:
     print(f"DB init warning: {e}")
 
 USERS = {
-    "admin":    {"password": "ETP@admin2024", "role": "admin"},
-    "investor": {"password": "ETP@inv2024",   "role": "investor"},
+    "ETP.MEX":    {"password": "ETP$mex2026", "role": "admin"},
+    "B2": {"password": "ETP$inv2026",   "role": "investor"},
 }
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
