@@ -22,7 +22,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--surface);
   border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100}
 .sidebar-logo{padding:1.25rem 1.25rem 1rem;border-bottom:1px solid var(--border)}
-.sidebar-logo img{height:32px}
+.sidebar-logo img{height:36px;width:auto}
 .sidebar-nav{flex:1;padding:0.75rem 0.75rem;display:flex;flex-direction:column;gap:2px}
 .nav-item{display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.75rem;border-radius:7px;
   font-size:0.82rem;font-weight:500;color:var(--muted);cursor:pointer;transition:all 0.15s;border:none;
@@ -202,7 +202,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
 <!-- Sidebar -->
 <div class="sidebar">
   <div class="sidebar-logo">
-    <img src="data:image/png;base64,{{ logo }}" alt="ETPMEX">
+    <img src="data:image/svg+xml;base64,{{ logo }}" alt="ETP">
   </div>
   <nav class="sidebar-nav">
     {% if role == 'admin' %}
