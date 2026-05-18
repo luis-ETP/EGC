@@ -21,23 +21,27 @@ def init_db():
                     inventory JSONB,
                     fifo_rows JSONB,
                     meta JSONB,
-                    investment JSONB
+                    investment JSONB,
+                    bol_tab JSONB
                 );
             """)
             # Add investment column if missing (idempotent)
             cur.execute("""
                 ALTER TABLE dashboard_data ADD COLUMN IF NOT EXISTS investment JSONB;
             """)
+            cur.execute("""
+                ALTER TABLE dashboard_data ADD COLUMN IF NOT EXISTS bol_tab JSONB;
+            """)
         conn.commit()
 
-def save_data(filename, overall_summary, inventory, fifo_rows, meta, investment=None):
+def save_data(filename, overall_summary, inventory, fifo_rows, meta, investment=None, bol_tab=None):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM dashboard_data")
             cur.execute("""
                 INSERT INTO dashboard_data
-                    (filename, overall_summary, inventory, fifo_rows, meta, investment)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                    (filename, overall_summary, inventory, fifo_rows, meta, investment, bol_tab)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (
                 filename,
                 json.dumps(overall_summary),
@@ -45,6 +49,7 @@ def save_data(filename, overall_summary, inventory, fifo_rows, meta, investment=
                 json.dumps(fifo_rows),
                 json.dumps(meta),
                 json.dumps(investment or {}),
+                json.dumps(bol_tab or {}),
             ))
         conn.commit()
 
@@ -63,4 +68,5 @@ def load_data():
                 "fifo_rows":       row["fifo_rows"],
                 "meta":            row["meta"],
                 "investment":      row.get("investment") or {},
+                "bol_tab":         row.get("bol_tab") or {},
             }
