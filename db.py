@@ -21,12 +21,14 @@ def init_db():
                     overall_summary JSONB,
                     inventory JSONB,
                     fifo_rows JSONB,
-                    meta JSONB
+                    meta JSONB,
+                    investment JSONB
                 );
+                ALTER TABLE dashboard_data ADD COLUMN IF NOT EXISTS investment JSONB;
             """)
         conn.commit()
 
-def save_data(filename, overall_summary, inventory, fifo_rows, meta):
+def save_data(filename, overall_summary, inventory, fifo_rows, meta, investment=None):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM dashboard_data")
@@ -56,4 +58,5 @@ def load_data():
                 "inventory": row["inventory"],
                 "fifo_rows": row["fifo_rows"],
                 "meta": row["meta"],
+                "investment": row.get("investment") or {},
             }
