@@ -993,51 +993,6 @@ function renderBol() {
 function renderCompany() {
   const el = document.getElementById('company-content');
   el.innerHTML = `
-  <style>
-    .cp-section { margin-bottom: 2.75rem; }
-    .cp-label { font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text);padding-bottom:0.6rem;border-bottom:2px solid var(--border2);margin-bottom:1.4rem; }
-    .cp-p { font-size:0.875rem;color:var(--muted);line-height:1.75;margin-bottom:0.65rem; }
-    .cp-p strong { color:var(--text);font-weight:500; }
-    .cp-metric-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:1rem; }
-    .cp-metric { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem; }
-    .cp-metric-val { font-size:1.45rem;font-weight:700;color:var(--text);letter-spacing:-0.02em; }
-    .cp-metric-lbl { font-size:0.68rem;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em; }
-    .cp-metric-sub { font-size:0.65rem;color:var(--muted2);margin-top:2px; }
-    .cp-permit-entity { font-size:0.7rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;margin-top:1rem; }
-    .cp-permit-entity:first-child { margin-top:0; }
-    .cp-table { width:100%;border-collapse:collapse;font-size:0.78rem; }
-    .cp-table th { font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);text-align:left;padding:6px 12px;border-bottom:1px solid var(--border); }
-    .cp-table td { padding:8px 12px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:middle;text-align:left; }
-    .cp-table td:first-child { color:var(--text);font-weight:500; }
-    .cp-table tr:last-child td { border-bottom:none; }
-    .cp-note { font-size:0.7rem;color:var(--muted2);font-style:italic;margin-top:0.5rem; }
-    .cp-two { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
-    .cp-card { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem; }
-    .cp-card-title { font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--accent);margin-bottom:0.5rem; }
-    .cp-card p { font-size:0.78rem;color:var(--muted);line-height:1.7;margin-bottom:0.5rem; }
-    .cp-card p:last-child { margin-bottom:0; }
-    .cp-card p strong { color:var(--text);font-weight:500; }
-    .cp-four { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
-    .cp-strength { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem; }
-    .cp-strength-title { font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:0.35rem;display:flex;align-items:center;gap:0.45rem; }
-    .cp-dot { width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0; }
-    .cp-strength p { font-size:0.76rem;color:var(--muted);line-height:1.7;margin:0; }
-    .cp-leaders { display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem; }
-    .cp-leader { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:0.8rem; }
-    .cp-avatar { width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:var(--accent);flex-shrink:0; }
-    .cp-leader-name { font-size:0.85rem;font-weight:600;color:var(--text); }
-    .cp-leader-role { font-size:0.7rem;color:var(--muted);margin-top:2px; }
-    .cp-leader-bio  { font-size:0.72rem;color:var(--muted2);margin-top:5px;font-style:italic; }
-    .cp-offices { display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem; }
-    .cp-office { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1.1rem; }
-    .cp-office-flag { font-size:1rem;margin-bottom:3px; }
-    .cp-office-city { font-size:0.85rem;font-weight:600;color:var(--text); }
-    .cp-office-addr { font-size:0.72rem;color:var(--muted);margin-top:2px; }
-    .cp-footer { margin-top:2rem;padding-top:1.2rem;border-top:1px solid var(--border);font-size:0.67rem;color:var(--muted2);font-style:italic;text-align:center; }
-    .cp-path-desc { display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;margin-top:1.1rem; }
-    .cp-path-card { background:var(--surface);border-radius:8px;padding:0.65rem 0.85rem; }
-  </style>
-
   <!-- Overview -->
   <div class="cp-section">
     <div class="cp-label">Overview</div>
@@ -1051,6 +1006,166 @@ function renderCompany() {
       <div class="cp-metric"><div class="cp-metric-val">$240M</div><div class="cp-metric-lbl">Historical Sales</div><div class="cp-metric-sub">2024 – 2025</div></div>
       <div class="cp-metric"><div class="cp-metric-val">~80M</div><div class="cp-metric-lbl">Gallons Moved</div><div class="cp-metric-sub">estimated, 2024 – 2025</div></div>
       <div class="cp-metric"><div class="cp-metric-val">6.1B</div><div class="cp-metric-lbl">Gal Addressable Market</div><div class="cp-metric-sub">Mexico total annual diesel</div></div>
+    </div>
+  </div>
+
+  <!-- Business Model -->
+  <div class="cp-section">
+    <div class="cp-label">Business Model</div>
+    <div class="cp-two">
+      <div class="cp-card">
+        <div class="cp-card-title">Track 1 · U.S. to Mexico Import (via Petrotal)</div>
+        <p style="margin-bottom:0.4rem">EGC sources refined fuels from any U.S. supplier at any U.S. rack and imports into Mexico using <strong>Petrotal's SENER permits</strong>, which cover diesel, regular, and premium gasoline. Product moves through two main channels:</p>
+        <p style="margin-bottom:0.2rem">· <strong>By truck</strong> : crosses border points into bulk storage facilities</p>
+        <p style="margin-bottom:0">· <strong>By rail</strong> : ships to terminals in the Mexican interior</p>
+      </div>
+      <div class="cp-card">
+        <div class="cp-card-title">Track 2 · Domestic Mexico Commercialization</div>
+        <p style="margin-bottom:0.4rem">When domestic pricing or logistics favor it, EGC purchases fuel already inside Mexico, priced in MXN/L, from domestic suppliers including:</p>
+        <p style="margin-bottom:0.2rem">· <strong>PEMEX</strong></p>
+        <p style="margin-bottom:0.2rem">· <strong>Flint Hills Mexico</strong></p>
+        <p style="margin-bottom:0.2rem">· <strong>Glencore Mexico</strong></p>
+        <p style="margin-bottom:0.4rem">· <strong>Repsol Mexico</strong></p>
+        <p style="margin-bottom:0">Product is distributed to end customers under the CRE/CNE permits held by <strong>Apollo</strong> and <strong>Gasolinas y Rendimiento</strong>. No import permit is used in this track. The choice between import and domestic sourcing is driven by continuous pricing and logistics analysis.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Strengths -->
+  <div class="cp-section">
+    <div class="cp-label">Key Strengths</div>
+    <div class="cp-four">
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Rare Regulatory Access</div><p>EGC holds active SENER import permits for all three major fuel products at a time when the Mexican government has revoked or declined to renew the majority of private importer permits.</p></div>
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Full Vertical Permit Stack</div><p>Import, commercialization, and transportation permits across multiple legal entities create a compliant, end-to-end operating structure from U.S. terminal to Mexican end customer.</p></div>
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Supply-Side Flexibility</div><p>With no exclusive supplier commitments, EGC sources from any U.S. refiner or terminal and toggles between import and domestic purchase based on real-time pricing.</p></div>
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Compliant by Design</div><p>EGC's multi-entity structure matches each regulated activity to the correct permit type, fully aligned with the 2025 SENER/CNE regulatory consolidation and SAT's updated CFDI hydrocarbon complement requirements.</p></div>
+    </div>
+  </div>
+
+  <!-- Delivery Paths -->
+  <div class="cp-section">
+    <div class="cp-label">Delivery Paths</div>
+    <div class="cp-card" style="padding:1.5rem;overflow-x:auto">
+      <svg viewBox="0 0 900 440" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:700px;display:block">
+        <defs>
+          <marker id="dp-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        <!-- ── TRACK 1 (left half) ── -->
+        <text x="14" y="18" font-size="10" font-weight="600" fill="#c0392b" font-family="Inter,sans-serif" letter-spacing="0.3">TRACK 1 · IMPORT · PETROTAL SENER</text>
+
+        <!-- Source -->
+        <rect x="14" y="28" width="138" height="50" rx="9" fill="#1e2736" stroke="#e74c3c" stroke-width="1.8"/>
+        <text x="83" y="50" text-anchor="middle" font-size="13" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">U.S. Rack</text>
+        <text x="83" y="68" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">any U.S. supplier</text>
+
+        <!-- pickup at rack -->
+        <line x1="152" y1="42" x2="302" y2="42" stroke="#e74c3c" stroke-width="1.4" marker-end="url(#dp-a)"/>
+        <rect x="302" y="26" width="148" height="38" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
+        <text x="376" y="42" text-anchor="middle" font-size="11" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer picks up</text>
+        <text x="376" y="56" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">at rack</text>
+
+        <!-- EGC delivers direct -->
+        <line x1="152" y1="60" x2="302" y2="82" stroke="#e74c3c" stroke-width="1.4" marker-end="url(#dp-a)"/>
+        <rect x="302" y="72" width="148" height="38" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
+        <text x="376" y="88" text-anchor="middle" font-size="11" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">EGC delivers</text>
+        <text x="376" y="102" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">direct to customer</text>
+
+        <!-- to inventory -->
+        <path d="M152 68 C190 68 190 168 184 168" fill="none" stroke="#e74c3c" stroke-width="1.8" marker-end="url(#dp-a)"/>
+
+        <!-- Inventory T1 -->
+        <rect x="184" y="142" width="176" height="60" rx="10" fill="#1e2736" stroke="#e74c3c" stroke-width="1.8"/>
+        <text x="272" y="164" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Bulk Plant · Inventory</text>
+        <text x="272" y="181" text-anchor="middle" font-size="9" fill="#e05555" font-family="Inter,sans-serif" font-weight="500">blend-capable · higher margin</text>
+        <text x="272" y="195" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">longer cycle</text>
+
+        <!-- pickup at plant -->
+        <line x1="360" y1="158" x2="400" y2="142" stroke="#e74c3c" stroke-width="1.4" marker-end="url(#dp-a)"/>
+        <rect x="302" y="126" width="148" height="38" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
+        <text x="376" y="142" text-anchor="middle" font-size="11" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer picks up</text>
+        <text x="376" y="156" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">at plant</text>
+
+        <!-- EGC last-mile from plant -->
+        <line x1="360" y1="180" x2="400" y2="180" stroke="#e74c3c" stroke-width="1.4" marker-end="url(#dp-a)"/>
+        <rect x="302" y="170" width="148" height="38" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
+        <text x="376" y="185" text-anchor="middle" font-size="11" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">EGC delivers</text>
+        <text x="376" y="199" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">last-mile to customer</text>
+
+        <!-- Rail future T1 -->
+        <rect x="14" y="230" width="438" height="72" rx="8" fill="#161c26" stroke="#263044" stroke-width="1" stroke-dasharray="4 3"/>
+        <text x="24" y="246" font-size="8" font-weight="600" fill="#6e7f96" font-family="Inter,sans-serif" letter-spacing="0.3">RAIL · FUTURE (pending investment)</text>
+        <g opacity="0.4">
+          <rect x="24" y="252" width="110" height="36" rx="6" fill="#1e2736" stroke="#30363d" stroke-width="1"/>
+          <text x="79" y="266" text-anchor="middle" font-size="10" font-weight="600" fill="#8899ad" font-family="Inter,sans-serif">U.S. Rack</text>
+          <text x="79" y="281" text-anchor="middle" font-size="9" fill="#6e7f96" font-family="Inter,sans-serif">any U.S. supplier</text>
+          <line x1="134" y1="270" x2="170" y2="270" stroke="#6e7f96" stroke-width="1.2" marker-end="url(#dp-a)"/>
+          <rect x="170" y="252" width="138" height="36" rx="6" fill="#1e2736" stroke="#30363d" stroke-width="1"/>
+          <text x="239" y="266" text-anchor="middle" font-size="10" font-weight="600" fill="#8899ad" font-family="Inter,sans-serif">Rail Terminal</text>
+          <text x="239" y="281" text-anchor="middle" font-size="9" fill="#6e7f96" font-family="Inter,sans-serif">Mexican interior</text>
+          <line x1="308" y1="264" x2="342" y2="256" stroke="#6e7f96" stroke-width="1" marker-end="url(#dp-a)"/>
+          <line x1="308" y1="276" x2="342" y2="286" stroke="#6e7f96" stroke-width="1" marker-end="url(#dp-a)"/>
+          <rect x="342" y="246" width="102" height="26" rx="5" fill="#1e2736" stroke="#30363d" stroke-width="1"/>
+          <text x="393" y="260" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Customer picks up</text>
+          <rect x="342" y="278" width="102" height="26" rx="5" fill="#1e2736" stroke="#30363d" stroke-width="1"/>
+          <text x="393" y="292" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">EGC delivers</text>
+        </g>
+
+        <!-- ── VERTICAL DIVIDER ── -->
+        <line x1="460" y1="10" x2="460" y2="430" stroke="#263044" stroke-width="1.5"/>
+
+        <!-- ── TRACK 2 (right half) ── -->
+        <text x="474" y="18" font-size="10" font-weight="600" fill="#185FA5" font-family="Inter,sans-serif" letter-spacing="0.3">TRACK 2 · DOMESTIC MEXICO · CRE/CNE</text>
+
+        <!-- Source -->
+        <rect x="474" y="28" width="138" height="62" rx="9" fill="#1e2736" stroke="#378ADD" stroke-width="1.8"/>
+        <text x="543" y="50" text-anchor="middle" font-size="13" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Domestic supplier</text>
+        <text x="543" y="67" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">PEMEX · FHR Mexico</text>
+        <text x="543" y="82" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">Glencore · Repsol</text>
+
+        <!-- pickup at supplier -->
+        <line x1="612" y1="42" x2="752" y2="42" stroke="#378ADD" stroke-width="1.4" marker-end="url(#dp-a)"/>
+        <rect x="752" y="26" width="140" height="38" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
+        <text x="822" y="42" text-anchor="middle" font-size="11" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer picks up</text>
+        <text x="822" y="56" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">at supplier</text>
+
+        <!-- EGC delivers direct -->
+        <line x1="612" y1="62" x2="752" y2="82" stroke="#378ADD" stroke-width="1.4" marker-end="url(#dp-a)"/>
+        <rect x="752" y="72" width="140" height="38" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
+        <text x="822" y="88" text-anchor="middle" font-size="11" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">EGC delivers</text>
+        <text x="822" y="102" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">direct to customer</text>
+
+        <!-- to inventory -->
+        <path d="M612 72 C650 72 650 168 644 168" fill="none" stroke="#378ADD" stroke-width="1.8" marker-end="url(#dp-a)"/>
+
+        <!-- Inventory T2 -->
+        <rect x="644" y="142" width="176" height="60" rx="10" fill="#1e2736" stroke="#378ADD" stroke-width="1.8"/>
+        <text x="732" y="164" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Bulk Plant · Inventory</text>
+        <text x="732" y="181" text-anchor="middle" font-size="9" fill="#5a8fef" font-family="Inter,sans-serif" font-weight="500">blend-capable · higher margin</text>
+        <text x="732" y="195" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">longer cycle</text>
+
+        <!-- pickup at plant -->
+        <line x1="752" y1="155" x2="820" y2="142" stroke="#378ADD" stroke-width="1.4" marker-end="url(#dp-a)"/>
+        <rect x="752" y="126" width="140" height="38" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
+        <text x="822" y="142" text-anchor="middle" font-size="11" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer picks up</text>
+        <text x="822" y="156" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">at plant</text>
+
+        <!-- EGC last-mile from plant -->
+        <line x1="752" y1="178" x2="820" y2="178" stroke="#378ADD" stroke-width="1.4" marker-end="url(#dp-a)"/>
+        <rect x="752" y="168" width="140" height="38" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
+        <text x="822" y="184" text-anchor="middle" font-size="11" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">EGC delivers</text>
+        <text x="822" y="198" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">last-mile to customer</text>
+
+        <!-- ── Legend ── -->
+        <line x1="14"  y1="420" x2="38"  y2="420" stroke="#e74c3c" stroke-width="2"/>
+        <text x="44"  y="424" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">Import track</text>
+        <line x1="138" y1="420" x2="162" y2="420" stroke="#378ADD" stroke-width="2"/>
+        <text x="168" y="424" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">Domestic track</text>
+        <line x1="268" y1="420" x2="292" y2="420" stroke="#6e7f96" stroke-width="1.2" opacity="0.4"/>
+        <text x="298" y="424" font-size="10" fill="#6e7f96" font-family="Inter,sans-serif">Rail (future)</text>
+      </svg>
     </div>
   </div>
 
@@ -1077,206 +1192,6 @@ function renderCompany() {
     </table>
   </div>
 
-  <!-- Business Model -->
-  <div class="cp-section">
-    <div class="cp-label">Business Model</div>
-    <div class="cp-two">
-      <div class="cp-card">
-        <div class="cp-card-title">Track 1 · U.S. to Mexico Import (via Petrotal)</div>
-        <p style="margin-bottom:0.4rem">EGC sources refined fuels from any U.S. supplier at any U.S. rack and imports into Mexico using <strong>Petrotal's SENER permits</strong>, which cover diesel, regular, and premium gasoline. Product moves through two main channels:</p>
-        <p style="margin-bottom:0.2rem">· <strong>By truck</strong> : crosses border points into bulk storage facilities</p>
-        <p style="margin-bottom:0">· <strong>By rail</strong> : ships to terminals in the Mexican interior</p>
-      </div>
-      <div class="cp-card">
-        <div class="cp-card-title">Track 2 · Domestic Mexico Commercialization</div>
-        <p style="margin-bottom:0.4rem">When domestic pricing or logistics favor it, EGC purchases fuel already inside Mexico, priced in MXN/L, from domestic suppliers including:</p>
-        <p style="margin-bottom:0.2rem">· <strong>PEMEX</strong></p>
-        <p style="margin-bottom:0.2rem">· <strong>Flint Hills Mexico</strong></p>
-        <p style="margin-bottom:0.2rem">· <strong>Glencore Mexico</strong></p>
-        <p style="margin-bottom:0.4rem">· <strong>Repsol Mexico</strong></p>
-        <p style="margin-bottom:0">Product is distributed to end customers under the CRE/CNE permits held by <strong>Apollo</strong> and <strong>Gasolinas y Rendimiento</strong>. No import permit is used in this track. The choice between import and domestic sourcing is driven by continuous pricing and logistics analysis.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Delivery Paths -->
-  <div class="cp-section">
-    <div class="cp-label">Delivery Paths</div>
-    <div class="cp-card" style="padding:1.5rem;overflow-x:auto">
-      <svg viewBox="0 0 900 820" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:700px;display:block">
-        <defs>
-          <marker id="dp-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </marker>
-        </defs>
-
-        <!-- Column headers -->
-        <text x="100" y="22" text-anchor="middle" font-size="11" fill="#6e7f96" font-family="Inter,sans-serif" letter-spacing="0.5">SOURCE</text>
-        <text x="340" y="22" text-anchor="middle" font-size="11" fill="#6e7f96" font-family="Inter,sans-serif" letter-spacing="0.5">EGC OPERATION</text>
-        <text x="590" y="22" text-anchor="middle" font-size="11" fill="#6e7f96" font-family="Inter,sans-serif" letter-spacing="0.5">INVENTORY / PLANT</text>
-        <text x="800" y="22" text-anchor="middle" font-size="11" fill="#6e7f96" font-family="Inter,sans-serif" letter-spacing="0.5">CUSTOMER</text>
-
-        <!-- Column dividers -->
-        <line x1="215" y1="30" x2="215" y2="800" stroke="#1e2736" stroke-width="1" stroke-dasharray="4 4"/>
-        <line x1="460" y1="30" x2="460" y2="800" stroke="#1e2736" stroke-width="1" stroke-dasharray="4 4"/>
-        <line x1="700" y1="30" x2="700" y2="800" stroke="#1e2736" stroke-width="1" stroke-dasharray="4 4"/>
-
-        <!-- ═══════════════════════════════════════════════
-             TRACK 1 — IMPORT (coral/red)
-        ═══════════════════════════════════════════════ -->
-        <text x="28" y="48" font-size="11" font-weight="600" fill="#c0392b" font-family="Inter,sans-serif" letter-spacing="0.3">TRACK 1 · IMPORT · PETROTAL SENER</text>
-
-        <!-- Source: U.S. Rack -->
-        <rect x="28" y="58" width="160" height="54" rx="10" fill="#1e2736" stroke="#e74c3c" stroke-width="1.5"/>
-        <text x="108" y="82" text-anchor="middle" font-size="13" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">U.S. Rack</text>
-        <text x="108" y="100" text-anchor="middle" font-size="11" fill="#8899ad" font-family="Inter,sans-serif">any U.S. supplier</text>
-
-        <!-- 1A: At-rack -->
-        <line x1="188" y1="72" x2="700" y2="72" stroke="#e74c3c" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#dp-arr)"/>
-        <text x="440" y="65" text-anchor="middle" font-size="10" fill="#c0392b" font-family="Inter,sans-serif" font-weight="600">1A · at-rack pickup</text>
-        <rect x="700" y="56" width="172" height="44" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
-        <text x="786" y="75" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer</text>
-        <text x="786" y="91" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">picks up at rack</text>
-
-        <!-- 1B: EGC direct delivery by truck -->
-        <path d="M188 88 C240 88 240 138 268 138" fill="none" stroke="#e74c3c" stroke-width="1.2" marker-end="url(#dp-arr)"/>
-        <rect x="228" y="118" width="160" height="44" rx="8" fill="#1e2736" stroke="#e74c3c" stroke-width="1"/>
-        <text x="308" y="137" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">EGC · truck</text>
-        <text x="308" y="153" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">direct delivery</text>
-        <path d="M388 138 L700 128" fill="none" stroke="#e74c3c" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#dp-arr)"/>
-        <text x="233" y="116" font-size="10" fill="#c0392b" font-family="Inter,sans-serif" font-weight="600">1B</text>
-        <rect x="700" y="112" width="172" height="44" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
-        <text x="786" y="131" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer</text>
-        <text x="786" y="147" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">direct delivery</text>
-
-        <!-- 1C/1D: Truck → Bulk Plant -->
-        <path d="M188 98 C240 98 240 248 462 248" fill="none" stroke="#e74c3c" stroke-width="1.8" marker-end="url(#dp-arr)"/>
-        <text x="240" y="195" font-size="10" fill="#c0392b" font-family="Inter,sans-serif" font-weight="600">1C · 1D</text>
-        <text x="240" y="210" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">truck → inventory</text>
-
-        <!-- Bulk Plant Track 1 -->
-        <rect x="462" y="210" width="210" height="74" rx="10" fill="#1e2736" stroke="#e74c3c" stroke-width="1.8"/>
-        <text x="567" y="237" text-anchor="middle" font-size="13" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Bulk Plant · Inventory</text>
-        <text x="567" y="256" text-anchor="middle" font-size="10" fill="#e05555" font-family="Inter,sans-serif" font-weight="500">blend-capable · higher margin</text>
-        <text x="567" y="272" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">longer cycle</text>
-
-        <!-- 1C: customer pickup at plant -->
-        <path d="M672 230 L700 210" fill="none" stroke="#e74c3c" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#dp-arr)"/>
-        <text x="706" y="195" font-size="10" fill="#c0392b" font-family="Inter,sans-serif" font-weight="600">1C</text>
-        <rect x="700" y="168" width="172" height="44" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
-        <text x="786" y="187" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer</text>
-        <text x="786" y="203" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">picks up at plant</text>
-
-        <!-- 1D: EGC last-mile from plant -->
-        <path d="M672 258 L700 258" fill="none" stroke="#e74c3c" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#dp-arr)"/>
-        <text x="706" y="253" font-size="10" fill="#c0392b" font-family="Inter,sans-serif" font-weight="600">1D</text>
-        <rect x="700" y="240" width="172" height="44" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
-        <text x="786" y="259" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer</text>
-        <text x="786" y="275" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">EGC last-mile</text>
-
-        <!-- ─── RAIL FUTURE (under Track 1) ─── -->
-        <rect x="28" y="310" width="852" height="106" rx="10" fill="#161c26" stroke="#263044" stroke-width="1" stroke-dasharray="5 3"/>
-        <text x="40" y="330" font-size="10" font-weight="600" fill="#6e7f96" font-family="Inter,sans-serif" letter-spacing="0.3">RAIL · FUTURE · PETROTAL SENER  (pending investment)</text>
-        <g opacity="0.45">
-          <rect x="40" y="338" width="152" height="44" rx="8" fill="#1e2736" stroke="#30363d" stroke-width="1"/>
-          <text x="116" y="357" text-anchor="middle" font-size="12" font-weight="600" fill="#8899ad" font-family="Inter,sans-serif">U.S. Rack</text>
-          <text x="116" y="373" text-anchor="middle" font-size="10" fill="#6e7f96" font-family="Inter,sans-serif">any U.S. supplier</text>
-          <path d="M192 360 L462 360" fill="none" stroke="#6e7f96" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#dp-arr)"/>
-          <text x="328" y="353" text-anchor="middle" font-size="10" fill="#6e7f96" font-family="Inter,sans-serif">by rail</text>
-          <rect x="462" y="338" width="210" height="44" rx="8" fill="#1e2736" stroke="#30363d" stroke-width="1"/>
-          <text x="567" y="357" text-anchor="middle" font-size="12" font-weight="600" fill="#8899ad" font-family="Inter,sans-serif">Rail Terminal</text>
-          <text x="567" y="373" text-anchor="middle" font-size="10" fill="#6e7f96" font-family="Inter,sans-serif">Mexican interior</text>
-          <path d="M672 352 L700 340" fill="none" stroke="#6e7f96" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#dp-arr)"/>
-          <path d="M672 368 L700 380" fill="none" stroke="#6e7f96" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#dp-arr)"/>
-          <rect x="700" y="326" width="172" height="36" rx="8" fill="#1e2736" stroke="#30363d" stroke-width="1"/>
-          <text x="786" y="345" text-anchor="middle" font-size="11" fill="#8899ad" font-family="Inter,sans-serif">Customer pickup</text>
-          <rect x="700" y="368" width="172" height="36" rx="8" fill="#1e2736" stroke="#30363d" stroke-width="1"/>
-          <text x="786" y="387" text-anchor="middle" font-size="11" fill="#8899ad" font-family="Inter,sans-serif">EGC last-mile</text>
-        </g>
-
-        <!-- ═══════════════════════════════════════════════
-             TRACK DIVIDER
-        ═══════════════════════════════════════════════ -->
-        <line x1="28" y1="442" x2="872" y2="442" stroke="#263044" stroke-width="1.2"/>
-
-        <!-- ═══════════════════════════════════════════════
-             TRACK 2 — DOMESTIC (blue)
-        ═══════════════════════════════════════════════ -->
-        <text x="28" y="462" font-size="11" font-weight="600" fill="#185FA5" font-family="Inter,sans-serif" letter-spacing="0.3">TRACK 2 · DOMESTIC MEXICO · APOLLO / GASOLINAS Y RENDIMIENTO  (CRE/CNE)</text>
-
-        <!-- Source: Domestic Supplier -->
-        <rect x="28" y="472" width="160" height="68" rx="10" fill="#1e2736" stroke="#378ADD" stroke-width="1.5"/>
-        <text x="108" y="496" text-anchor="middle" font-size="13" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Domestic supplier</text>
-        <text x="108" y="514" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">PEMEX · FHR Mexico</text>
-        <text x="108" y="530" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">Glencore · Repsol</text>
-
-        <!-- 2A: At-rack domestic -->
-        <line x1="188" y1="488" x2="700" y2="488" stroke="#378ADD" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#dp-arr)"/>
-        <text x="440" y="481" text-anchor="middle" font-size="10" fill="#185FA5" font-family="Inter,sans-serif" font-weight="600">2A · at-rack pickup</text>
-        <rect x="700" y="472" width="172" height="44" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
-        <text x="786" y="491" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer</text>
-        <text x="786" y="507" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">picks up at supplier</text>
-
-        <!-- 2B: EGC direct delivery domestic -->
-        <path d="M188 510 C240 510 240 554 268 554" fill="none" stroke="#378ADD" stroke-width="1.2" marker-end="url(#dp-arr)"/>
-        <rect x="228" y="534" width="160" height="44" rx="8" fill="#1e2736" stroke="#378ADD" stroke-width="1"/>
-        <text x="308" y="553" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">EGC delivers</text>
-        <text x="308" y="569" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">direct to customer</text>
-        <path d="M388 554 L700 544" fill="none" stroke="#378ADD" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#dp-arr)"/>
-        <text x="233" y="532" font-size="10" fill="#185FA5" font-family="Inter,sans-serif" font-weight="600">2B</text>
-        <rect x="700" y="528" width="172" height="44" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
-        <text x="786" y="547" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer</text>
-        <text x="786" y="563" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">direct delivery</text>
-
-        <!-- 2C/2D: Domestic → Bulk Plant -->
-        <path d="M188 522 C240 522 240 660 462 660" fill="none" stroke="#378ADD" stroke-width="1.8" marker-end="url(#dp-arr)"/>
-        <text x="240" y="610" font-size="10" fill="#185FA5" font-family="Inter,sans-serif" font-weight="600">2C · 2D</text>
-        <text x="240" y="625" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">to inventory</text>
-
-        <!-- Bulk Plant Track 2 -->
-        <rect x="462" y="622" width="210" height="74" rx="10" fill="#1e2736" stroke="#378ADD" stroke-width="1.8"/>
-        <text x="567" y="649" text-anchor="middle" font-size="13" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Bulk Plant · Inventory</text>
-        <text x="567" y="668" text-anchor="middle" font-size="10" fill="#5a8fef" font-family="Inter,sans-serif" font-weight="500">blend-capable · higher margin</text>
-        <text x="567" y="684" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">longer cycle</text>
-
-        <!-- 2C: customer pickup at plant -->
-        <path d="M672 642 L700 622" fill="none" stroke="#378ADD" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#dp-arr)"/>
-        <text x="706" y="610" font-size="10" fill="#185FA5" font-family="Inter,sans-serif" font-weight="600">2C</text>
-        <rect x="700" y="584" width="172" height="44" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
-        <text x="786" y="603" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer</text>
-        <text x="786" y="619" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">picks up at plant</text>
-
-        <!-- 2D: EGC last-mile from plant -->
-        <path d="M672 670 L700 670" fill="none" stroke="#378ADD" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#dp-arr)"/>
-        <text x="706" y="665" font-size="10" fill="#185FA5" font-family="Inter,sans-serif" font-weight="600">2D</text>
-        <rect x="700" y="652" width="172" height="44" rx="8" fill="#1e2736" stroke="#263044" stroke-width="1"/>
-        <text x="786" y="671" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer</text>
-        <text x="786" y="687" text-anchor="middle" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">EGC last-mile</text>
-
-        <!-- ── Legend ── -->
-        <line x1="28" y1="720" x2="60" y2="720" stroke="#e74c3c" stroke-width="2"/>
-        <text x="66" y="724" font-size="11" fill="#8899ad" font-family="Inter,sans-serif">Import track (truck)</text>
-        <line x1="200" y1="720" x2="232" y2="720" stroke="#378ADD" stroke-width="2"/>
-        <text x="238" y="724" font-size="11" fill="#8899ad" font-family="Inter,sans-serif">Domestic track</text>
-        <line x1="355" y1="720" x2="387" y2="720" stroke="#6e7f96" stroke-width="1.2" stroke-dasharray="6 4"/>
-        <text x="393" y="724" font-size="11" fill="#8899ad" font-family="Inter,sans-serif">At-rack / last-mile delivery</text>
-        <line x1="560" y1="720" x2="592" y2="720" stroke="#6e7f96" stroke-width="1.2" stroke-dasharray="6 4" opacity="0.45"/>
-        <text x="598" y="724" font-size="11" fill="#6e7f96" font-family="Inter,sans-serif">Rail (future)</text>
-      </svg>
-    </div>
-  </div>
-
-  <!-- Key Strengths -->
-  <div class="cp-section">
-    <div class="cp-label">Key Strengths</div>
-    <div class="cp-four">
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Rare Regulatory Access</div><p>EGC holds active SENER import permits for all three major fuel products at a time when the Mexican government has revoked or declined to renew the majority of private importer permits.</p></div>
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Full Vertical Permit Stack</div><p>Import, commercialization, and transportation permits across multiple legal entities create a compliant, end-to-end operating structure from U.S. terminal to Mexican end customer.</p></div>
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Supply-Side Flexibility</div><p>With no exclusive supplier commitments, EGC sources from any U.S. refiner or terminal and toggles between import and domestic purchase based on real-time pricing.</p></div>
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Compliant by Design</div><p>EGC's multi-entity structure matches each regulated activity to the correct permit type, fully aligned with the 2025 SENER/CNE regulatory consolidation and SAT's updated CFDI hydrocarbon complement requirements.</p></div>
-    </div>
-  </div>
-
   <!-- Leadership -->
   <div class="cp-section">
     <div class="cp-label">Leadership</div>
@@ -1298,6 +1213,7 @@ function renderCompany() {
   </div>
 
   <div class="cp-footer">This document is confidential and prepared for informational purposes only. It does not constitute an offer or solicitation. All information sourced from EGC operational records.</div>
+
   `;
 }
 
