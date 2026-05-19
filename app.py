@@ -105,7 +105,11 @@ def dashboard():
 def api_data():
     if 'user' not in session:
         return jsonify(error='Unauthorized'), 401
-    data = load_data()
+    try:
+        data = load_data()
+    except Exception as e:
+        print(f"[load_data error] {e}", flush=True)
+        return jsonify(None)
     if not data:
         return jsonify(None)
     role = session['role']
