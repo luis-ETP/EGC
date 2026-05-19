@@ -635,7 +635,9 @@ function renderFifo() {
   const el = document.getElementById('fifo-content');
   if (!rows.length) { el.innerHTML='<div class="empty-state">No FIFO data.</div>'; return; }
 
-  const headers = Object.keys(rows[0]);
+  // Type first, exclude Total Cost column
+  const allHeaders = Object.keys(rows[0]);
+  const headers = ['Type', ...allHeaders.filter(h => h !== 'Type' && !h.toLowerCase().includes('total cost'))];
   let html = `<div class="table-card">
     <div class="table-header"><div class="table-title">FIFO Allocation Log</div><div style="font-size:0.72rem;color:var(--muted)">${rows.length} entries</div></div>
     <div class="table-wrap"><table class="fifo-table"><thead><tr>`;
@@ -689,8 +691,8 @@ function renderInvestor() {
 
   // ── Committed Capital ──
   html += `
-  <div style="margin-bottom:1.5rem">
-    <div style="font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.6rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border)">Committed Capital</div>
+  <div style="margin-bottom:2rem">
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Committed Capital</div>
     <div class="table-wrap"><table>
       <thead><tr>
         <th>Round</th><th style="text-align:right">Committed (USD)</th><th style="text-align:right">Committed (MXN)</th><th style="text-align:right">Date</th><th style="text-align:right">FX Rate</th>
@@ -721,8 +723,8 @@ function renderInvestor() {
     {label:'Total Profit',     val:'$'+fmxn(inv.total_margin),         sub:'MXN gross', green:true},
     {label:'Investor Share',   val:'$'+fmxn(inv.investor_share),       sub:(Math.round((inv.inv_share_pct||0.4)*100))+'% of profit', green:true},
   ];
-  html += `<div style="margin-bottom:1.5rem">
-    <div style="font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.6rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border)">Key Performance Indicators (MXN)</div>
+  html += `<div style="margin-bottom:2rem">
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Key Performance Indicators (MXN)</div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px">`;
   kpis.forEach(k => {
     html += `<div style="background:var(--surface2);border-radius:8px;padding:0.7rem 0.6rem;text-align:center">
@@ -735,8 +737,8 @@ function renderInvestor() {
 
   // ── Active Capital ──
   const ad = inv.active_detail || {};
-  html += `<div style="margin-bottom:1.5rem">
-    <div style="font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.6rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border)">Active Capital — investor capital funding loads not yet collected</div>
+  html += `<div style="margin-bottom:2rem">
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Active Capital — investor capital funding loads not yet collected</div>
     <div class="table-wrap"><table>
       <thead><tr><th>Type</th><th style="text-align:right">Capital (MXN)</th><th style="text-align:right">Liters</th></tr></thead>
       <tbody>
@@ -755,8 +757,8 @@ function renderInvestor() {
     ['BTC', rd.btc||{}],
     ['Total Recovered', rd.total||{}, true],
   ];
-  html += `<div style="margin-bottom:1.5rem">
-    <div style="font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.6rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border)">Recovered Capital — cumulative from fully collected loads</div>
+  html += `<div style="margin-bottom:2rem">
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Recovered Capital — cumulative from fully collected loads</div>
     <div class="table-wrap"><table>
       <thead><tr>
         <th>Type</th>
@@ -860,8 +862,8 @@ function renderCompany() {
   const el = document.getElementById('company-content');
   el.innerHTML = `
   <style>
-    .cp-section { margin-bottom: 2rem; }
-    .cp-label { font-size:0.63rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);padding-bottom:0.5rem;border-bottom:1px solid var(--border);margin-bottom:1.1rem; }
+    .cp-section { margin-bottom: 2.75rem; }
+    .cp-label { font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text);padding-bottom:0.6rem;border-bottom:2px solid var(--border2);margin-bottom:1.4rem; }
     .cp-p { font-size:0.875rem;color:var(--muted);line-height:1.75;margin-bottom:0.65rem; }
     .cp-p strong { color:var(--text);font-weight:500; }
     .cp-metric-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:1rem; }
@@ -872,8 +874,8 @@ function renderCompany() {
     .cp-permit-entity { font-size:0.7rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.4rem;margin-top:1rem; }
     .cp-permit-entity:first-child { margin-top:0; }
     .cp-table { width:100%;border-collapse:collapse;font-size:0.78rem; }
-    .cp-table th { font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border); }
-    .cp-table td { padding:7px 8px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top;text-align:left; }
+    .cp-table th { font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);text-align:left;padding:6px 12px;border-bottom:1px solid var(--border); }
+    .cp-table td { padding:8px 12px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:middle;text-align:left; }
     .cp-table td:first-child { color:var(--text);font-weight:500; }
     .cp-table tr:last-child td { border-bottom:none; }
     .cp-note { font-size:0.7rem;color:var(--muted2);font-style:italic;margin-top:0.5rem; }
@@ -948,13 +950,13 @@ function renderCompany() {
     <div class="cp-label">Business Model</div>
     <div class="cp-two">
       <div class="cp-card">
-        <div class="cp-card-title">Track 1 — U.S. to Mexico Import (via Petrotal)</div>
+        <div class="cp-card-title">Track 1 · U.S. to Mexico Import (via Petrotal)</div>
         <p style="margin-bottom:0.4rem">ETP sources refined fuels from any U.S. supplier at any U.S. rack and imports into Mexico using <strong>Petrotal's SENER permits</strong>, which cover diesel, regular, and premium gasoline. Product moves through two main channels:</p>
         <p style="margin-bottom:0.2rem">· <strong>By truck</strong> : crosses border points into bulk storage facilities</p>
         <p style="margin-bottom:0">· <strong>By rail</strong> : ships to terminals in the Mexican interior</p>
       </div>
       <div class="cp-card">
-        <div class="cp-card-title">Track 2 — Domestic Mexico Commercialization</div>
+        <div class="cp-card-title">Track 2 · Domestic Mexico Commercialization</div>
         <p style="margin-bottom:0.4rem">When domestic pricing or logistics favor it, ETP purchases fuel already inside Mexico, priced in MXN/L, from domestic suppliers including:</p>
         <p style="margin-bottom:0.2rem">· <strong>PEMEX</strong></p>
         <p style="margin-bottom:0.2rem">· <strong>Flint Hills Mexico</strong></p>
@@ -1022,10 +1024,10 @@ function renderCompany() {
         <text x="232" y="267" text-anchor="middle" font-size="8" fill="#d29922" font-family="Inter,sans-serif">Rail — import only</text>
       </svg>
       <div class="cp-path-desc">
-        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#4a7cdc;letter-spacing:0.08em;margin-bottom:3px">PATH A — At-Rack Transaction</div><div style="font-size:0.73rem;color:var(--muted)">Customer picks up at the rack. No ETP logistics involved.</div></div>
-        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#4a7cdc;letter-spacing:0.08em;margin-bottom:3px">PATH B — ETP-Coordinated Delivery</div><div style="font-size:0.73rem;color:var(--muted)">ETP picks up at the rack and delivers directly to the customer.</div></div>
-        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#3fb950;letter-spacing:0.08em;margin-bottom:3px">PATH C — Inventory Position + Last-Mile</div><div style="font-size:0.73rem;color:var(--muted)">ETP moves product to a bulk plant. Customer picks up at the plant, or ETP dispatches last-mile delivery via third-party carrier.</div></div>
-        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#d29922;letter-spacing:0.08em;margin-bottom:3px">PATH D — Rail Paper Trade (Import Only)</div><div style="font-size:0.73rem;color:var(--muted)">Product ships by railcar to a Mexican rail terminal. ETP coordinates full rail logistics. Customer picks up at the terminal.</div></div>
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#4a7cdc;letter-spacing:0.08em;margin-bottom:3px">PATH A · At-Rack Transaction</div><div style="font-size:0.73rem;color:var(--muted)">Customer picks up at the rack. No ETP logistics involved.</div></div>
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#4a7cdc;letter-spacing:0.08em;margin-bottom:3px">PATH B · ETP-Coordinated Delivery</div><div style="font-size:0.73rem;color:var(--muted)">ETP picks up at the rack and delivers directly to the customer.</div></div>
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#3fb950;letter-spacing:0.08em;margin-bottom:3px">PATH C · Inventory Position + Last-Mile</div><div style="font-size:0.73rem;color:var(--muted)">ETP moves product to a bulk plant. Customer picks up at the plant, or ETP dispatches last-mile delivery via third-party carrier.</div></div>
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#d29922;letter-spacing:0.08em;margin-bottom:3px">PATH D · Rail Paper Trade (Import Only)</div><div style="font-size:0.73rem;color:var(--muted)">Product ships by railcar to a Mexican rail terminal. ETP coordinates full rail logistics. Customer picks up at the terminal.</div></div>
       </div>
     </div>
   </div>
