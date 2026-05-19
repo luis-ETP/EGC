@@ -679,7 +679,7 @@ function renderInvestor() {
 
   // ── Markup: +$0.10/gal applied only for partner_investor role ────────────────
   const MARKUP       = dashData.markup === true;
-  const MARKUP_USD   = 0.10;          // USD per gallon
+  const MARKUP_USD   = 0.02;          // USD per gallon
   const L_PER_GAL    = 3.7854;
 
   function getAvgFx() {
@@ -783,13 +783,14 @@ function renderInvestor() {
     {label:'Active Capital',   val:'$'+fmxn(inv.active_capital),       sub:'MXN deployed'},
     {label:'Available Capital',val:'$'+fmxn(inv.available),            sub:'MXN uninvested'},
     {label:'Recovered Capital',val:'$'+fmxn(inv.recovered_mxn),        sub:'MXN returned', green:true},
-    {label:'Revolved Multiple',val:Number(inv.revolved||0).toFixed(2)+'×', sub:'capital turns'},
+    ...(MARKUP ? [] : [{label:'Revolved Multiple',val:Number(inv.revolved||0).toFixed(2)+'×', sub:'capital turns'}]),
     {label:'Total Profit',     val:'$'+fmxn(inv.total_margin),         sub:'MXN gross', green:true},
     {label:'Investor Share',   val:'$'+fmxn(inv.investor_share),       sub:Math.round((inv.inv_share_pct||0.4)*100)+'% of profit', green:true},
   ];
+  const kpiCols = kpis.length;
   html += `<div style="margin-bottom:2rem">
     <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Key Performance Indicators (MXN)</div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px">`;
+    <div style="display:grid;grid-template-columns:repeat(${kpiCols},1fr);gap:8px">`;
   kpis.forEach(k => {
     html += `<div style="background:var(--surface2);border-radius:8px;padding:0.7rem 0.6rem;text-align:center">
       <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:4px;line-height:1.3">${k.label}</div>
