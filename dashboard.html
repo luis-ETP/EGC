@@ -270,27 +270,23 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
             <span id="fileLabel">Click to upload or drag & drop .xlsx</span>
           </div>
           <button class="run-btn" id="runBtn" disabled onclick="processFile()">Run FIFO Engine</button>
+          <div style="display:flex;align-items:center;gap:0.5rem;border-left:1px solid var(--border);padding-left:0.75rem;margin-left:0.25rem">
+            <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">LPA Markup</span>
+            <span style="font-size:0.72rem;color:var(--muted)">$</span>
+            <input id="markupInput" type="number" step="0.01" min="0" max="10" value="0.02"
+              style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+                     padding:0.3rem 0.45rem;color:var(--text);font-size:0.78rem;font-family:var(--font)">
+            <span style="font-size:0.72rem;color:var(--muted)">USD/gal</span>
+            <button onclick="saveMarkup()"
+              style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+                     padding:0.3rem 0.65rem;color:var(--muted);font-size:0.72rem;font-family:var(--font);
+                     cursor:pointer;transition:all 0.15s"
+              onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Save</button>
+            <span id="markupStatus" style="font-size:0.7rem;color:var(--green);display:none">✓</span>
+          </div>
         </div>
         <div class="upload-status" id="uploadStatus"></div>
-      </div>
-      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
-        <div style="font-size:0.75rem;color:var(--muted);font-weight:500">Partner Investor Markup</div>
-        <div style="display:flex;align-items:center;gap:0.5rem">
-          <span style="font-size:0.72rem;color:var(--muted)">$</span>
-          <input id="markupInput" type="number" step="0.01" min="0" max="10" value="0.02"
-            style="width:80px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-                   padding:0.35rem 0.5rem;color:var(--text);font-size:0.78rem;font-family:var(--font)">
-          <span style="font-size:0.72rem;color:var(--muted)">USD / gal</span>
-          <button onclick="saveMarkup()"
-            style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-                   padding:0.35rem 0.75rem;color:var(--muted);font-size:0.72rem;font-family:var(--font);
-                   cursor:pointer;transition:all 0.15s"
-            onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
-            onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
-            Save
-          </button>
-          <span id="markupStatus" style="font-size:0.7rem;color:var(--green);display:none">✓ Saved</span>
-        </div>
       </div>
       {% endif %}
 
