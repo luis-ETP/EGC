@@ -345,6 +345,7 @@ def _extract_bol(wb):
             "liters":      round(f(row[7]), 2),
             "product":     fs(row[8]),
             "cost_gal":    round(f(row[16]), 4),   # Tota Cost/Gal (USD)
+            "fx_payment":  round(f(row[25]), 4),   # FX Payment (idx 25)
             "invoice":     inv,
             "inv_amount":  round(f(row[18]), 2),
             "received":    round(f(row[20]), 2),
