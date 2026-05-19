@@ -11,7 +11,7 @@ LOGO_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAg
 
 try:
     init_db()
-init_settings()
+    init_settings()
 except Exception as e:
     print(f"DB init warning: {e}")
 
@@ -106,7 +106,7 @@ def api_data():
         return jsonify(error='Unauthorized'), 401
     try:
         markup_usd = float(get_setting("markup_usd", "0.02"))
-    data = load_data()
+        data = load_data()
     except Exception as e:
         print(f"[load_data error] {e}", flush=True)
         return jsonify(None)
