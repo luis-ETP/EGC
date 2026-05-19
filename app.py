@@ -117,6 +117,7 @@ def api_data():
             "overall_summary": data["overall_summary"],
             "investment":     data.get("investment", {}),
             "bol_tab":        data.get("bol_tab", {}),
+            "overview_exp":   data.get("overview_exp", {}),
         })
     if role == 'partner_investor':
         return jsonify({
@@ -128,6 +129,7 @@ def api_data():
             "fifo_rows":      data["fifo_rows"],
             "investment":     data.get("investment", {}),
             "bol_tab":        data.get("bol_tab", {}),
+            "overview_exp":   data.get("overview_exp", {}),
             "markup":         True,
         })
     return jsonify(data)  # admin gets everything
@@ -149,15 +151,18 @@ def process():
         try:
             run_fifo(src, dst)
             result = extract(dst, src_path=src)
-            if len(result) == 6:
+            if len(result) == 7:
+                overall_summary, inventory, fifo_rows, meta, investment, bol_tab, overview_exp = result
+            elif len(result) == 6:
                 overall_summary, inventory, fifo_rows, meta, investment, bol_tab = result
+                overview_exp = {}
             elif len(result) == 5:
                 overall_summary, inventory, fifo_rows, meta, investment = result
-                bol_tab = {}
+                bol_tab = {}; overview_exp = {}
             else:
                 overall_summary, inventory, fifo_rows, meta = result
-                investment = {}; bol_tab = {}
-            save_data(f.filename, overall_summary, inventory, fifo_rows, meta, investment, bol_tab)
+                investment = {}; bol_tab = {}; overview_exp = {}
+            save_data(f.filename, overall_summary, inventory, fifo_rows, meta, investment, bol_tab, overview_exp)
         except Exception as e:
             return jsonify(error=str(e)), 500
         with open(dst, 'rb') as fh:
