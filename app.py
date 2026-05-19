@@ -51,7 +51,6 @@ button:hover{opacity:0.88}
   <div class="logo"><img src="data:image/svg+xml;base64,{{ logo }}" alt="EGC"></div>
   <div class="card">
     <h2>Sign in</h2>
-    <p>Access the FIFO dashboard</p>
     {% if error %}<div class="err">{{ error }}</div>{% endif %}
     <form method="POST">
       <label>Username</label>
