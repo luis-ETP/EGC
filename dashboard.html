@@ -21,8 +21,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 /* ── Sidebar ── */
 .sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--surface);
   border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100}
-.sidebar-logo{padding:1.25rem 1.25rem 1rem;border-bottom:1px solid var(--border)}
-.sidebar-logo img{height:44px;width:auto}
+.sidebar-logo{padding:1.1rem 1.25rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:flex-start}
+.sidebar-logo img{height:40px;width:auto;display:block}
 .sidebar-nav{flex:1;padding:0.75rem 0.75rem;display:flex;flex-direction:column;gap:2px}
 .nav-item{display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.75rem;border-radius:7px;
   font-size:0.82rem;font-weight:500;color:var(--muted);cursor:pointer;transition:all 0.15s;border:none;
@@ -691,20 +691,20 @@ function renderInvestor() {
   function applyMarkup(src) {
     if (!MARKUP) return src;
     const avgFx = getAvgFx();
-    const mu = MARKUP_USD * avgFx / L_PER_GAL;   // MXN/L adder
+    const mu = MARKUP_USD * avgFx / L_PER_GAL;   // MXN/L adder at delivery
     const d = JSON.parse(JSON.stringify(src));     // deep clone
     const ad = d.active_detail || {};
     const rd = d.recovered_detail || {};
 
-    // Inventory & pending: cost goes up
-    ad.inv_mxn      += mu * (ad.inv_liters      || 0);
+    // Fee is incurred at delivery only — inventory & allocation unchanged.
+    // Only pending loads (not yet collected) and recovered loads are affected.
     ad.btc_pend_mxn += mu * (ad.btc_pend_liters || 0);
     ad.rtc_pend_mxn += mu * (ad.rtc_pend_liters || 0);
-    ad.total_mxn     = (ad.alloc_mxn||0) + ad.inv_mxn + ad.btc_pend_mxn + ad.rtc_pend_mxn;
+    ad.total_mxn     = (ad.alloc_mxn||0) + (ad.inv_mxn||0) + ad.btc_pend_mxn + ad.rtc_pend_mxn;
     d.active_capital = ad.total_mxn;
     d.available      = d.total_committed_mxn - d.active_capital;
 
-    // Recovered loads: cost up, sale unchanged, margin down
+    // Recovered loads: delivery fee increases cost, sale unchanged, margin down
     function mu_load(ld) {
       if (!ld || !ld.liters) return ld;
       const extra = mu * ld.liters;
@@ -722,8 +722,8 @@ function renderInvestor() {
     const tl  = (rd.btc.liters||0) + (rd.rtc.liters||0);
     tot.tc     = (rd.btc.tc||0)     + (rd.rtc.tc||0);
     tot.margin = (rd.btc.margin||0) + (rd.rtc.margin||0);
-    tot.roi    = tot.tc > 0 ? tot.margin / tot.tc     : 0;
-    tot.mxnl   = tl   > 0 ? tot.margin / tl          : 0;
+    tot.roi    = tot.tc > 0 ? tot.margin / tot.tc        : 0;
+    tot.mxnl   = tl   > 0 ? tot.margin / tl             : 0;
     tot.usdgal = tl   > 0 ? tot.margin / tl * L_PER_GAL / avgFx : 0;
     rd.total   = tot;
 
@@ -844,40 +844,59 @@ function renderInvestor() {
   });
   html += `</tbody></table></div></div>`;
 
-  // ── How Your Capital Works ──────────────────────────────────────────────────
-  const ovx = dashData.overview_exp || {};
-  const steps = ovx.steps || [];
-  const glossary = ovx.glossary || [];
-
-  if (steps.length || glossary.length) {
-    html += `<div style="margin-bottom:2rem;margin-top:0.5rem">
-      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">How Your Capital Works</div>`;
-
-    if (steps.length) {
-      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem">`;
-      steps.forEach(s => {
-        html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem">
-          <div style="font-size:0.75rem;font-weight:600;color:var(--accent);margin-bottom:0.4rem">${s.title}</div>
-          <div style="font-size:0.78rem;color:var(--muted);line-height:1.7">${(s.body||'').split('\n').join('<br>')}</div>
-        </div>`;
-      });
-      html += `</div>`;
+  // ── How Your Capital Works (hardcoded — no Excel dependency) ────────────────
+  const STEPS = [
+    {
+      title: "1 · Allocation",
+      body:  "Your investment dollars are used to purchase fuel directly from U.S. suppliers. Once wired, those funds become allocated gallons — product you own but that hasn't moved to Mexico yet."
+    },
+    {
+      title: "2 · Inventory (Rack-to-Bulk / RTB)",
+      body:  "ETP dispatches the allocated fuel from the supplier's rack to a bulk storage plant in Mexico. The capital is now deployed as physical inventory — product in the tank, waiting to be sold."
+    },
+    {
+      title: "3 · Pending Collection (BTC & RTC)",
+      body:  "Product moves toward the customer. In a Bulk-to-Customer (BTC) load, fuel ships from the bulk plant to the end buyer. In a Rack-to-Customer (RTC) load, it goes directly from the rack without touching the plant. In both cases, capital is active until Mexico pays."
+    },
+    {
+      title: "4 · Recovered",
+      body:  "Once the customer pays, capital is recovered along with the gross margin earned on the trade. Recovered capital can be redeployed into the next cycle, compounding returns over time."
     }
-
-    if (glossary.length) {
-      html += `<div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted2);margin-bottom:0.6rem">Glossary</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem">`;
-      glossary.forEach(g => {
-        html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem">
-          <div style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.3rem">${g.term}</div>
-          <div style="font-size:0.73rem;color:var(--muted);line-height:1.65">${g.definition}</div>
-        </div>`;
-      });
-      html += `</div>`;
+  ];
+  const GLOSSARY = [
+    {
+      term: "RTB — Rack to Bulk",
+      def:  "Product moves from the U.S. supplier rack to ETP's bulk storage plant in Mexico. This is the inventory-building step."
+    },
+    {
+      term: "BTC — Bulk to Customer",
+      def:  "Product is dispatched from the bulk plant to the end customer in Mexico. This is the revenue-generating step for inventory loads."
+    },
+    {
+      term: "RTC — Rack to Customer",
+      def:  "Product goes directly from the U.S. rack to the Mexican end customer, bypassing the bulk plant. Faster cycle, no inventory holding period."
     }
+  ];
 
-    html += `</div>`;
-  }
+  html += `<div style="margin-bottom:2rem;margin-top:0.5rem">
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">How Your Capital Works</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem">`;
+  STEPS.forEach(s => {
+    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem">
+      <div style="font-size:0.75rem;font-weight:600;color:var(--accent);margin-bottom:0.4rem">${s.title}</div>
+      <div style="font-size:0.78rem;color:var(--muted);line-height:1.7">${s.body}</div>
+    </div>`;
+  });
+  html += `</div>
+    <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted2);margin-bottom:0.6rem">Glossary</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem">`;
+  GLOSSARY.forEach(g => {
+    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.3rem">${g.term}</div>
+      <div style="font-size:0.73rem;color:var(--muted);line-height:1.65">${g.def}</div>
+    </div>`;
+  });
+  html += `</div></div>`;
 
   html += `<div style="font-size:0.68rem;color:var(--muted);font-style:italic;padding-top:0.75rem;border-top:1px solid var(--border)">
     This document is prepared for informational purposes only. Past performance does not guarantee future results. All figures sourced from ETP operational records.
