@@ -17,8 +17,8 @@ except Exception as e:
 USERS = {
     "ETP.MEX": {"password": "ETP$mex2026",  "role": "admin"},
     "B2":      {"password": "ETP$inv2026",   "role": "investor"},
-    "ETPCO":   {"password": "invest$ETP",    "role": "potential investor"},
-    "B2P":     {"password": "ETP$part2026",  "role": "partner/investor"},
+    "ETPCO":   {"password": "invest$ETP",    "role": "potential_investor"},
+    "B2P":     {"password": "ETP$part2026",  "role": "partner_investor"},
 }
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
@@ -109,7 +109,7 @@ def api_data():
     if not data:
         return jsonify(None)
     role = session['role']
-    if role in ('investor', 'partner_investor'):
+    if role == 'investor':
         return jsonify({
             "uploaded_at":    data["uploaded_at"],
             "filename":       data["filename"],
@@ -117,7 +117,18 @@ def api_data():
             "overall_summary": data["overall_summary"],
             "investment":     data.get("investment", {}),
             "bol_tab":        data.get("bol_tab", {}),
-            "markup":         role == "partner_investor",
+        })
+    if role == 'partner_investor':
+        return jsonify({
+            "uploaded_at":    data["uploaded_at"],
+            "filename":       data["filename"],
+            "meta":           data["meta"],
+            "overall_summary": data["overall_summary"],
+            "inventory":      data["inventory"],
+            "fifo_rows":      data["fifo_rows"],
+            "investment":     data.get("investment", {}),
+            "bol_tab":        data.get("bol_tab", {}),
+            "markup":         True,
         })
     return jsonify(data)  # admin gets everything
 
