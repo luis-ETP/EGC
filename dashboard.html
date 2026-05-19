@@ -226,7 +226,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
     {% endif %}
     {% if role != 'potential_investor' %}
     <div class="nav-section">Reports</div>
-    <button class="nav-item {% if role == 'investor' %}active{% endif %}" onclick="showTab('investor')" id="nav-investor">
+    <button class="nav-item {% if role == 'investor' or role == 'partner_investor' %}active{% endif %}" onclick="showTab('investor')" id="nav-investor">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Investor Summary
     </button>
@@ -307,7 +307,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
 
     <!-- INVESTOR SUMMARY TAB -->
-    <div class="tab-panel {% if role == 'investor' %}active{% endif %}" id="tab-investor">
+    <div class="tab-panel {% if role == 'investor' or role == 'partner_investor' %}active{% endif %}" id="tab-investor">
       <div id="investor-content">
         <div class="loading"><div class="spinner"></div> Loading summary…</div>
       </div>
@@ -667,14 +667,102 @@ function renderFifo() {
 function renderInvestor() {
   const inv = dashData.investment || {};
   const el = document.getElementById('investor-content');
-  if (!inv || !inv.commits || !inv.commits.length) { el.innerHTML = '<div class="empty-state">No investment data yet — upload a file to populate this section.</div>'; return; }
+  if (!inv || !_inv.commits || !_inv.commits.length) { el.innerHTML = '<div class="empty-state">No investment data yet — upload a file to populate this section.</div>'; return; }
+  const invD = applyMarkup(inv);
+  // Use invD for all display; inv untouched
+  const _inv = invD;
+
+  // ── Markup logic (+$0.10/gal = +0.10 * FX / 3.7854 MXN/L) ──────────────────
+  const MARKUP = dashData.markup === true;
+  const MARKUP_USD_GAL = 0.10;
+  const LITERS_PER_GAL = 3.7854;
+
+  // Compute weighted avg FX from BOL tab (FX Payment col)
+  // Fall back to avg of Supplier Invoices FX rates (~17.30)
+  function getAvgFx() {
+    const bols = (dashData.bol_tab || {}).rows || [];
+    const fxVals = bols.map(r => r.fx_payment).filter(v => v > 0);
+    return fxVals.length ? fxVals.reduce((a,b)=>a+b,0)/fxVals.length : 17.30;
+  }
+
+  function markupMxnL(fx) {
+    // +0.10 USD/gal * FX / 3.7854 liters/gal = MXN/L added to supply cost
+    return MARKUP ? MARKUP_USD_GAL * fx / LITERS_PER_GAL : 0;
+  }
+
+  function applyMarkup(inv) {
+    if (!MARKUP) return inv;
+    const avgFx = getAvgFx();
+    const mu = markupMxnL(avgFx);  // MXN/L adder
+
+    // Clone deeply
+    inv = JSON.parse(JSON.stringify(inv));
+    const ad = _inv.active_detail || {};
+    const rd = _inv.recovered_detail || {};
+
+    // Inventory: value increases by markup/L * inv_liters
+    if (ad.inv_liters > 0) {
+      ad.inv_mxn = ad.inv_mxn + mu * ad.inv_liters;
+    }
+    // Allocation unchanged (paid gallons not yet pulled — cost not realized)
+
+    // BTC/RTC pending: cost increases by markup/L * pending_liters
+    if (ad.btc_pend_liters > 0) {
+      ad.btc_pend_mxn = ad.btc_pend_mxn + mu * ad.btc_pend_liters;
+    }
+    if (ad.rtc_pend_liters > 0) {
+      ad.rtc_pend_mxn = ad.rtc_pend_mxn + mu * ad.rtc_pend_liters;
+    }
+
+    // Recalculate active capital total
+    ad.total_mxn = (ad.alloc_mxn||0) + ad.inv_mxn + ad.btc_pend_mxn + ad.rtc_pend_mxn;
+    _inv.active_capital = ad.total_mxn;
+    _inv.available = _inv.total_committed_mxn - _inv.active_capital;
+
+    // Recovered: BTC/RTC — cost increases, sale unchanged, margin decreases
+    function markupLoad(d) {
+      if (!d || d.liters <= 0) return d;
+      const extra = mu * d.liters;
+      d.tc     = d.tc + extra;          // higher cost
+      d.margin = d.margin - extra;      // lower margin
+      d.roi    = d.tc > 0 ? d.margin / d.tc : 0;
+      d.mxnl   = d.liters > 0 ? d.margin / d.liters : 0;
+      // usdgal: margin(MXN) / liters * 3.7854 / avgFx
+      d.usdgal = d.liters > 0 ? (d.margin / d.liters * LITERS_PER_GAL / avgFx) : 0;
+      return d;
+    }
+
+    rd.btc   = markupLoad(rd.btc);
+    rd.rtc   = markupLoad(rd.rtc);
+
+    // Recalculate total recovered
+    const tot = rd.total || {};
+    const totLiters = (rd.btc.liters||0) + (rd.rtc.liters||0);
+    tot.tc     = (rd.btc.tc||0) + (rd.rtc.tc||0);
+    tot.margin = (rd.btc.margin||0) + (rd.rtc.margin||0);
+    tot.roi    = tot.tc > 0 ? tot.margin / tot.tc : 0;
+    tot.mxnl   = totLiters > 0 ? tot.margin / totLiters : 0;
+    tot.usdgal = totLiters > 0 ? (tot.margin / totLiters * LITERS_PER_GAL / avgFx) : 0;
+    rd.total   = tot;
+
+    // Update top-level KPIs
+    _inv.total_margin   = tot.margin;
+    _inv.investor_share = tot.margin * (_inv.inv_share_pct || 0.40);
+    // recovered_mxn = sale price paid by Mexico — UNCHANGED
+    // revolved = recovered_mxn / committed — UNCHANGED
+    // committed — UNCHANGED
+
+    inv.active_detail    = ad;
+    inv.recovered_detail = rd;
+    return inv;
+  }
 
   const fmxn = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—';
   const fusd = v => v != null ? '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—';
   const fmxnd = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—';
   const fpct = v => v != null ? (Number(v)*100).toFixed(2)+'%' : '—';
   const fnum = (v,d=2) => v != null ? Number(v).toFixed(d) : '—';
-  const date = inv.as_of || '—';
+  const date = _inv.as_of || '—';
 
   // ── Header ──
   let html = `
@@ -697,7 +785,7 @@ function renderInvestor() {
       <thead><tr>
         <th>Round</th><th style="text-align:right">Committed (USD)</th><th style="text-align:right">Committed (MXN)</th><th style="text-align:right">Date</th><th style="text-align:right">FX Rate</th>
       </tr></thead><tbody>`;
-  (inv.commits||[]).forEach(c => {
+  (_inv.commits||[]).forEach(c => {
     html += `<tr>
       <td><span style="font-size:0.7rem;padding:2px 8px;border-radius:4px;background:rgba(74,124,220,0.12);color:var(--accent);font-weight:600">${c.round}</span></td>
       <td style="text-align:right">$${Number(c.usd).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
@@ -708,20 +796,20 @@ function renderInvestor() {
   });
   html += `<tr style="font-weight:600;background:var(--surface2)">
     <td>Total Committed Capital</td>
-    <td style="text-align:right">$${Number(inv.total_committed_usd||0).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
-    <td style="text-align:right">$${Number(inv.total_committed_mxn||0).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
+    <td style="text-align:right">$${Number(_inv.total_committed_usd||0).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
+    <td style="text-align:right">$${Number(_inv.total_committed_mxn||0).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
     <td colspan="2"></td>
   </tr></tbody></table></div></div>`;
 
   // ── KPI bar ──
   const kpis = [
-    {label:'Total Committed',  val:'$'+fmxn(inv.total_committed_mxn), sub:'MXN'},
-    {label:'Active Capital',   val:'$'+fmxn(inv.active_capital),       sub:'MXN deployed'},
-    {label:'Available Capital',val:'$'+fmxn(inv.available),            sub:'MXN uninvested'},
-    {label:'Recovered Capital',val:'$'+fmxn(inv.recovered_mxn),        sub:'MXN returned', green:true},
-    {label:'Revolved Multiple',val:(Number(inv.revolved||0)).toFixed(2)+'×', sub:'capital turns'},
-    {label:'Total Profit',     val:'$'+fmxn(inv.total_margin),         sub:'MXN gross', green:true},
-    {label:'Investor Share',   val:'$'+fmxn(inv.investor_share),       sub:(Math.round((inv.inv_share_pct||0.4)*100))+'% of profit', green:true},
+    {label:'Total Committed',  val:'$'+fmxn(_inv.total_committed_mxn), sub:'MXN'},
+    {label:'Active Capital',   val:'$'+fmxn(_inv.active_capital),       sub:'MXN deployed'},
+    {label:'Available Capital',val:'$'+fmxn(_inv.available),            sub:'MXN uninvested'},
+    {label:'Recovered Capital',val:'$'+fmxn(_inv.recovered_mxn),        sub:'MXN returned', green:true},
+    {label:'Revolved Multiple',val:(Number(_inv.revolved||0)).toFixed(2)+'×', sub:'capital turns'},
+    {label:'Total Profit',     val:'$'+fmxn(_inv.total_margin),         sub:'MXN gross', green:true},
+    {label:'Investor Share',   val:'$'+fmxn(_inv.investor_share),       sub:(Math.round((_inv.inv_share_pct||0.4)*100))+'% of profit', green:true},
   ];
   html += `<div style="margin-bottom:2rem">
     <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Key Performance Indicators (MXN)</div>
@@ -736,7 +824,7 @@ function renderInvestor() {
   html += `</div></div>`;
 
   // ── Active Capital ──
-  const ad = inv.active_detail || {};
+  const ad = _inv.active_detail || {};
   html += `<div style="margin-bottom:2rem">
     <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Active Capital — investor capital funding loads not yet collected</div>
     <div class="table-wrap"><table>
@@ -751,7 +839,7 @@ function renderInvestor() {
     </table></div></div>`;
 
   // ── Recovered Capital ──
-  const rd = inv.recovered_detail || {};
+  const rd = _inv.recovered_detail || {};
   const recRows = [
     ['RTC', rd.rtc||{}],
     ['BTC', rd.btc||{}],
@@ -1070,7 +1158,7 @@ function renderCompany() {
 // ── Init ───────────────────────────────────────────────────────────────────────
 loadData();
 if (ROLE === 'potential_investor') showTab('company');
-else if (ROLE === 'investor') showTab('investor');
+else if (ROLE === 'investor' || ROLE === 'partner_investor') showTab('investor');
 </script>
 </body>
 </html>
