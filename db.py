@@ -65,14 +65,17 @@ def load_data():
             row = cur.fetchone()
             if not row:
                 return None
+            def _get(key, default=None):
+                try: return row[key] if row[key] is not None else default
+                except: return default
             return {
                 "uploaded_at":     row["uploaded_at"].isoformat() if row["uploaded_at"] else None,
                 "filename":        row["filename"],
-                "overall_summary": row["overall_summary"],
-                "inventory":       row["inventory"],
-                "fifo_rows":       row["fifo_rows"],
-                "meta":            row["meta"],
-                "investment":      row.get("investment") or {},
-                "bol_tab":         row.get("bol_tab") or {},
-                "overview_exp":    row.get("overview_exp") or {},
+                "overall_summary": _get("overall_summary", []),
+                "inventory":       _get("inventory", {}),
+                "fifo_rows":       _get("fifo_rows", []),
+                "meta":            _get("meta", {}),
+                "investment":      _get("investment", {}),
+                "bol_tab":         _get("bol_tab", {}),
+                "overview_exp":    _get("overview_exp", {}),
             }
