@@ -79,3 +79,39 @@ def load_data():
                 "bol_tab":         _get("bol_tab", {}),
                 "overview_exp":    _get("overview_exp", {}),
             }
+
+# ── Settings ───────────────────────────────────────────────────────────────────
+def init_settings():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
+            """)
+            # Default markup
+            cur.execute("""
+                INSERT INTO settings (key, value) VALUES ('markup_usd', '0.02')
+                ON CONFLICT (key) DO NOTHING;
+            """)
+        conn.commit()
+
+def get_setting(key, default=None):
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT value FROM settings WHERE key = %s", (key,))
+                row = cur.fetchone()
+                return row['value'] if row else default
+    except:
+        return default
+
+def set_setting(key, value):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO settings (key, value) VALUES (%s, %s)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+            """, (key, str(value)))
+        conn.commit()
