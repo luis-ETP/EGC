@@ -822,7 +822,8 @@ function renderBol() {
         <th>Product</th>
         <th>BOL</th>
         <th style="text-align:right">Gallons</th>
-        <th style="text-align:right">Liters</th>
+        <th style="text-align:right">Total Cost/Gal (USD)</th>
+        <th style="text-align:right">FX Rate</th>
         <th>Invoice #</th>
         <th style="text-align:right">Invoice Amount</th>
         <th style="text-align:right">Received Payments</th>
@@ -845,7 +846,8 @@ function renderBol() {
       <td>${r.product}</td>
       <td style="font-weight:500">${r.bol}</td>
       <td style="text-align:right">${fn(r.gallons)}</td>
-      <td style="text-align:right">${fn(r.liters)}</td>
+      <td style="text-align:right">${r.cost_gal>0 ? '$'+fd(r.cost_gal) : '—'}</td>
+      <td style="text-align:right">${r.fx_payment>0 ? fd(r.fx_payment,4) : '—'}</td>
       <td style="color:var(--muted2);font-size:0.72rem">${r.invoice || '—'}</td>
       <td style="text-align:right">${r.inv_amount>0 ? fu(r.inv_amount) : '—'}</td>
       <td style="text-align:right">${r.received>0 ? fu(r.received) : '—'}</td>
