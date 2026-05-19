@@ -2,7 +2,7 @@ from flask import Flask, request, Response, render_template_string, jsonify, ses
 import os, json, shutil, tempfile, base64
 from fifo_engine import run_fifo
 from extract import extract
-from db import init_db, save_data, load_data
+from db import init_db, save_data, load_data, get_setting, set_setting, init_settings
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "etpmex-fifo-secret-2024")
@@ -11,14 +11,14 @@ LOGO_B64 = "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAg
 
 try:
     init_db()
+init_settings()
 except Exception as e:
     print(f"DB init warning: {e}")
 
 USERS = {
-    "ETP.MEX": {"password": "ETP$mex2026",  "role": "admin"},
-    "EGC.P":      {"password": "EGC$inv2026",   "role": "investor"},
-    "EGC.INFO":   {"password": "invest$EGC",    "role": "potential_investor"},
-    "EGC.LP":     {"password": "EGC$lp2026",  "role": "LP"},
+    "EGC.ADMIN": {"password": "EGC$admin!2026", "role": "admin"},
+    "EGC.LPA":   {"password": "LPA!EGC$26",     "role": "potential_investor"},
+    "EGC.LPP":   {"password": "LPP!EGC$26",     "role": "partner_investor"},
 }
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
@@ -105,7 +105,8 @@ def api_data():
     if 'user' not in session:
         return jsonify(error='Unauthorized'), 401
     try:
-        data = load_data()
+        markup_usd = float(get_setting("markup_usd", "0.02"))
+    data = load_data()
     except Exception as e:
         print(f"[load_data error] {e}", flush=True)
         return jsonify(None)
@@ -134,6 +135,7 @@ def api_data():
             "bol_tab":        data.get("bol_tab", {}),
             "overview_exp":   data.get("overview_exp", {}),
             "markup":         True,
+            "markup_usd":     markup_usd,
         })
     return jsonify(data)  # admin gets everything
 
@@ -175,6 +177,28 @@ def process():
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers={'Content-Disposition': f'attachment; filename=FIFO_Output.xlsx'})
 
+
+
+@app.route('/api/settings', methods=['POST'])
+def save_settings():
+    if 'user' not in session or session['role'] != 'admin':
+        return jsonify(error='Unauthorized'), 403
+    data = request.get_json()
+    val = data.get('markup_usd', '0.02')
+    try:
+        v = round(float(val), 4)
+        if v < 0 or v > 10:
+            raise ValueError
+        set_setting('markup_usd', v)
+        return jsonify(ok=True, markup_usd=v)
+    except:
+        return jsonify(error='Invalid value'), 400
+
+@app.route('/api/settings', methods=['GET'])
+def get_settings():
+    if 'user' not in session or session['role'] != 'admin':
+        return jsonify(error='Unauthorized'), 403
+    return jsonify(markup_usd=float(get_setting('markup_usd', '0.02')))
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
