@@ -321,15 +321,33 @@ def _extract_bol(wb):
         "total_not_invoiced":  f(rows[4][17]),   # row 5
     }
 
+    # Read headers to find column indices dynamically
+    hdr_row = None
+    for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
+        if i == 7: hdr_row = [str(v).strip() if v else "" for v in row]; break
+    def _col(name, default):
+        try: return hdr_row.index(name)
+        except ValueError: return default
+
+    idx_inv    = _col("Invoice #",        17)
+    idx_col4   = _col("Column4",          22)
+    idx_col5   = _col("Column5",          23)
+    idx_col6   = _col("Column6",          24)
+    idx_fx     = _col("FX Payment",       25)
+    idx_cost_g = _col("Tota Cost /Gal (USD)", 16)
+    idx_recv   = _col("Received Payments", 20)
+    idx_bal    = _col("Balance",          21)
+    idx_inv_amt= _col("Invoice Amount",   18)
+
     # Data rows (row 8+)
     bols = []
     for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
         if i <= 7: continue
         if not row[2]: break
-        inv  = fs(row[17])   # R Invoice#
-        col4 = f(row[22])    # Column4: 1 if invoiced
-        col5 = f(row[23])    # Column5: 1 if balance=0
-        col6 = f(row[24])    # Column6: col4+col5
+        inv  = fs(row[idx_inv])
+        col4 = f(row[idx_col4])
+        col5 = f(row[idx_col5])
+        col6 = f(row[idx_col6])
 
         # Balance status: 'paid' | 'open' | 'not_invoiced'
         if col4 == 0:
@@ -344,12 +362,12 @@ def _extract_bol(wb):
             "gallons":     round(f(row[6]), 2),
             "liters":      round(f(row[7]), 2),
             "product":     fs(row[8]),
-            "cost_gal":    round(f(row[16]), 4),   # Tota Cost/Gal (USD)
-            "fx_payment":  round(f(row[25]), 4),   # FX Payment (idx 25)
+            "cost_gal":    round(f(row[idx_cost_g]), 4),
+            "fx_payment":  round(f(row[idx_fx]), 4) if idx_fx < len(row) else 0.0,
             "invoice":     inv,
-            "inv_amount":  round(f(row[18]), 2),
-            "received":    round(f(row[20]), 2),
-            "balance":     round(f(row[21]), 2),
+            "inv_amount":  round(f(row[idx_inv_amt]), 2),
+            "received":    round(f(row[idx_recv]), 2),
+            "balance":     round(f(row[idx_bal]), 2),
             "status":      status,
         })
 
