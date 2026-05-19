@@ -16,9 +16,10 @@ def extract(path, src_path=None):
     fifo_rows       = _extract_fifo(wb)
     meta            = _extract_meta(wb)
 
-    bol_tab    = _extract_bol(wb_src)
-    investment = _extract_investment_summary(wb_src)
-    return overall_summary, inventory, fifo_rows, meta, investment, bol_tab
+    bol_tab         = _extract_bol(wb_src)
+    overview_exp    = _extract_overview(wb_src)
+    investment      = _extract_investment_summary(wb_src)
+    return overall_summary, inventory, fifo_rows, meta, investment, bol_tab, overview_exp
 
 # ── Overall Summary ────────────────────────────────────────────────────────────
 def _extract_overall_summary(wb):
@@ -372,3 +373,29 @@ def _extract_bol(wb):
         })
 
     return {"summary": summary, "rows": bols}
+
+# ── Overview / How Capital Works ───────────────────────────────────────────────
+def _extract_overview(wb):
+    try:
+        ws = wb["Overview"]
+        rows = list(ws.iter_rows(values_only=True))
+        steps = []
+        glossary = []
+        in_glossary = False
+        for i, row in enumerate(rows, start=1):
+            if not any(v for v in row): continue
+            label = str(row[1]).strip() if row[1] else ""
+            text  = str(row[2]).strip() if row[2] else ""
+            if label == "GLOSSARY":
+                in_glossary = True
+                continue
+            if label == "HOW YOUR CAPITAL WORKS": continue
+            if "This document" in label: continue
+            if not label: continue
+            if in_glossary and text:
+                glossary.append({"term": label, "definition": text})
+            elif not in_glossary and text:
+                steps.append({"title": label, "body": text})
+        return {"steps": steps, "glossary": glossary}
+    except:
+        return {"steps": [], "glossary": []}
