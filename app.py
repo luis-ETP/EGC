@@ -17,8 +17,8 @@ except Exception as e:
 
 USERS = {
     "EGC.ADMIN": {"password": "EGC$admin!2026", "role": "admin"},
-    "EGC.LPP":   {"password": "LPP!EGC$26",     "role": "LPP"},
-    "EGC.LPA":   {"password": "LPA!EGC$26",     "role": "LPA"},
+    "EGC.LPA":   {"password": "LPA!EGC$26",     "role": "potential_investor"},
+    "EGC.LPP":   {"password": "LPP!EGC$26",     "role": "partner_investor"},
 }
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
