@@ -16,9 +16,9 @@ except Exception as e:
 
 USERS = {
     "ETP.MEX": {"password": "ETP$mex2026",  "role": "admin"},
-    "B2":      {"password": "ETP$inv2026",   "role": "investor"},
-    "ETPCO":   {"password": "invest$ETP",    "role": "potential_investor"},
-    "B2P":     {"password": "ETP$part2026",  "role": "partner_investor"},
+    "EGC.P":      {"password": "EGC$inv2026",   "role": "investor"},
+    "EGC.INFO":   {"password": "invest$EGC",    "role": "potential_investor"},
+    "EGC.LP":     {"password": "EGC$lp2026",  "role": "LP"},
 }
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
