@@ -189,7 +189,7 @@ def run_fifo(SRC, DST):
             ws_bol.cell(row=i, column=5).value  = alloc["batch_str"]
             ws_bol.cell(row=i, column=10).value = round(alloc["cost_usd"],    6)  # J Cost/Gal USD
             ws_bol.cell(row=i, column=12).value = round(alloc["cost_adder"],  6)  # L Cost/Gal+Adder
-            ws_bol.cell(row=i, column=13).value = round(alloc["cost_mxn"],    6)  # M Supply Cost DashFuel
+            # col 13 (M) Supply Cost DashFuel is now a formula — do not write
 
     # Write Net RTB Gallons, Remainder, and Liter formulas to Supplier Invoices
     # W(23)=NetRTBGallons, X(24)=RemainderGallons, U(21)=formula, V(22)=formula
@@ -477,14 +477,26 @@ def run_fifo(SRC, DST):
         sup_inv[label]["i_src"] = _f(row[8])  # I Avg Cost (cached, fallback)
 
     # Read D (Wired Amount) from Supplier Invoices col E (raw)
+    # Read E (Paid for Gallons) from Supplier Invoices col G (idx 6) as fallback
     # Read F (Pulled) and G (Remaining) from script-written W/X
     out_rows = {i: row for i, row in enumerate(ws_inv.iter_rows(values_only=True), start=1)
                 if i > 7 and row[0] is not None}
+    src_rows = {i: row for i, row in enumerate(ws_inv_r.iter_rows(values_only=True), start=1)
+                if i > 7 and row[0] is not None}
+    sup_paid_gals = _dd(float)
     for i, out in out_rows.items():
         sup = str(out[2]).strip()
         sup_inv[sup]["d"] += _f(out[4])    # E Wired Amount (raw)
         sup_inv[sup]["f"] += _f(out[22])   # W Net RTB Gallons (script-written)
         sup_inv[sup]["g"] += _f(out[23])   # X Remainder Gallons (script-written)
+        # Read Paid for Gallons from SOURCE file (cached) since output formulas return None
+        src = src_rows.get(i, out)
+        sup_paid_gals[sup] += _f(src[6])   # G Paid for Gallons (cached in source)
+
+    # Fallback: use Supplier Invoices paid_gals when source Overall Summary cached value is 0
+    for sup, pg in sup_paid_gals.items():
+        if sup_inv[sup]["e"] == 0.0 and pg > 0:
+            sup_inv[sup]["e"] = pg
 
     # Aggregate J (Received Payments) and K (Mexico Balance) from BOL output
     # T(Balance) is a formula — compute it: T = (M/G + K)*G - S if P!="" else (M/G+K)*G
