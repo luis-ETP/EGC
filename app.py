@@ -18,7 +18,7 @@ USERS = {
     "ETP.MEX": {"password": "ETP$mex2026",  "role": "admin"},
     "B2":      {"password": "ETP$inv2026",   "role": "investor"},
     "ETPCO":   {"password": "invest$ETP",    "role": "potential_investor"},
-    "B2P":     {"password": "ETP$part2026",  "role": "partner_investor"},
+    "B2P":     {"password": "ETP$b2p2026",  "role": "partner/investor"},
 }
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
