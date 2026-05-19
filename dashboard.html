@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ETPMEX — Dashboard</title>
+<title>EGCMEX — Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -202,7 +202,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
 <!-- Sidebar -->
 <div class="sidebar">
   <div class="sidebar-logo">
-    <img src="data:image/svg+xml;base64,{{ logo }}" alt="ETP">
+    <img src="data:image/svg+xml;base64,{{ logo }}" alt="EGC">
   </div>
   <nav class="sidebar-nav">
     {% if role == 'admin' or role == 'partner_investor' %}
@@ -745,7 +745,7 @@ function renderInvestor() {
   let html = `
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
     <div>
-      <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">ETP — Investor Performance Report</div>
+      <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">EGC — Investor Performance Report</div>
       <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;font-style:italic">All figures in MXN &amp; Liters</div>
     </div>
     <div style="text-align:right">
@@ -852,7 +852,7 @@ function renderInvestor() {
     },
     {
       title: "2 · Inventory (Rack-to-Bulk / RTB)",
-      body:  "ETP dispatches the allocated fuel from the supplier's rack to a bulk storage plant in Mexico. The capital is now deployed as physical inventory — product in the tank, waiting to be sold."
+      body:  "EGC dispatches the allocated fuel from the supplier's rack to a bulk storage plant in Mexico. The capital is now deployed as physical inventory — product in the tank, waiting to be sold."
     },
     {
       title: "3 · Pending Collection (BTC & RTC)",
@@ -899,7 +899,7 @@ function renderInvestor() {
   html += `</div></div>`;
 
   html += `<div style="font-size:0.68rem;color:var(--muted);font-style:italic;padding-top:0.75rem;border-top:1px solid var(--border)">
-    This document is prepared for informational purposes only. Past performance does not guarantee future results. All figures sourced from ETP operational records.
+    This document is prepared for informational purposes only. Past performance does not guarantee future results. All figures sourced from EGC operational records.
   </div>`;
 
   el.innerHTML = html;
@@ -1006,13 +1006,13 @@ function renderCompany() {
     .cp-strength-title { font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:0.35rem;display:flex;align-items:center;gap:0.45rem; }
     .cp-dot { width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0; }
     .cp-strength p { font-size:0.76rem;color:var(--muted);line-height:1.7;margin:0; }
-    .cp-leaders { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+    .cp-leaders { display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem; }
     .cp-leader { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:0.8rem; }
     .cp-avatar { width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:var(--accent);flex-shrink:0; }
     .cp-leader-name { font-size:0.85rem;font-weight:600;color:var(--text); }
     .cp-leader-role { font-size:0.7rem;color:var(--muted);margin-top:2px; }
     .cp-leader-bio  { font-size:0.72rem;color:var(--muted2);margin-top:5px;font-style:italic; }
-    .cp-offices { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+    .cp-offices { display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem; }
     .cp-office { background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1.1rem; }
     .cp-office-flag { font-size:1rem;margin-bottom:3px; }
     .cp-office-city { font-size:0.85rem;font-weight:600;color:var(--text); }
@@ -1025,7 +1025,7 @@ function renderCompany() {
   <!-- Overview -->
   <div class="cp-section">
     <div class="cp-label">Overview</div>
-    <p class="cp-p">Elevar Trading Partners is a <strong>fully licensed refined fuels trading company</strong> operating across the U.S. and Mexico energy corridor. With active import permits from SENER and commercialization permits from the CRE/CNE, ETP occupies a rare position in a market where <strong>regulatory access has become the primary barrier to entry</strong>. The company sources product from U.S. refiners and terminals, importing directly into Mexico or acquiring locally, guided by real-time pricing and logistics analysis to optimize every transaction.</p>
+    <p class="cp-p">Elevar Global Commodities is a <strong>fully licensed refined fuels trading company</strong> operating across the U.S. and Mexico energy corridor. With active import permits from SENER and commercialization permits from the CRE/CNE, EGC occupies a rare position in a market where <strong>regulatory access has become the primary barrier to entry</strong>. The company sources product from U.S. refiners and terminals, importing directly into Mexico or acquiring locally, guided by real-time pricing and logistics analysis to optimize every transaction.</p>
   </div>
 
   <!-- Metrics -->
@@ -1067,13 +1067,13 @@ function renderCompany() {
     <div class="cp-two">
       <div class="cp-card">
         <div class="cp-card-title">Track 1 · U.S. to Mexico Import (via Petrotal)</div>
-        <p style="margin-bottom:0.4rem">ETP sources refined fuels from any U.S. supplier at any U.S. rack and imports into Mexico using <strong>Petrotal's SENER permits</strong>, which cover diesel, regular, and premium gasoline. Product moves through two main channels:</p>
+        <p style="margin-bottom:0.4rem">EGC sources refined fuels from any U.S. supplier at any U.S. rack and imports into Mexico using <strong>Petrotal's SENER permits</strong>, which cover diesel, regular, and premium gasoline. Product moves through two main channels:</p>
         <p style="margin-bottom:0.2rem">· <strong>By truck</strong> : crosses border points into bulk storage facilities</p>
         <p style="margin-bottom:0">· <strong>By rail</strong> : ships to terminals in the Mexican interior</p>
       </div>
       <div class="cp-card">
         <div class="cp-card-title">Track 2 · Domestic Mexico Commercialization</div>
-        <p style="margin-bottom:0.4rem">When domestic pricing or logistics favor it, ETP purchases fuel already inside Mexico, priced in MXN/L, from domestic suppliers including:</p>
+        <p style="margin-bottom:0.4rem">When domestic pricing or logistics favor it, EGC purchases fuel already inside Mexico, priced in MXN/L, from domestic suppliers including:</p>
         <p style="margin-bottom:0.2rem">· <strong>PEMEX</strong></p>
         <p style="margin-bottom:0.2rem">· <strong>Flint Hills Mexico</strong></p>
         <p style="margin-bottom:0.2rem">· <strong>Glencore Mexico</strong></p>
@@ -1141,9 +1141,9 @@ function renderCompany() {
       </svg>
       <div class="cp-path-desc">
         <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#4a7cdc;letter-spacing:0.08em;margin-bottom:3px">PATH A · At-Rack Transaction</div><div style="font-size:0.73rem;color:var(--muted)">Customer picks up at the rack. No ETP logistics involved.</div></div>
-        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#4a7cdc;letter-spacing:0.08em;margin-bottom:3px">PATH B · ETP-Coordinated Delivery</div><div style="font-size:0.73rem;color:var(--muted)">ETP picks up at the rack and delivers directly to the customer.</div></div>
-        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#3fb950;letter-spacing:0.08em;margin-bottom:3px">PATH C · Inventory Position + Last-Mile</div><div style="font-size:0.73rem;color:var(--muted)">ETP moves product to a bulk plant. Customer picks up at the plant, or ETP dispatches last-mile delivery via third-party carrier.</div></div>
-        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#d29922;letter-spacing:0.08em;margin-bottom:3px">PATH D · Rail Paper Trade (Import Only)</div><div style="font-size:0.73rem;color:var(--muted)">Product ships by railcar to a Mexican rail terminal. ETP coordinates full rail logistics. Customer picks up at the terminal.</div></div>
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#4a7cdc;letter-spacing:0.08em;margin-bottom:3px">PATH B · ETP-Coordinated Delivery</div><div style="font-size:0.73rem;color:var(--muted)">EGC picks up at the rack and delivers directly to the customer.</div></div>
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#3fb950;letter-spacing:0.08em;margin-bottom:3px">PATH C · Inventory Position + Last-Mile</div><div style="font-size:0.73rem;color:var(--muted)">EGC moves product to a bulk plant. Customer picks up at the plant, or EGC dispatches last-mile delivery via third-party carrier.</div></div>
+        <div class="cp-path-card"><div style="font-size:0.66rem;font-weight:700;color:#d29922;letter-spacing:0.08em;margin-bottom:3px">PATH D · Rail Paper Trade (Import Only)</div><div style="font-size:0.73rem;color:var(--muted)">Product ships by railcar to a Mexican rail terminal. EGC coordinates full rail logistics. Customer picks up at the terminal.</div></div>
       </div>
     </div>
   </div>
@@ -1152,10 +1152,10 @@ function renderCompany() {
   <div class="cp-section">
     <div class="cp-label">Key Strengths</div>
     <div class="cp-four">
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Rare Regulatory Access</div><p>ETP holds active SENER import permits for all three major fuel products at a time when the Mexican government has revoked or declined to renew the majority of private importer permits.</p></div>
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Rare Regulatory Access</div><p>EGC holds active SENER import permits for all three major fuel products at a time when the Mexican government has revoked or declined to renew the majority of private importer permits.</p></div>
       <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Full Vertical Permit Stack</div><p>Import, commercialization, and transportation permits across multiple legal entities create a compliant, end-to-end operating structure from U.S. terminal to Mexican end customer.</p></div>
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Supply-Side Flexibility</div><p>With no exclusive supplier commitments, ETP sources from any U.S. refiner or terminal and toggles between import and domestic purchase based on real-time pricing.</p></div>
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Compliant by Design</div><p>ETP's multi-entity structure matches each regulated activity to the correct permit type, fully aligned with the 2025 SENER/CNE regulatory consolidation and SAT's updated CFDI hydrocarbon complement requirements.</p></div>
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Supply-Side Flexibility</div><p>With no exclusive supplier commitments, EGC sources from any U.S. refiner or terminal and toggles between import and domestic purchase based on real-time pricing.</p></div>
+      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Compliant by Design</div><p>EGC's multi-entity structure matches each regulated activity to the correct permit type, fully aligned with the 2025 SENER/CNE regulatory consolidation and SAT's updated CFDI hydrocarbon complement requirements.</p></div>
     </div>
   </div>
 
@@ -1163,8 +1163,9 @@ function renderCompany() {
   <div class="cp-section">
     <div class="cp-label">Leadership</div>
     <div class="cp-leaders">
-      <div class="cp-leader"><div class="cp-avatar">JD</div><div><div class="cp-leader-name">Jeremy Dickens</div><div class="cp-leader-role">Principal</div><div class="cp-leader-bio">Bio to be added.</div></div></div>
-      <div class="cp-leader"><div class="cp-avatar">PG</div><div><div class="cp-leader-name">Pablo Gonzalez</div><div class="cp-leader-role">Principal</div><div class="cp-leader-bio">Bio to be added.</div></div></div>
+      <div class="cp-leader"><div class="cp-avatar">JD</div><div><div class="cp-leader-name">Jeremy Dickens</div><div class="cp-leader-role">Principal</div></div></div>
+      <div class="cp-leader"><div class="cp-avatar">BH</div><div><div class="cp-leader-name">Ben Hart</div><div class="cp-leader-role">Principal</div></div></div>
+      <div class="cp-leader"><div class="cp-avatar">BS</div><div><div class="cp-leader-name">Benjamin Stern</div><div class="cp-leader-role">Principal</div></div></div>
     </div>
   </div>
 
@@ -1172,12 +1173,13 @@ function renderCompany() {
   <div class="cp-section">
     <div class="cp-label">Offices</div>
     <div class="cp-offices">
-      <div class="cp-office"><div class="cp-office-flag">🇺🇸</div><div class="cp-office-city">The Woodlands, TX</div><div class="cp-office-addr">United States</div></div>
-      <div class="cp-office"><div class="cp-office-flag">🇲🇽</div><div class="cp-office-city">Mexico City, CDMX</div><div class="cp-office-addr">Av. Paseo de la Reforma 333, Suite 703</div></div>
+      <div class="cp-office"><div class="cp-office-flag">🇺🇸</div><div class="cp-office-city">The Woodlands, TX</div></div>
+      <div class="cp-office"><div class="cp-office-flag">🇲🇽</div><div class="cp-office-city">Mexico City</div></div>
+      <div class="cp-office"><div class="cp-office-flag">🇰🇳</div><div class="cp-office-city">St. Kitts &amp; Nevis</div></div>
     </div>
   </div>
 
-  <div class="cp-footer">This document is confidential and prepared for informational purposes only. It does not constitute an offer or solicitation. All information sourced from ETP operational records.</div>
+  <div class="cp-footer">This document is confidential and prepared for informational purposes only. It does not constitute an offer or solicitation. All information sourced from EGC operational records.</div>
   `;
 }
 
