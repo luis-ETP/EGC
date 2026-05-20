@@ -24,7 +24,8 @@ USERS = {
 # ── Auth ───────────────────────────────────────────────────────────────────────
 LOGIN_HTML = """<!DOCTYPE html>
 <html><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj4KICA8cmVjdCB4PSIyIiB5PSIyIiAgd2lkdGg9IjI4IiBoZWlnaHQ9IjciIHJ4PSIzLjUiIGZpbGw9IiNlNzRjM2MiIHRyYW5zZm9ybT0icm90YXRlKC0zMCwgMTYsIDUuNSkiLz4KICA8cmVjdCB4PSIyIiB5PSIxMyIgd2lkdGg9IjI4IiBoZWlnaHQ9IjciIHJ4PSIzLjUiIGZpbGw9IiNhZWNiZjAiIHRyYW5zZm9ybT0icm90YXRlKC0zMCwgMTYsIDE2LjUpIi8+CiAgPHJlY3QgeD0iMiIgeT0iMjQiIHdpZHRoPSIyOCIgaGVpZ2h0PSI3IiByeD0iMy41IiBmaWxsPSIjZTc0YzNjIiB0cmFuc2Zvcm09InJvdGF0ZSgtMzAsIDE2LCAyNy41KSIvPgo8L3N2Zz4="><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ETPMEX — Login</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
