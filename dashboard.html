@@ -713,19 +713,14 @@ function renderInvestor() {
     const ad = d.active_detail || {};
     const rd = d.recovered_detail || {};
 
-    // Fee is incurred at delivery only — inventory & allocation unchanged.
-    // Only pending loads (not yet collected) and recovered loads are affected.
-    ad.btc_pend_mxn += mu * (ad.btc_pend_liters || 0);
-    ad.rtc_pend_mxn += mu * (ad.rtc_pend_liters || 0);
-    ad.total_mxn     = (ad.alloc_mxn||0) + (ad.inv_mxn||0) + ad.btc_pend_mxn + ad.rtc_pend_mxn;
+    // Fee only affects recovered loads (already collected) — active capital unchanged
     d.active_capital = ad.total_mxn;
     d.available      = d.total_committed_mxn - d.active_capital;
 
-    // Recovered loads: delivery fee increases cost, sale unchanged, margin down
+    // Recovered loads: delivery fee reduces margin only — tc (sale price) unchanged
     function mu_load(ld) {
       if (!ld || !ld.liters) return ld;
       const extra = mu * ld.liters;
-      ld.tc     += extra;
       ld.margin -= extra;
       ld.roi     = ld.tc     > 0 ? ld.margin / ld.tc     : 0;
       ld.mxnl    = ld.liters > 0 ? ld.margin / ld.liters : 0;
