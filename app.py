@@ -17,8 +17,8 @@ except Exception as e:
 
 USERS = {
     "EGC.ADMIN": {"password": "EGC$admin!2026", "role": "admin"},
-    "EGC.LPP":   {"password": "LPP!EGC$26",     "role": "LPP"},
-    "EGC.LPA":   {"password": "LPA!EGC$26",     "role": "LPA"},
+    "EGC.LPP":   {"password": "LPP!EGC$26",     "role": "potential_investor"},
+    "EGC.LPA":   {"password": "LPA!EGC$26",     "role": "partner_investor"},
 }
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
@@ -136,6 +136,11 @@ def api_data():
             "overview_exp":   data.get("overview_exp", {}),
             "markup":         True,
             "markup_usd":     markup_usd,
+        })
+    if role == 'potential_investor':
+        return jsonify({
+            "uploaded_at":    data["uploaded_at"],
+            "filename":       data["filename"],
         })
     return jsonify(data)  # admin gets everything
 
