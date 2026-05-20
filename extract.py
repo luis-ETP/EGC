@@ -22,14 +22,18 @@ def extract(path, src_path=None):
     return overall_summary, inventory, fifo_rows, meta, investment, bol_tab, overview_exp
 
 # ── Overall Summary ────────────────────────────────────────────────────────────
-def _extract_overall_summary(wb):
-    ws = wb["Overall Summary"]
+def _extract_overall_summary(wb, wb_fifo=None):
+    try:
+        ws = wb["Overall Summary"]
+    except KeyError:
+        return []
+
     rows = list(ws.iter_rows(values_only=True))
+    hdr_idx = next((i for i, r in enumerate(rows) if r[0] == "Row Labels"), None)
+    if hdr_idx is None:
+        return []
 
-    # Find header row (contains "Row Labels")
-    hdr_idx = next(i for i, r in enumerate(rows) if r[0] == "Row Labels")
     headers = [str(v).strip() if v else f"col{j}" for j, v in enumerate(rows[hdr_idx])]
-
     result = []
     for row in rows[hdr_idx + 1:]:
         if not row[0]: continue
@@ -37,7 +41,6 @@ def _extract_overall_summary(wb):
         for j, h in enumerate(headers):
             v = row[j]
             entry[h] = float(v) if isinstance(v, (int, float)) else (str(v) if v else None)
-        # Normalise key names so dashboard always finds them regardless of Excel naming
         entry["_wired"]     = entry.get("Total Wired Amount", 0) or 0
         entry["_paid_gal"]  = entry.get("Paid for Gallons (Allocation)") or entry.get("Paid for Gallons ") or 0
         entry["_pulled"]    = entry.get("Gallons Pulled from Allocation (RTB & RTC)") or entry.get("Gallons Pulled (RTB & RTC)") or 0
@@ -48,6 +51,7 @@ def _extract_overall_summary(wb):
         entry["_balance"]   = entry.get("Mexico Balance (MXN)") or entry.get("Mexico Balance") or 0
         result.append(entry)
     return result
+
 
 # ── Inventory (from FIFO sheet + Purchase to BOL-RTB) ─────────────────────────
 def _extract_inventory(wb):
@@ -175,35 +179,20 @@ def _extract_fifo(wb):
 
 # ── Meta ───────────────────────────────────────────────────────────────────────
 def _extract_meta(wb):
-    # Pull key KPIs from Overall Summary total row
-    ws = wb["Overall Summary"]
-    total_row = None
-    for row in ws.iter_rows(values_only=True):
-        if row[0] and "TOTAL" in str(row[0]).upper():
-            total_row = row
-            break
-
-    meta = {}
-    if total_row:
-        def _f(v): 
-            try: return round(float(v), 4)
-            except: return 0
-        # Use overall_summary normalised keys for reliability
-        os_rows = _extract_overall_summary(wb)
-        total_os = next((r for r in os_rows if r.get("Row Labels","").upper().find("TOTAL") >= 0), {})
-        meta = {
-            "total_invoiced_usd":      _f(total_row[1]),
-            "total_gallons":           _f(total_row[2]),
-            "total_wired":             total_os.get("_wired", _f(total_row[3])),
-            "paid_for_gallons":        total_os.get("_paid_gal", _f(total_row[4])),
-            "gallons_pulled":          total_os.get("_pulled", _f(total_row[5])),
-            "remaining_allocation":    total_os.get("_rem_alloc", _f(total_row[6])),
-            "remaining_inventory_gal": total_os.get("_rem_inv", _f(total_row[7])),
-            "avg_cost_inventory":      total_os.get("_avg_cost", _f(total_row[8])),
-            "amount_paid_back":        total_os.get("_paid_back", _f(total_row[9])),
-            "mexico_balance":          total_os.get("_balance", _f(total_row[10])),
-        }
-    return meta
+    os_rows = _extract_overall_summary(wb)
+    total_os = next((r for r in os_rows if r.get("Row Labels","").upper().find("TOTAL") >= 0), {})
+    return {
+        "total_invoiced_usd":      total_os.get("_wired", 0),
+        "total_gallons":           total_os.get("_paid_gal", 0),
+        "total_wired":             total_os.get("_wired", 0),
+        "paid_for_gallons":        total_os.get("_paid_gal", 0),
+        "gallons_pulled":          total_os.get("_pulled", 0),
+        "remaining_allocation":    total_os.get("_rem_alloc", 0),
+        "remaining_inventory_gal": total_os.get("_rem_inv", 0),
+        "avg_cost_inventory":      total_os.get("_avg_cost", 0),
+        "amount_paid_back":        total_os.get("_paid_back", 0),
+        "mexico_balance":          total_os.get("_balance", 0),
+    }
 
 # ── Investment Summary ─────────────────────────────────────────────────────────
 def _extract_investment_summary(wb, uploaded_at=None):
