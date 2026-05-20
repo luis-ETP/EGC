@@ -317,13 +317,11 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
 
     <!-- COMPANY PROFILE TAB -->
-    {% endif %}
     <div class="tab-panel" id="tab-company">
       <div id="company-content"></div>
     </div>
 
     <!-- INVESTOR SUMMARY TAB -->
-    {% if role != 'potential_investor' %}
     <div class="tab-panel {% if role == 'investor' %}active{% endif %}" id="tab-investor">
       <div id="investor-content">
         <div class="loading"><div class="spinner"></div> Loading summary…</div>
