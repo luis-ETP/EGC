@@ -207,7 +207,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
   <nav class="sidebar-nav">
     {% if role == 'admin' or role == 'partner_investor' %}
     <div class="nav-section">Operations</div>
-    <button class="nav-item {% if role != 'investor' %}active{% endif %}" onclick="showTab('overview')" id="nav-overview">
+    <button class="nav-item {% if role != 'investor' and role != 'potential_investor' %}active{% endif %}" onclick="showTab('overview')" id="nav-overview">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Overview
     </button>
@@ -259,7 +259,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
   <div class="content">
 
     <!-- OVERVIEW TAB -->
-    <div class="tab-panel active" id="tab-overview">
+    <div class="tab-panel {% if role != 'potential_investor' %}active{% endif %}" id="tab-overview">
       {% if role == 'admin' %}
       <div class="upload-panel">
         <div class="upload-panel-title">Process New File</div>
@@ -317,7 +317,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
 
     <!-- COMPANY PROFILE TAB -->
-    <div class="tab-panel" id="tab-company">
+    <div class="tab-panel {% if role == 'potential_investor' %}active{% endif %}" id="tab-company">
       <div id="company-content"></div>
     </div>
 
