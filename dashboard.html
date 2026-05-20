@@ -1236,6 +1236,35 @@ function renderCompany() {
   `;
 }
 
+// ── Markup setting ────────────────────────────────────────────────────────────
+async function saveMarkup() {
+  const inp = document.getElementById('markupInput');
+  const val = parseFloat(inp.value);
+  if (isNaN(val) || val < 0 || val > 10) return;
+  const res = await fetch('/api/settings', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({markup_usd: val})
+  });
+  if (res.ok) {
+    const st = document.getElementById('markupStatus');
+    st.style.display = 'inline';
+    setTimeout(() => st.style.display = 'none', 2000);
+    if (dashData) { dashData.markup_usd = val; renderInvestor(); }
+  }
+}
+
+async function loadMarkupSetting() {
+  if (ROLE !== 'admin') return;
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) return;
+    const d = await res.json();
+    const inp = document.getElementById('markupInput');
+    if (inp && d.markup_usd != null) inp.value = d.markup_usd;
+  } catch(e) { console.error('loadMarkupSetting:', e); }
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────────
 loadData();
 loadMarkupSetting();
