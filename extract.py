@@ -208,17 +208,31 @@ def _extract_meta(wb):
 # ── Investment Summary ─────────────────────────────────────────────────────────
 def _extract_investment_summary(wb, uploaded_at=None):
     """
-    Read Investment Summary values directly from cached Excel formula results.
-    Falls back to computing from raw columns when cache is missing.
+    Compute Investment Summary replicating the exact Excel formulas from Table6
+    (Load Tracking) and Table7 (Supplier Invoices / allocation).
+    This avoids relying on Excel formula cache — works after a single FIFO run.
+
+    Key formulas replicated:
+      FreightCost/L  = Freight Cost / Delivered Net Liters
+      Comission/L    = COMISSION / Delivered Net Liters
+      Total Cost/L   = FreightCost/L + Supply Cost + Comission/L
+      Total Cost     = Total Cost/L * Delivered Net Liters
+      Price/L (BTC)  = (Fuel Cost / Liters) + FreightCost/L + Comission/L
+      Total Sale     = Price/L * Delivered Net Liters
+      Total Margin   = Total Sale - Total Cost
+
+      Inventory L    = SUM(RTB liters) - SUM(BTC liters)
+      Inventory MXN  = Inventory L * (SUM RTB cost / SUM RTB liters)
+      BTC/RTC Pending= SUMIFS(Total Cost, type, PENDING)
+      Recovered      = SUMIFS(Total Cost/Margin, type, PAID)
     """
     f  = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
-    fz = lambda v: float(v) if isinstance(v, (int, float)) else None
 
-    ws = wb["Investment Summary"]
-    rows = {i: row for i, row in enumerate(ws.iter_rows(values_only=True), start=1)}
+    # ── 1. Committed Capital — user-entered, always cached ────────────────────
+    ws_inv = wb["Investment Summary"]
+    inv_rows = {i: list(row) for i, row in enumerate(ws_inv.iter_rows(values_only=True), start=1)}
 
-    # ── Date (G3) ────────────────────────────────────────────────────────────
-    r3 = rows.get(3, [])
+    r3 = inv_rows.get(3, [])
     as_of_val = r3[6] if len(r3) > 6 else None
     if hasattr(as_of_val, "strftime"):
         as_of_str = as_of_val.strftime("%d-%b-%Y")
@@ -227,59 +241,139 @@ def _extract_investment_summary(wb, uploaded_at=None):
     else:
         as_of_str = uploaded_at or ""
 
-    # ── Committed Capital (rows 7-8) ─────────────────────────────────────────
     commits = []
     for ri in (7, 8):
-        row = rows.get(ri, [])
+        row = inv_rows.get(ri, [])
         if len(row) < 6: continue
-        usd = f(row[2]); mxn = f(row[3]); fx = f(row[5])
+        usd = f(row[2]); fx = f(row[5])
         dv  = row[4]
         dstr = dv.strftime("%d-%b-%y") if hasattr(dv, "strftime") else str(dv or "")
-        commits.append({"round": str(row[1] or ""), "usd": usd, "mxn": mxn, "date": dstr, "fx": fx})
+        mxn = usd * fx
+        if usd > 0:
+            commits.append({"round": str(row[1] or ""), "usd": usd, "mxn": mxn, "date": dstr, "fx": fx})
 
-    r10 = rows.get(10, [])
-    total_committed_usd = f(r10[2]) if len(r10) > 2 else sum(c["usd"] for c in commits)
-    total_committed_mxn = f(r10[3]) if len(r10) > 3 else sum(c["mxn"] for c in commits)
+    total_committed_usd = sum(c["usd"] for c in commits)
+    total_committed_mxn = sum(c["mxn"] for c in commits)
     avg_fx = total_committed_mxn / total_committed_usd if total_committed_usd else 17.31
+    inv_share_pct = 0.40
 
-    # ── KPI row 14 ───────────────────────────────────────────────────────────
-    r14 = rows.get(14, [])
-    active_capital  = f(r14[2]) if len(r14) > 2 else 0.0
-    available       = f(r14[3]) if len(r14) > 3 else 0.0
-    recovered_mxn   = f(r14[4]) if len(r14) > 4 else 0.0
-    revolved        = f(r14[5]) if len(r14) > 5 else 0.0
-    total_margin    = f(r14[6]) if len(r14) > 6 else 0.0
-    investor_share  = f(r14[7]) if len(r14) > 7 else total_margin * 0.40
-    inv_share_pct   = investor_share / total_margin if total_margin else 0.40
+    # ── 2. Allocation from Supplier Invoices (Table7) ─────────────────────────
+    alloc_mxn = alloc_lit = 0.0
+    try:
+        ws_si = wb["Supplier Invoices"]
+        si_rows = list(ws_si.iter_rows(values_only=True))
+        # Find header row
+        si_h = {}
+        for i, row in enumerate(si_rows):
+            if any(v and 'Status' in str(v) for v in row):
+                si_h = {str(v).strip(): j for j, v in enumerate(row) if v}
+                si_data_start = i + 1
+                break
+        if si_h:
+            for row in si_rows[si_data_start:]:
+                if not any(row): break
+                status = str(row[si_h.get('Status', 0)] or '').strip().upper()
+                if status == 'ACTIVE':
+                    alloc_mxn += f(row[si_h.get('Remainder Amount MXN', 0)])
+                    alloc_lit += f(row[si_h.get('Remainder Liters Paid and No BOL', 0)])
+    except:
+        pass
 
-    # ── Active Capital detail (rows 18-23) ───────────────────────────────────
-    def _rd(ri, ci, cj=None):
-        r = rows.get(ri, [])
-        v1 = f(r[ci]) if len(r) > ci else 0.0
-        v2 = f(r[cj]) if cj is not None and len(r) > cj else 0.0
-        return v1, v2
+    # ── 3. Load Tracking — replicate Table6 formulas ──────────────────────────
+    ws_lt = wb["Load Tracking"]
+    lt_rows = list(ws_lt.iter_rows(values_only=True))
+    lt_h = {str(v).strip(): i for i, v in enumerate(lt_rows[0]) if v}
 
-    alloc_mxn,    alloc_liters    = _rd(18, 2, 3)
-    inv_mxn,      inv_liters      = _rd(19, 2, 3)
-    rtc_pend_mxn, rtc_pend_liters = _rd(20, 2, 3)
-    btc_pend_mxn, btc_pend_liters = _rd(21, 2, 3)
-    total_act_mxn, total_act_lit  = _rd(23, 2, 3)
+    def _get(row, col_name, default=0.0):
+        idx = lt_h.get(col_name)
+        if idx is None: return default
+        return f(row[idx])
 
-    # ── Recovered Capital detail (rows 27-30) ────────────────────────────────
-    def _rec(ri):
-        r = rows.get(ri, [])
-        return {
-            "tc":     f(r[2]) if len(r) > 2 else 0.0,
-            "liters": f(r[3]) if len(r) > 3 else 0.0,
-            "margin": f(r[4]) if len(r) > 4 else 0.0,
-            "roi":    f(r[5]) if len(r) > 5 else 0.0,
-            "mxnl":   f(r[6]) if len(r) > 6 else 0.0,
-            "usdgal": f(r[7]) if len(r) > 7 else 0.0,
-        }
+    rtb_total_cost = rtb_total_lit = 0.0
+    btc_total_lit = 0.0
+    btc_pend_mxn = btc_pend_lit = 0.0
+    rtc_pend_mxn = rtc_pend_lit = 0.0
+    rec_btc_tc = rec_btc_sale = rec_btc_margin = rec_btc_lit = 0.0
+    rec_rtc_tc = rec_rtc_sale = rec_rtc_margin = rec_rtc_lit = 0.0
 
-    rtc_rec   = _rec(27)
-    btc_rec   = _rec(28)
-    total_rec = _rec(30)
+    for row in lt_rows[1:]:
+        if not row[0]: continue
+        typ    = str(row[lt_h.get('Customer Groups', 10)] or '').strip()
+        status = str(row[lt_h.get('Invoice Status', 55)] or '').strip().upper()
+        liters = _get(row, 'Delivered Net Liters')
+        if liters <= 0:
+            liters = _get(row, 'Net Liters')
+
+        supply_cost_l = _get(row, 'Supply Cost')
+        freight       = _get(row, 'Freight Cost')
+        commission    = _get(row, 'COMISSION')
+        fuel_cost     = _get(row, 'Fuel Cost')   # Mexico payment MXN
+
+        # Replicate Excel formulas
+        freight_l  = freight / liters   if liters > 0 else 0.0
+        comm_l     = commission / liters if liters > 0 else 0.0
+        total_cost_l = supply_cost_l + freight_l + comm_l
+        total_cost   = total_cost_l * liters
+
+        if typ == 'BTC':
+            price_l    = (fuel_cost / liters) + freight_l + comm_l if liters > 0 else 0.0
+        elif typ == 'RTC':
+            price_l    = (fuel_cost / liters) + freight_l + comm_l if liters > 0 else 0.0
+        else:
+            price_l    = 0.0
+
+        total_sale   = price_l * liters
+        total_margin = total_sale - total_cost
+
+        if typ == 'RTB':
+            rtb_total_cost += total_cost
+            rtb_total_lit  += liters
+        elif typ == 'BTC':
+            btc_total_lit  += liters
+            if status == 'PAID':
+                rec_btc_tc     += total_cost
+                rec_btc_sale   += total_sale
+                rec_btc_margin += total_margin
+                rec_btc_lit    += liters
+            else:
+                btc_pend_mxn   += total_cost
+                btc_pend_lit   += liters
+        elif typ == 'RTC':
+            if status == 'PAID':
+                rec_rtc_tc     += total_cost
+                rec_rtc_sale   += total_sale
+                rec_rtc_margin += total_margin
+                rec_rtc_lit    += liters
+            else:
+                rtc_pend_mxn   += total_cost
+                rtc_pend_lit   += liters
+
+    # Inventory: D19 = RTB liters - BTC liters; C19 = D19 * avg_rtb_cost/L
+    inv_lit = max(0.0, rtb_total_lit - btc_total_lit)
+    avg_rtb_cost_l = rtb_total_cost / rtb_total_lit if rtb_total_lit > 0 else 0.0
+    inv_mxn = inv_lit * avg_rtb_cost_l
+
+    # ── 4. KPIs ───────────────────────────────────────────────────────────────
+    active_capital = alloc_mxn + inv_mxn + btc_pend_mxn + rtc_pend_mxn
+    available      = total_committed_mxn - active_capital
+    # Excel E14 = C30 = sum(Total Cost of PAID loads) — capital recovered
+    recovered_mxn  = (rec_btc_tc + rec_rtc_tc)
+    revolved       = recovered_mxn / total_committed_mxn if total_committed_mxn else 0.0
+    total_margin   = rec_btc_margin + rec_rtc_margin
+    investor_share = total_margin * inv_share_pct
+
+    def _rec(tc, sale, margin, liters):
+        roi   = margin / tc    if tc     > 0 else 0.0
+        mxnl  = margin / liters if liters > 0 else 0.0
+        usdg  = mxnl * 3.7854 / avg_fx if avg_fx > 0 else 0.0
+        return {"tc": tc, "liters": liters, "margin": margin,
+                "roi": roi, "mxnl": mxnl, "usdgal": usdg}
+
+    btc_rec = _rec(rec_btc_tc, rec_btc_sale, rec_btc_margin, rec_btc_lit)
+    rtc_rec = _rec(rec_rtc_tc, rec_rtc_sale, rec_rtc_margin, rec_rtc_lit)
+    tot_lit = rec_btc_lit + rec_rtc_lit
+    tot_tc  = rec_btc_tc  + rec_rtc_tc
+    tot_rec = _rec(tot_tc, recovered_mxn, total_margin, tot_lit)
 
     return {
         "as_of":               as_of_str,
@@ -294,85 +388,111 @@ def _extract_investment_summary(wb, uploaded_at=None):
         "investor_share":      investor_share,
         "inv_share_pct":       inv_share_pct,
         "active_detail": {
-            "alloc_mxn":       alloc_mxn,    "alloc_liters":    alloc_liters,
-            "inv_mxn":         inv_mxn,      "inv_liters":      inv_liters,
-            "rtc_pend_mxn":    rtc_pend_mxn, "rtc_pend_liters": rtc_pend_liters,
-            "btc_pend_mxn":    btc_pend_mxn, "btc_pend_liters": btc_pend_liters,
-            "total_mxn":       total_act_mxn,"total_liters":    total_act_lit,
+            "alloc_mxn":       alloc_mxn,
+            "alloc_liters":    alloc_lit,
+            "inv_mxn":         inv_mxn,
+            "inv_liters":      inv_lit,
+            "rtc_pend_mxn":    rtc_pend_mxn,
+            "rtc_pend_liters": rtc_pend_lit,
+            "btc_pend_mxn":    btc_pend_mxn,
+            "btc_pend_liters": btc_pend_lit,
+            "total_mxn":       active_capital,
+            "total_liters":    alloc_lit + inv_lit + btc_pend_lit + rtc_pend_lit,
         },
         "recovered_detail": {
-            "rtc":   rtc_rec,
             "btc":   btc_rec,
-            "total": total_rec,
+            "rtc":   rtc_rec,
+            "total": tot_rec,
         },
     }
 
-# ── Purchase to BOL-RTB ────────────────────────────────────────────────────────
+
+# ── Purchase BOLs tab ──────────────────────────────────────────────────────────
 def _extract_bol(wb):
-    ws = wb["Purchase to BOL-RTB"]
-    f  = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
-    fs = lambda v: str(v).strip() if v is not None else ""
+    try:
+        ws = wb["Purchase to BOL-RTB"]
+        rows = list(ws.iter_rows(values_only=True))
+        # Find header row
+        header_row = None
+        for i, row in enumerate(rows):
+            if row[0] and 'DashFuel' in str(row[0]):
+                header_row = i
+                break
+        if header_row is None:
+            for i, row in enumerate(rows):
+                if any('DashFuel' in str(v) for v in row if v):
+                    header_row = i
+                    break
+        if header_row is None:
+            return {"rows": []}
 
-    # Summary from top-right corner (rows 2-5, col R = index 17)
-    rows = list(ws.iter_rows(values_only=True))
-    summary = {
-        "total_invoiced":      f(rows[1][17]),   # row 2 col R
-        "received_payments":   f(rows[2][17]),   # row 3
-        "open_balance":        f(rows[3][17]),   # row 4
-        "total_not_invoiced":  f(rows[4][17]),   # row 5
-    }
+        headers = rows[header_row]
+        def _col(name, default=None):
+            for j, h in enumerate(headers):
+                if h and name.lower() in str(h).lower():
+                    return j
+            return default
 
-    # Read headers to find column indices dynamically
-    hdr_row = None
-    for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
-        if i == 7: hdr_row = [str(v).strip() if v else "" for v in row]; break
-    def _col(name, default):
-        try: return hdr_row.index(name)
-        except ValueError: return default
+        col_bol      = _col('BOL', 5)
+        col_supplier = _col('Supplier', 2)
+        col_inv      = _col('Supplier Invoice', 3)
+        col_batch    = _col('Batch', 4)
+        col_gal      = _col('Gallons', 6)
+        col_lit      = _col('Liters', 7)
+        col_prod     = _col('Product', 8)
+        col_cost_gal = _col('Cost/Gal USD', 9)
+        col_adder    = _col('Adder', 10)
+        col_total_gal= _col('Cost/Gal + Adder', 11)
+        col_mxnl     = _col('Supply Cost DashFuel', 12)
+        col_carrier  = _col('Carrier', 13)
+        col_freight  = _col('Freight/Load', 14)
+        col_inv_num  = _col('Invoice #', 17)
+        col_inv_amt  = _col('Invoice Amount', 18)
+        col_customer = _col('MX Customer', 19)
+        col_received = _col('Received Payments', 20)
+        col_balance  = _col('Balance', 21)
+        col_fx       = None
+        for j, h in enumerate(headers):
+            if h and 'FX' in str(h).upper() and 'PAYMENT' in str(h).upper():
+                col_fx = j
+                break
 
-    idx_inv    = _col("Invoice #",        17)
-    idx_col4   = _col("Column4",          22)
-    idx_col5   = _col("Column5",          23)
-    idx_col6   = _col("Column6",          24)
-    idx_fx     = _col("FX Payment",       25)
-    idx_cost_g = _col("Tota Cost /Gal (USD)", 16)
-    idx_recv   = _col("Received Payments", 20)
-    idx_bal    = _col("Balance",          21)
-    idx_inv_amt= _col("Invoice Amount",   18)
+        f = lambda v: float(v) if isinstance(v, (int, float)) else None
 
-    # Data rows (row 8+)
-    bols = []
-    for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
-        if i <= 7: continue
-        if not row[2]: break
-        inv  = fs(row[idx_inv])
-        col4 = f(row[idx_col4])
-        col5 = f(row[idx_col5])
-        col6 = f(row[idx_col6])
+        result_rows = []
+        for row in rows[header_row + 1:]:
+            if not row[0] and not (col_supplier and row[col_supplier]):
+                if not any(v for v in row):
+                    break
+                continue
+            r = {
+                "bol":          str(row[col_bol] or '') if col_bol is not None else '',
+                "supplier":     str(row[col_supplier] or '') if col_supplier is not None else '',
+                "inv_num":      str(row[col_inv] or '') if col_inv is not None else '',
+                "batch":        str(row[col_batch] or '') if col_batch is not None else '',
+                "gallons":      f(row[col_gal]) if col_gal is not None else None,
+                "liters":       f(row[col_lit]) if col_lit is not None else None,
+                "product":      str(row[col_prod] or '') if col_prod is not None else '',
+                "cost_gal_usd": f(row[col_cost_gal]) if col_cost_gal is not None else None,
+                "adder":        f(row[col_adder]) if col_adder is not None else None,
+                "total_gal":    f(row[col_total_gal]) if col_total_gal is not None else None,
+                "mxn_l":        f(row[col_mxnl]) if col_mxnl is not None else None,
+                "carrier":      str(row[col_carrier] or '') if col_carrier is not None else '',
+                "freight":      f(row[col_freight]) if col_freight is not None else None,
+                "invoice_num":  str(row[col_inv_num] or '') if col_inv_num is not None else '',
+                "invoice_amt":  f(row[col_inv_amt]) if col_inv_amt is not None else None,
+                "customer":     str(row[col_customer] or '') if col_customer is not None else '',
+                "received":     f(row[col_received]) if col_received is not None else None,
+                "balance":      f(row[col_balance]) if col_balance is not None else None,
+                "fx_payment":   f(row[col_fx]) if col_fx is not None else None,
+            }
+            if r["bol"] or r["supplier"]:
+                result_rows.append(r)
 
-        # Balance status: 'paid' | 'open' | 'not_invoiced'
-        if col4 == 0:
-            status = "not_invoiced"
-        elif col5 == 1:
-            status = "paid"
-        else:
-            status = "open"
+        return {"rows": result_rows}
+    except Exception as e:
+        return {"rows": []}
 
-        bols.append({
-            "bol":         fs(row[5]),
-            "gallons":     round(f(row[6]), 2),
-            "liters":      round(f(row[7]), 2),
-            "product":     fs(row[8]),
-            "cost_gal":    round(f(row[idx_cost_g]), 4),
-            "fx_payment":  round(f(row[idx_fx]), 4) if idx_fx < len(row) else 0.0,
-            "invoice":     inv,
-            "inv_amount":  round(f(row[idx_inv_amt]), 2),
-            "received":    round(f(row[idx_recv]), 2),
-            "balance":     round(f(row[idx_bal]), 2),
-            "status":      status,
-        })
-
-    return {"summary": summary, "rows": bols}
 
 # ── Overview / How Capital Works ───────────────────────────────────────────────
 def _extract_overview(wb):
