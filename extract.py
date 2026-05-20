@@ -11,10 +11,10 @@ def extract(path, src_path=None):
     wb     = openpyxl.load_workbook(path, data_only=True)
     wb_src = openpyxl.load_workbook(src_path, data_only=True) if src_path else wb
 
-    overall_summary = _extract_overall_summary(wb)
+    overall_summary = _extract_overall_summary(wb_src, wb_fifo=wb)
     inventory       = _extract_inventory(wb)
     fifo_rows       = _extract_fifo(wb)
-    meta            = _extract_meta(wb)
+    meta            = _extract_meta(wb_src, wb_fifo=wb)
 
     bol_tab         = _extract_bol(wb_src)
     overview_exp    = _extract_overview(wb_src)
@@ -23,33 +23,136 @@ def extract(path, src_path=None):
 
 # ── Overall Summary ────────────────────────────────────────────────────────────
 def _extract_overall_summary(wb, wb_fifo=None):
+    # Try reading from Overall Summary tab first (legacy)
     try:
         ws = wb["Overall Summary"]
+        rows = list(ws.iter_rows(values_only=True))
+        hdr_idx = next((i for i, r in enumerate(rows) if r[0] == "Row Labels"), None)
+        if hdr_idx is not None:
+            headers = [str(v).strip() if v else f"col{j}" for j, v in enumerate(rows[hdr_idx])]
+            result = []
+            for row in rows[hdr_idx + 1:]:
+                if not row[0]: continue
+                entry = {}
+                for j, h in enumerate(headers):
+                    v = row[j]
+                    entry[h] = float(v) if isinstance(v, (int, float)) else (str(v) if v else None)
+                entry["_wired"]     = entry.get("Total Wired Amount", 0) or 0
+                entry["_paid_gal"]  = entry.get("Paid for Gallons (Allocation)") or entry.get("Paid for Gallons ") or 0
+                entry["_pulled"]    = entry.get("Gallons Pulled from Allocation (RTB & RTC)") or entry.get("Gallons Pulled (RTB & RTC)") or 0
+                entry["_rem_alloc"] = entry.get("Remaining Gallons in Allocation") or 0
+                entry["_rem_inv"]   = entry.get("Remaining Gallons in Inventory") or 0
+                entry["_avg_cost"]  = entry.get("Weighted Average Cost in Inventory (MXN/L)") or entry.get("Weighted Average Cost in Inventory") or 0
+                entry["_paid_back"] = entry.get("Amount Paid Back by Mexico (MXN)") or entry.get("Amount Paid Back by Mexico ") or entry.get("Amount Paid Back by Mexico") or 0
+                entry["_balance"]   = entry.get("Mexico Balance (MXN)") or entry.get("Mexico Balance") or 0
+                result.append(entry)
+            if result:
+                return result
     except KeyError:
-        return []
+        pass
 
-    rows = list(ws.iter_rows(values_only=True))
-    hdr_idx = next((i for i, r in enumerate(rows) if r[0] == "Row Labels"), None)
-    if hdr_idx is None:
-        return []
+    # Compute from raw sheets when Overall Summary tab is missing
+    from collections import defaultdict
+    f = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
 
-    headers = [str(v).strip() if v else f"col{j}" for j, v in enumerate(rows[hdr_idx])]
+    # Supplier Invoices → wired, paid_gal per supplier
+    sup_data = defaultdict(lambda: {"wired": 0.0, "paid_gal": 0.0})
+    try:
+        ws_si = wb["Supplier Invoices"]
+        si_rows = list(ws_si.iter_rows(values_only=True))
+        si_hdr = next((i for i, r in enumerate(si_rows) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
+        if si_hdr is not None:
+            sc = {str(v).strip(): j for j, v in enumerate(si_rows[si_hdr]) if v}
+            for row in si_rows[si_hdr + 1:]:
+                if not any(row): break
+                s = str(row[sc.get("Supplier", 2)] or "").strip()
+                if not s or s == "Total": continue
+                sup_data[s]["wired"]    += f(row[sc.get("Wired Amount", 4)])
+                sup_data[s]["paid_gal"] += f(row[sc.get("Paid for Gallons", 6)])
+    except Exception:
+        pass
+
+    # FIFO output → pulled gallons + remaining inventory per supplier
+    # Need BOL→supplier mapping
+    bol_sup = {}
+    try:
+        ws_bol_rtb = wb["Purchase to BOL-RTB"]
+        bol_rows = list(ws_bol_rtb.iter_rows(values_only=True))
+        bh = {str(v).strip(): j for j, v in enumerate(bol_rows[6]) if v}
+        for row in bol_rows[7:]:
+            if not row[bh.get("BOL", 5)]: continue
+            bol_sup[str(row[bh["BOL"]])] = str(row[bh.get("Supplier", 2)] or "").strip()
+    except Exception:
+        pass
+
+    # Normalise supplier name matching
+    si_names = {s.upper(): s for s in sup_data}
+    def _match(raw): return si_names.get(raw.upper(), raw)
+
+    pulled_gal  = defaultdict(float)
+    rem_inv_gal = defaultdict(float)
+    rem_inv_mxn = defaultdict(float)
+    _wb_f = wb_fifo if wb_fifo is not None else wb
+    try:
+        ws_fifo = _wb_f["FIFO"]
+        fh = {str(v).strip(): j for j, v in enumerate(next(ws_fifo.iter_rows(values_only=True))) if v}
+        for row in ws_fifo.iter_rows(min_row=2, values_only=True):
+            if not row[0]: break
+            if row[fh["Type"]] != "RTB": continue
+            s = _match(bol_sup.get(str(row[fh["BOL"]]), ""))
+            liters    = f(row[fh["Liters"]])
+            remaining = f(row[fh["Remaining L (BOL)"]])
+            cost_l    = f(row[fh["Cost / L (MXN)"]])
+            pulled_gal[s]  += (liters - remaining) / 3.7854
+            rem_inv_gal[s] += remaining / 3.7854
+            rem_inv_mxn[s] += remaining * cost_l
+    except Exception:
+        pass
+
+    # BOL sheet → Mexico payments (totals only)
+    total_received = total_balance = 0.0
+    try:
+        ws_bol_rtb = wb["Purchase to BOL-RTB"]
+        bol_rows = list(ws_bol_rtb.iter_rows(values_only=True))
+        bh = {str(v).strip(): j for j, v in enumerate(bol_rows[6]) if v}
+        for row in bol_rows[7:]:
+            if not row[0]: continue
+            total_received += f(row[bh.get("Received Payments", 20)])
+            total_balance  += f(row[bh.get("Balance", 21)])
+    except Exception:
+        pass
+
     result = []
-    for row in rows[hdr_idx + 1:]:
-        if not row[0]: continue
-        entry = {}
-        for j, h in enumerate(headers):
-            v = row[j]
-            entry[h] = float(v) if isinstance(v, (int, float)) else (str(v) if v else None)
-        entry["_wired"]     = entry.get("Total Wired Amount", 0) or 0
-        entry["_paid_gal"]  = entry.get("Paid for Gallons (Allocation)") or entry.get("Paid for Gallons ") or 0
-        entry["_pulled"]    = entry.get("Gallons Pulled from Allocation (RTB & RTC)") or entry.get("Gallons Pulled (RTB & RTC)") or 0
-        entry["_rem_alloc"] = entry.get("Remaining Gallons in Allocation") or 0
-        entry["_rem_inv"]   = entry.get("Remaining Gallons in Inventory") or 0
-        entry["_avg_cost"]  = entry.get("Weighted Average Cost in Inventory (MXN/L)") or entry.get("Weighted Average Cost in Inventory") or 0
-        entry["_paid_back"] = entry.get("Amount Paid Back by Mexico (MXN)") or entry.get("Amount Paid Back by Mexico ") or entry.get("Amount Paid Back by Mexico") or 0
-        entry["_balance"]   = entry.get("Mexico Balance (MXN)") or entry.get("Mexico Balance") or 0
-        result.append(entry)
+    for s in sup_data:
+        d = sup_data[s]
+        pulled   = pulled_gal.get(s, 0.0)
+        rem_inv  = rem_inv_gal.get(s, 0.0)
+        rem_alloc = max(0.0, d["paid_gal"] - pulled - rem_inv)
+        inv_mxn  = rem_inv_mxn.get(s, 0.0)
+        avg_cost = (inv_mxn / (rem_inv * 3.7854)) if rem_inv > 0 else 0.0
+        result.append({
+            "Row Labels": s,
+            "_wired": d["wired"], "_paid_gal": d["paid_gal"],
+            "_pulled": pulled, "_rem_alloc": rem_alloc,
+            "_rem_inv": rem_inv, "_avg_cost": avg_cost,
+            "_paid_back": 0.0, "_balance": 0.0,
+        })
+
+    total_wired    = sum(d["wired"]    for d in sup_data.values())
+    total_paid_gal = sum(d["paid_gal"] for d in sup_data.values())
+    total_pulled   = sum(pulled_gal.values())
+    total_rem_inv  = sum(rem_inv_gal.values())
+    total_inv_mxn  = sum(rem_inv_mxn.values())
+    total_avg_cost = (total_inv_mxn / (total_rem_inv * 3.7854)) if total_rem_inv > 0 else 0.0
+    total_rem_alloc = max(0.0, total_paid_gal - total_pulled - total_rem_inv)
+
+    result.append({
+        "Row Labels": "Total",
+        "_wired": total_wired, "_paid_gal": total_paid_gal,
+        "_pulled": total_pulled, "_rem_alloc": total_rem_alloc,
+        "_rem_inv": total_rem_inv, "_avg_cost": total_avg_cost,
+        "_paid_back": total_received, "_balance": total_balance,
+    })
     return result
 
 
@@ -178,8 +281,8 @@ def _extract_fifo(wb):
     return result
 
 # ── Meta ───────────────────────────────────────────────────────────────────────
-def _extract_meta(wb):
-    os_rows = _extract_overall_summary(wb)
+def _extract_meta(wb, wb_fifo=None):
+    os_rows = _extract_overall_summary(wb, wb_fifo=wb_fifo)
     total_os = next((r for r in os_rows if r.get("Row Labels","").upper().find("TOTAL") >= 0), {})
     return {
         "total_invoiced_usd":      total_os.get("_wired", 0),
@@ -478,9 +581,45 @@ def _extract_bol(wb):
             if r["bol"] or r["supplier"]:
                 result_rows.append(r)
 
-        return {"rows": result_rows}
+        # Compute summary KPIs
+        f2 = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
+        total_invoiced    = sum(f2(r["invoice_amt"]) for r in result_rows if r.get("invoice_amt"))
+        received_payments = sum(f2(r["received"])    for r in result_rows if r.get("received"))
+        open_balance      = sum(f2(r["balance"])     for r in result_rows if r.get("balance"))
+
+        # Not invoiced yet: rows with no invoice number but have a BOL
+        # Read from BOL sheet header area (rows 2-5 before data)
+        total_not_invoiced = 0.0
+        try:
+            for row in ws.iter_rows(min_row=1, max_row=6, values_only=True):
+                for cell in row:
+                    if cell and "Total NOT Invoiced" in str(cell):
+                        # value is in next cell on same row
+                        row_vals = list(row)
+                        idx = row_vals.index(cell)
+                        if idx + 1 < len(row_vals) and isinstance(row_vals[idx+1], (int, float)):
+                            total_not_invoiced = float(row_vals[idx+1])
+        except Exception:
+            pass
+
+        # Add status to each row
+        for r in result_rows:
+            if r.get("invoice_amt") and r.get("invoice_num"):
+                r["status"] = "paid" if (r.get("balance") or 0) <= 0.01 else "open"
+            else:
+                r["status"] = "not_invoiced"
+
+        return {
+            "rows": result_rows,
+            "summary": {
+                "total_invoiced":    total_invoiced,
+                "received_payments": received_payments,
+                "open_balance":      open_balance,
+                "total_not_invoiced": total_not_invoiced,
+            }
+        }
     except Exception as e:
-        return {"rows": []}
+        return {"rows": [], "summary": {}}
 
 
 # ── Overview / How Capital Works ───────────────────────────────────────────────
