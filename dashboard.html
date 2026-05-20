@@ -88,7 +88,7 @@ thead th{padding:0.65rem 1rem;text-align:right;color:var(--muted);font-weight:50
 thead th:first-child{text-align:left}
 tbody td{padding:0.6rem 1rem;text-align:right;border-bottom:1px solid var(--border);color:var(--text)}
 tbody td:first-child{text-align:left;font-weight:500}
-tbody tr:last-child td{border-bottom:none;font-weight:600;background:var(--surface2)}
+tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td{background:rgba(255,255,255,0.02)}
 .badge{display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.65rem;font-weight:600}
 .badge.green{background:rgba(63,185,80,0.15);color:var(--green)}
@@ -1194,7 +1194,8 @@ function renderCompany() {
   <div class="cp-section">
     <div class="cp-label">Regulatory Permits</div>
     <div class="cp-permit-entity">SENER Import Permits — Petrotal SA de CV</div>
-    <table class="cp-table">
+    <table class="cp-table" style="table-layout:fixed;width:100%">
+      <colgroup><col style="width:25%"><col style="width:30%"><col style="width:25%"><col style="width:20%"></colgroup>
       <thead><tr><th>Product</th><th>Permit Number</th><th>Volume</th><th>Approx. Gallons</th></tr></thead>
       <tbody>
         <tr><td>Diesel</td><td>1701C125001774</td><td>84,000,000 L</td><td>~22.2M gal</td></tr>
@@ -1203,7 +1204,8 @@ function renderCompany() {
       </tbody>
     </table>
     <div class="cp-permit-entity">CRE / CNE Operating Permits</div>
-    <table class="cp-table">
+    <table class="cp-table" style="table-layout:fixed;width:100%">
+      <colgroup><col style="width:35%"><col style="width:30%"><col style="width:20%"><col style="width:15%"></colgroup>
       <thead><tr><th>Entity</th><th>Permit Number</th><th>Type</th><th>Authorization</th></tr></thead>
       <tbody>
         <tr><td>Importadora Apollo del Norte SA de CV</td><td>H/26101/COM/2024</td><td>Commercialization</td><td>Activity-based</td></tr>
