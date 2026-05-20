@@ -441,190 +441,194 @@ def run_fifo(SRC, DST):
         dat(ws_f.cell(row=row_num, column=5), round(avg_cost, 6),
             num_fmt="#,##0.0000", fill=FILL_SUBHDR)
 
-    # ══════════════════════════════════════════════════════════════════════════════
-    # ══════════════════════════════════════════════════════════════════════════════
-    # Overall Summary — all columns B through K
-    # B=Total Invoices USD, C=Total Gallons, D=Total Wired, E=Paid for Gallons,
-    # F=Gallons Pulled, G=Remaining in Allocation, H=Remaining in Inventory,
-    # I=Weighted Avg Cost, J=Amount Paid Back Mexico, K=Mexico Balance
-    # J and K read from ws_bol (already written with correct Cost/Gal)
-    # ══════════════════════════════════════════════════════════════════════════════
-    LITERS_PER_GAL = 3.7854
-    from collections import defaultdict as _dd
-
-    # Aggregate Overall Summary values
-    # B (Total Invoice USD), C (Total Gallons), E (Paid for Gallons):
-    #   Read directly from source Overall Summary which has cached formula values
-    # D (Total Wired): read from Supplier Invoices col E (always raw)
-    # F (Gallons Pulled), G (Remaining Allocation): from Supplier Invoices W/X (script-written)
-    sup_inv = _dd(lambda: {"b":0.0,"c":0.0,"d":0.0,"e":0.0,"f":0.0,"g":0.0})
-
-    def _f(v):
-        try: return float(v) if v is not None else 0.0
-        except: return 0.0
-
-    # Read B, C, E from source Overall Summary (cached formula values)
-    ws_os_r = wb_r["Overall Summary"]
-    for i, row in enumerate(ws_os_r.iter_rows(values_only=True), start=1):
-        if i < 4: continue
-        label = str(row[0]).strip() if row[0] else ""
-        if not label or label == "Row Labels": continue
-        if "TOTAL" in label.upper(): continue
-        sup_inv[label]["b"] = _f(row[1])   # B Total Invoice USD (formula cached)
-        sup_inv[label]["c"] = _f(row[2])   # C Total Gallons
-        sup_inv[label]["e"] = _f(row[4])   # E Paid for Gallons (formula cached)
-        sup_inv[label]["h_src"] = _f(row[7])  # H Rem Inventory (cached, fallback)
-        sup_inv[label]["i_src"] = _f(row[8])  # I Avg Cost (cached, fallback)
-
-    # Read D (Wired Amount) from Supplier Invoices col E (raw)
-    # Read E (Paid for Gallons) from Supplier Invoices col G (idx 6) as fallback
-    # Read F (Pulled) and G (Remaining) from script-written W/X
-    out_rows = {i: row for i, row in enumerate(ws_inv.iter_rows(values_only=True), start=1)
-                if i > 7 and row[0] is not None}
-    src_rows = {i: row for i, row in enumerate(ws_inv_r.iter_rows(values_only=True), start=1)
-                if i > 7 and row[0] is not None}
-    sup_paid_gals = _dd(float)
-    for i, out in out_rows.items():
-        sup = str(out[2]).strip()
-        sup_inv[sup]["d"] += _f(out[4])    # E Wired Amount (raw)
-        sup_inv[sup]["f"] += _f(out[22])   # W Net RTB Gallons (script-written)
-        sup_inv[sup]["g"] += _f(out[23])   # X Remainder Gallons (script-written)
-        # Read Paid for Gallons from SOURCE file (cached) since output formulas return None
-        src = src_rows.get(i, out)
-        sup_paid_gals[sup] += _f(src[6])   # G Paid for Gallons (cached in source)
-
-    # Fallback: use Supplier Invoices paid_gals when source Overall Summary cached value is 0
-    for sup, pg in sup_paid_gals.items():
-        if sup_inv[sup]["e"] == 0.0 and pg > 0:
-            sup_inv[sup]["e"] = pg
-
-    # Aggregate J (Received Payments) and K (Mexico Balance) from BOL output
-    # T(Balance) is a formula — compute it: T = (M/G + K)*G - S if P!="" else (M/G+K)*G
-    # Using ws_bol (output) so I and K are already written by the script
-    sup_j = _dd(float)
-    sup_k = _dd(float)
-    for i, row in enumerate(ws_bol.iter_rows(values_only=True), start=1):
-        if i <= 7: continue
-        if not row[2]: break
-        sup_raw = str(row[2]).strip()
-        try:
-            recv = float(row[20]) if row[20] is not None else 0.0  # U(21) Received Payments
-        except (TypeError, ValueError):
-            recv = 0.0
-        # Compute Balance: Invoice Amount = (Freight/Load + Cost/Gal+Adder × Gallons)
-        try:
-            gals    = float(row[6])  if row[6]  is not None else 0.0  # G(7) Gallons
-            freight = float(row[14]) if row[14] is not None else 0.0  # O(15) Freight/Load USD
-            cost_k  = float(row[11]) if row[11] is not None else 0.0  # L(12) Cost/Gal+Adder
-            inv_num = row[17]                                           # R(18) Invoice#
-            inv_amt = (freight + cost_k * gals) if gals else 0.0       # S = O + L×G
-            bal     = (inv_amt - recv) if inv_num else inv_amt
-        except (TypeError, ValueError):
-            bal = 0.0
-            inv_num = None
-        sup_j[sup_raw] += recv
-        if bal > 0.01 and inv_num:
-            sup_k[sup_raw] += bal
-
-    # Remaining FIFO inventory by supplier
-    supplier_remaining = _dd(list)
-    for (prod, bp), q in inventory.items():
-        for slot in q:
-            sup_upper = slot.get("supplier_upper", "")
-            if sup_upper:
-                supplier_remaining[sup_upper].append((slot["liters"], slot["cost"]))
-
-    def _match(label, d):
-        lu = label.upper()
-        total = 0.0
-        for k, v in d.items():
-            if k.upper() in lu or lu in k.upper():
-                total += v
-        return total
-
-    def _match_dict(label, d):
-        lu = label.upper()
-        for k, v in d.items():
-            if k.upper() in lu or lu in k.upper():
-                return v
-        return {"b":0.0,"c":0.0,"d":0.0,"e":0.0,"f":0.0,"g":0.0}
-
-    def _match_slots(label, d):
-        lu = label.upper()
-        result = []
-        for k, v in d.items():
-            if k.upper() in lu or lu in k.upper():
-                result.extend(v)
-        return result
-
-    ws_os = wb["Overall Summary"]
-    gt = {"b":0.0,"c":0.0,"d":0.0,"e":0.0,"f":0.0,"g":0.0,
-          "h_l":0.0,"h_pairs":[],"j":0.0,"k":0.0}
-
-    for i, row in enumerate(ws_os.iter_rows(values_only=False), start=1):
-        if i < 4: continue
-        label = str(row[0].value).strip() if row[0].value else ""
-        if not label or label == "Row Labels":
-            continue
-
-        if "TOTAL" in label.upper():
-            h_gals = gt["h_l"] / LITERS_PER_GAL
-            i_avg  = (sum(l*c for l,c in gt["h_pairs"]) / sum(l for l,_ in gt["h_pairs"])
-                      if gt["h_pairs"] else 0.0)
-            # If no real AV-based costs, use source cached Total row H and I
+    # Overall Summary — skip gracefully if tab deleted
+    try:
+        # ══════════════════════════════════════════════════════════════════════════════
+        # ══════════════════════════════════════════════════════════════════════════════
+        # Overall Summary — all columns B through K
+        # B=Total Invoices USD, C=Total Gallons, D=Total Wired, E=Paid for Gallons,
+        # F=Gallons Pulled, G=Remaining in Allocation, H=Remaining in Inventory,
+        # I=Weighted Avg Cost, J=Amount Paid Back Mexico, K=Mexico Balance
+        # J and K read from ws_bol (already written with correct Cost/Gal)
+        # ══════════════════════════════════════════════════════════════════════════════
+        LITERS_PER_GAL = 3.7854
+        from collections import defaultdict as _dd
+    
+        # Aggregate Overall Summary values
+        # B (Total Invoice USD), C (Total Gallons), E (Paid for Gallons):
+        #   Read directly from source Overall Summary which has cached formula values
+        # D (Total Wired): read from Supplier Invoices col E (always raw)
+        # F (Gallons Pulled), G (Remaining Allocation): from Supplier Invoices W/X (script-written)
+        sup_inv = _dd(lambda: {"b":0.0,"c":0.0,"d":0.0,"e":0.0,"f":0.0,"g":0.0})
+    
+        def _f(v):
+            try: return float(v) if v is not None else 0.0
+            except: return 0.0
+    
+        # Read B, C, E from source Overall Summary (cached formula values)
+        ws_os_r = wb_r["Overall Summary"]
+        for i, row in enumerate(ws_os_r.iter_rows(values_only=True), start=1):
+            if i < 4: continue
+            label = str(row[0]).strip() if row[0] else ""
+            if not label or label == "Row Labels": continue
+            if "TOTAL" in label.upper(): continue
+            sup_inv[label]["b"] = _f(row[1])   # B Total Invoice USD (formula cached)
+            sup_inv[label]["c"] = _f(row[2])   # C Total Gallons
+            sup_inv[label]["e"] = _f(row[4])   # E Paid for Gallons (formula cached)
+            sup_inv[label]["h_src"] = _f(row[7])  # H Rem Inventory (cached, fallback)
+            sup_inv[label]["i_src"] = _f(row[8])  # I Avg Cost (cached, fallback)
+    
+        # Read D (Wired Amount) from Supplier Invoices col E (raw)
+        # Read E (Paid for Gallons) from Supplier Invoices col G (idx 6) as fallback
+        # Read F (Pulled) and G (Remaining) from script-written W/X
+        out_rows = {i: row for i, row in enumerate(ws_inv.iter_rows(values_only=True), start=1)
+                    if i > 7 and row[0] is not None}
+        src_rows = {i: row for i, row in enumerate(ws_inv_r.iter_rows(values_only=True), start=1)
+                    if i > 7 and row[0] is not None}
+        sup_paid_gals = _dd(float)
+        for i, out in out_rows.items():
+            sup = str(out[2]).strip()
+            sup_inv[sup]["d"] += _f(out[4])    # E Wired Amount (raw)
+            sup_inv[sup]["f"] += _f(out[22])   # W Net RTB Gallons (script-written)
+            sup_inv[sup]["g"] += _f(out[23])   # X Remainder Gallons (script-written)
+            # Read Paid for Gallons from SOURCE file (cached) since output formulas return None
+            src = src_rows.get(i, out)
+            sup_paid_gals[sup] += _f(src[6])   # G Paid for Gallons (cached in source)
+    
+        # Fallback: use Supplier Invoices paid_gals when source Overall Summary cached value is 0
+        for sup, pg in sup_paid_gals.items():
+            if sup_inv[sup]["e"] == 0.0 and pg > 0:
+                sup_inv[sup]["e"] = pg
+    
+        # Aggregate J (Received Payments) and K (Mexico Balance) from BOL output
+        # T(Balance) is a formula — compute it: T = (M/G + K)*G - S if P!="" else (M/G+K)*G
+        # Using ws_bol (output) so I and K are already written by the script
+        sup_j = _dd(float)
+        sup_k = _dd(float)
+        for i, row in enumerate(ws_bol.iter_rows(values_only=True), start=1):
+            if i <= 7: continue
+            if not row[2]: break
+            sup_raw = str(row[2]).strip()
+            try:
+                recv = float(row[20]) if row[20] is not None else 0.0  # U(21) Received Payments
+            except (TypeError, ValueError):
+                recv = 0.0
+            # Compute Balance: Invoice Amount = (Freight/Load + Cost/Gal+Adder × Gallons)
+            try:
+                gals    = float(row[6])  if row[6]  is not None else 0.0  # G(7) Gallons
+                freight = float(row[14]) if row[14] is not None else 0.0  # O(15) Freight/Load USD
+                cost_k  = float(row[11]) if row[11] is not None else 0.0  # L(12) Cost/Gal+Adder
+                inv_num = row[17]                                           # R(18) Invoice#
+                inv_amt = (freight + cost_k * gals) if gals else 0.0       # S = O + L×G
+                bal     = (inv_amt - recv) if inv_num else inv_amt
+            except (TypeError, ValueError):
+                bal = 0.0
+                inv_num = None
+            sup_j[sup_raw] += recv
+            if bal > 0.01 and inv_num:
+                sup_k[sup_raw] += bal
+    
+        # Remaining FIFO inventory by supplier
+        supplier_remaining = _dd(list)
+        for (prod, bp), q in inventory.items():
+            for slot in q:
+                sup_upper = slot.get("supplier_upper", "")
+                if sup_upper:
+                    supplier_remaining[sup_upper].append((slot["liters"], slot["cost"]))
+    
+        def _match(label, d):
+            lu = label.upper()
+            total = 0.0
+            for k, v in d.items():
+                if k.upper() in lu or lu in k.upper():
+                    total += v
+            return total
+    
+        def _match_dict(label, d):
+            lu = label.upper()
+            for k, v in d.items():
+                if k.upper() in lu or lu in k.upper():
+                    return v
+            return {"b":0.0,"c":0.0,"d":0.0,"e":0.0,"f":0.0,"g":0.0}
+    
+        def _match_slots(label, d):
+            lu = label.upper()
+            result = []
+            for k, v in d.items():
+                if k.upper() in lu or lu in k.upper():
+                    result.extend(v)
+            return result
+    
+        ws_os = wb["Overall Summary"]
+        gt = {"b":0.0,"c":0.0,"d":0.0,"e":0.0,"f":0.0,"g":0.0,
+              "h_l":0.0,"h_pairs":[],"j":0.0,"k":0.0}
+    
+        for i, row in enumerate(ws_os.iter_rows(values_only=False), start=1):
+            if i < 4: continue
+            label = str(row[0].value).strip() if row[0].value else ""
+            if not label or label == "Row Labels":
+                continue
+    
+            if "TOTAL" in label.upper():
+                h_gals = gt["h_l"] / LITERS_PER_GAL
+                i_avg  = (sum(l*c for l,c in gt["h_pairs"]) / sum(l for l,_ in gt["h_pairs"])
+                          if gt["h_pairs"] else 0.0)
+                # If no real AV-based costs, use source cached Total row H and I
+                slots_have_av = any(s.get("av_available", True) for s in
+                                    [slot for (prod,bp),q in inventory.items() for slot in q])
+                if not slots_have_av:
+                    # Find cached total row in source Overall Summary
+                    for src_row in ws_os_r.iter_rows(values_only=True):
+                        if src_row[0] and "TOTAL" in str(src_row[0]).upper():
+                            if src_row[7]: h_gals = float(src_row[7])
+                            if src_row[8]: i_avg  = float(src_row[8])
+                            break
+                ws_os.cell(row=i, column=2).value  = round(gt["b"], 6)
+                ws_os.cell(row=i, column=3).value  = round(gt["c"], 6)
+                ws_os.cell(row=i, column=4).value  = round(gt["d"], 6)
+                ws_os.cell(row=i, column=5).value  = round(gt["e"], 6)
+                ws_os.cell(row=i, column=6).value  = round(gt["f"], 6)
+                ws_os.cell(row=i, column=7).value  = round(gt["g"], 6)
+                ws_os.cell(row=i, column=8).value  = round(h_gals, 6)
+                ws_os.cell(row=i, column=9).value  = round(i_avg, 6)
+                ws_os.cell(row=i, column=10).value = round(gt["j"], 6)
+                ws_os.cell(row=i, column=11).value = round(gt["k"], 6)
+                break
+    
+            sd     = _match_dict(label, sup_inv)
+            j_v    = _match(label, sup_j)
+            k_v    = _match(label, sup_k)
+            slots  = _match_slots(label, supplier_remaining)
+            h_l    = sum(l for l,_ in slots)
+            h_gals = h_l / LITERS_PER_GAL
+            i_avg  = (sum(l*c for l,c in slots)/h_l if h_l else 0.0)
+            # If FIFO slots used fallback costs (AV not cached), use source cached H/I
             slots_have_av = any(s.get("av_available", True) for s in
-                                [slot for (prod,bp),q in inventory.items() for slot in q])
-            if not slots_have_av:
-                # Find cached total row in source Overall Summary
-                for src_row in ws_os_r.iter_rows(values_only=True):
-                    if src_row[0] and "TOTAL" in str(src_row[0]).upper():
-                        if src_row[7]: h_gals = float(src_row[7])
-                        if src_row[8]: i_avg  = float(src_row[8])
-                        break
-            ws_os.cell(row=i, column=2).value  = round(gt["b"], 6)
-            ws_os.cell(row=i, column=3).value  = round(gt["c"], 6)
-            ws_os.cell(row=i, column=4).value  = round(gt["d"], 6)
-            ws_os.cell(row=i, column=5).value  = round(gt["e"], 6)
-            ws_os.cell(row=i, column=6).value  = round(gt["f"], 6)
-            ws_os.cell(row=i, column=7).value  = round(gt["g"], 6)
+                                [slot for (prod,bp),q in inventory.items()
+                                 for slot in q])
+            if not slots_have_av and sd.get("i_src", 0) > 0:
+                i_avg  = sd["i_src"]
+            if not slots_have_av and sd.get("h_src", 0) > 0:
+                h_gals = sd["h_src"]
+    
+            ws_os.cell(row=i, column=2).value  = round(sd["b"], 6)
+            ws_os.cell(row=i, column=3).value  = round(sd["c"], 6)
+            ws_os.cell(row=i, column=4).value  = round(sd["d"], 6)
+            ws_os.cell(row=i, column=5).value  = round(sd["e"], 6)
+            ws_os.cell(row=i, column=6).value  = round(sd["f"], 6)
+            ws_os.cell(row=i, column=7).value  = round(sd["g"], 6)
             ws_os.cell(row=i, column=8).value  = round(h_gals, 6)
             ws_os.cell(row=i, column=9).value  = round(i_avg, 6)
-            ws_os.cell(row=i, column=10).value = round(gt["j"], 6)
-            ws_os.cell(row=i, column=11).value = round(gt["k"], 6)
-            break
-
-        sd     = _match_dict(label, sup_inv)
-        j_v    = _match(label, sup_j)
-        k_v    = _match(label, sup_k)
-        slots  = _match_slots(label, supplier_remaining)
-        h_l    = sum(l for l,_ in slots)
-        h_gals = h_l / LITERS_PER_GAL
-        i_avg  = (sum(l*c for l,c in slots)/h_l if h_l else 0.0)
-        # If FIFO slots used fallback costs (AV not cached), use source cached H/I
-        slots_have_av = any(s.get("av_available", True) for s in
-                            [slot for (prod,bp),q in inventory.items()
-                             for slot in q])
-        if not slots_have_av and sd.get("i_src", 0) > 0:
-            i_avg  = sd["i_src"]
-        if not slots_have_av and sd.get("h_src", 0) > 0:
-            h_gals = sd["h_src"]
-
-        ws_os.cell(row=i, column=2).value  = round(sd["b"], 6)
-        ws_os.cell(row=i, column=3).value  = round(sd["c"], 6)
-        ws_os.cell(row=i, column=4).value  = round(sd["d"], 6)
-        ws_os.cell(row=i, column=5).value  = round(sd["e"], 6)
-        ws_os.cell(row=i, column=6).value  = round(sd["f"], 6)
-        ws_os.cell(row=i, column=7).value  = round(sd["g"], 6)
-        ws_os.cell(row=i, column=8).value  = round(h_gals, 6)
-        ws_os.cell(row=i, column=9).value  = round(i_avg, 6)
-        ws_os.cell(row=i, column=10).value = round(j_v, 6)
-        ws_os.cell(row=i, column=11).value = round(k_v, 6)
-
-        gt["b"] += sd["b"]; gt["c"] += sd["c"]; gt["d"] += sd["d"]
-        gt["e"] += sd["e"]; gt["f"] += sd["f"]; gt["g"] += sd["g"]
-        gt["h_l"] += h_l;  gt["h_pairs"].extend(slots)
-        gt["j"] += j_v;    gt["k"] += k_v
-
+            ws_os.cell(row=i, column=10).value = round(j_v, 6)
+            ws_os.cell(row=i, column=11).value = round(k_v, 6)
+    
+            gt["b"] += sd["b"]; gt["c"] += sd["c"]; gt["d"] += sd["d"]
+            gt["e"] += sd["e"]; gt["f"] += sd["f"]; gt["g"] += sd["g"]
+            gt["h_l"] += h_l;  gt["h_pairs"].extend(slots)
+            gt["j"] += j_v;    gt["k"] += k_v
+    
+    except Exception as _os_err:
+        print(f"[Overall Summary skipped: {_os_err}]", flush=True)
     wb.save(DST)
     print("Done")
 
