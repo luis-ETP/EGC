@@ -705,12 +705,13 @@ function renderFifo() {
     const prod = r['Product'] || 'Unknown';
     const bp   = r['Bulk Plant'] || '—';
     const key  = prod + '|' + bp;
-    if (!invByProd[key]) invByProd[key] = {prod, bp, remL:0, costs:[], nextCost:0};
+    if (!invByProd[key]) invByProd[key] = {prod, bp, remL:0, costs:[], remCosts:[], nextCost:0};
     const rem = r['Remaining L (BOL)'] || 0;
     const lit = r['Liters'] || 0;
     const cpl = r['Cost / L (MXN)'] || 0;
     invByProd[key].remL += rem;
     if (cpl > 0) invByProd[key].costs.push([lit, cpl]);
+    if (rem > 0) invByProd[key].remCosts.push([rem, cpl]);  // for avg cost
     if (rem > 0) invByProd[key].nextCost = cpl;
   });
 
@@ -735,8 +736,9 @@ function renderFifo() {
   const nProd = Object.keys(invByProd).length || 1;
   html += '<div class="kpi-grid" style="grid-template-columns:repeat(' + nProd + ',1fr);margin-bottom:1.25rem">';
   Object.values(invByProd).forEach(d => {
-    const totalW  = d.costs.reduce((s,p) => s + p[0], 0);
-    const avgCost = totalW > 0 ? d.costs.reduce((s,p) => s + p[0]*p[1], 0) / totalW : 0;
+    // Avg cost weighted by REMAINING liters only, not total purchased
+    const totalW  = d.remCosts.reduce((s,p) => s + p[0], 0);
+    const avgCost = totalW > 0 ? d.remCosts.reduce((s,p) => s + p[0]*p[1], 0) / totalW : 0;
     html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem">';
     html += '<div style="font-size:0.8rem;font-weight:700;color:var(--text);margin-bottom:0.75rem">' + d.prod + ' &nbsp;<span style="color:var(--muted);font-weight:400;font-size:0.72rem">· ' + d.bp + '</span></div>';
     html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem">';
