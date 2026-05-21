@@ -72,8 +72,29 @@ def _extract_overall_summary(wb, wb_fifo=None):
     except Exception:
         pass
 
-    # FIFO output → pulled gallons + remaining inventory per supplier
-    # Need BOL→supplier mapping
+    # Pulled gallons: use Supplier Invoices col W (Net RTB Gallons) — already computed there
+    # Remaining inventory: use FIFO Remaining L (BOL) per supplier
+    pulled_gal  = defaultdict(float)
+    rem_inv_gal = defaultdict(float)
+    rem_inv_mxn = defaultdict(float)
+
+    # Col W (Net RTB Gallons) from SI — gallons pulled from allocation per invoice row
+    try:
+        ws_si2 = wb["Supplier Invoices"]
+        si_rows2 = list(ws_si2.iter_rows(values_only=True))
+        si_hdr2 = next((i for i, r in enumerate(si_rows2) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
+        if si_hdr2 is not None:
+            sc2 = {str(v).strip(): j for j, v in enumerate(si_rows2[si_hdr2]) if v}
+            col_w = sc2.get("Net RTB Gallons", 22)
+            for row in si_rows2[si_hdr2 + 1:]:
+                if not any(row): break
+                s = str(row[sc2.get("Supplier", 2)] or "").strip()
+                if not s or s == "Total": continue
+                pulled_gal[s] += f(row[col_w])
+    except Exception:
+        pass
+
+    # Remaining inventory from FIFO sheet (Remaining L per BOL, need BOL→supplier map)
     bol_sup = {}
     try:
         ws_bol_rtb = wb["Purchase to BOL-RTB"]
@@ -85,13 +106,9 @@ def _extract_overall_summary(wb, wb_fifo=None):
     except Exception:
         pass
 
-    # Normalise supplier name matching
     si_names = {s.upper(): s for s in sup_data}
     def _match(raw): return si_names.get(raw.upper(), raw)
 
-    pulled_gal  = defaultdict(float)
-    rem_inv_gal = defaultdict(float)
-    rem_inv_mxn = defaultdict(float)
     _wb_f = wb_fifo if wb_fifo is not None else wb
     try:
         ws_fifo = _wb_f["FIFO"]
@@ -100,16 +117,15 @@ def _extract_overall_summary(wb, wb_fifo=None):
             if not row[0]: break
             if row[fh["Type"]] != "RTB": continue
             s = _match(bol_sup.get(str(row[fh["BOL"]]), ""))
-            liters    = f(row[fh["Liters"]])
             remaining = f(row[fh["Remaining L (BOL)"]])
             cost_l    = f(row[fh["Cost / L (MXN)"]])
-            pulled_gal[s]  += (liters - remaining) / 3.7854
             rem_inv_gal[s] += remaining / 3.7854
             rem_inv_mxn[s] += remaining * cost_l
     except Exception:
         pass
 
-    # BOL sheet → Mexico payments (totals only)
+    # BOL sheet → Mexico payments
+    # Open balance = only rows that HAVE an invoice number (actual open invoices)
     total_received = total_balance = 0.0
     try:
         ws_bol_rtb = wb["Purchase to BOL-RTB"]
@@ -117,8 +133,10 @@ def _extract_overall_summary(wb, wb_fifo=None):
         bh = {str(v).strip(): j for j, v in enumerate(bol_rows[6]) if v}
         for row in bol_rows[7:]:
             if not row[0]: continue
+            inv_num = row[bh.get("Invoice #", 17)]
             total_received += f(row[bh.get("Received Payments", 20)])
-            total_balance  += f(row[bh.get("Balance", 21)])
+            if inv_num:  # only invoiced rows count as open balance
+                total_balance += f(row[bh.get("Balance", 21)])
     except Exception:
         pass
 
@@ -585,7 +603,8 @@ def _extract_bol(wb):
         f2 = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
         total_invoiced    = sum(f2(r["invoice_amt"]) for r in result_rows if r.get("invoice_amt"))
         received_payments = sum(f2(r["received"])    for r in result_rows if r.get("received"))
-        open_balance      = sum(f2(r["balance"])     for r in result_rows if r.get("balance"))
+        # Open balance only for rows that have an invoice number
+        open_balance      = sum(f2(r["balance"]) for r in result_rows if r.get("invoice_num") and f2(r.get("balance", 0)) > 0)
 
         # Not invoiced yet: rows with no invoice number but have a BOL
         # Read from BOL sheet header area (rows 2-5 before data)
