@@ -1,1341 +1,710 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EGC Dashboard</title>
-  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAABCGlDQ1BJQ0MgUHJvZmlsZQAAeJxjYGA8wQAELAYMDLl5JUVB7k4KEZFRCuwPGBiBEAwSk4sLGHADoKpv1yBqL+viUYcLcKakFicD6Q9ArFIEtBxopAiQLZIOYWuA2EkQtg2IXV5SUAJkB4DYRSFBzkB2CpCtkY7ETkJiJxcUgdT3ANk2uTmlyQh3M/Ck5oUGA2kOIJZhKGYIYnBncAL5H6IkfxEDg8VXBgbmCQixpJkMDNtbGRgkbiHEVBYwMPC3MDBsO48QQ4RJQWJRIliIBYiZ0tIYGD4tZ2DgjWRgEL7AwMAVDQsIHG5TALvNnSEfCNMZchhSgSKeDHkMyQx6QJYRgwGDIYMZAKbWPz9HbOBQAAAFq0lEQVR4nN2W22/cVxHH53LO2d9v17vrje3Edmy1ToWTuCQKBSkhMQ0JVaCgcikIIVAknkEoPCAk/oOKP4BXBC80jSJApQolSomQaVADIWlJcZpWBMdJ69va3uvvcs4MDzaBrFMkEHmAeT0685kzM9+Zg0Njk/AwjR6q9/8LgPmPbyIAICIAACiAqv7XABuuRTXPvagAgGE2TPAgxD8Aij1HAVAUANTYYFiMQvDWBw4uxZZAxejTNXe4GneJX76zfq1DvlBA6L4vAPU+BgKQgIBVJaEMTFsRcm9Dwjs4++xAdGK0/4OVqD9kCOaJ4cHvXXpjVr1F0vcDbDDuGYkzAkLem7xj1AuVkmQSw6HRoWPba3uiUikNuJ5kzvsy1rO2SGbQAfZ2jdmIesP15gMUCFApzyyqWp+Fcjd/1PGTo8NPDvTtshKHVtaWYGo2iuZDev5Oevb20m2uAm+Jv7fIooSooogAgCELBrr7Y3eiVj3W1zfGmuZpN0CBY6zYa52VCzeXf7ucvpV5iYtlV6EgOeX34tzMyuD45MYLSAERNQgRpyIlSfbHOD1QPlgtboegormijRxaO7sWzt3+62Uyw9Of/sjh45x1Xvn5mZuvv8nOeQo9L8Ado7sDK4AYQVUKpKWsvSeOT+yo7eszMZNL2sWQ2ziqx/HltcaFufduxeP7Pvappz73xbHde3xwlnhl4c6pb3+luTRXgrhHEMYF6phc0LtgPZoUk2FOTz4yPhV81m2AQRNHy+JeX2xeePfu/Mij+09+92ufeGZkYqKdZL6eFhCphndX5kzHl3IHdksNAomCkiIIMgKzbVHheqChIldElzS+NN+aqSf+kd3Tp77zzU8+M7RtqJG3641GsVAu95cW3rl1/oVfvPTL5/P6fMHaRHu7CLfv/EBgIVXnjYLrGmHp7Ax+qq+UJ8lcjuWpAx//8smDR5+q9VeS9abmeVSseZAbs1fPvfjCq79+aXlxvhBHxsaghh4EeEwIEZADAZBnUNTQaqKJPjx9/Nlnv3Too0cKcXG92fIicV8p8/m1P/z+ldM/mb90YYybe0crzO7KfONqy7YKBca8FzC8c1dAUiQAYFUCTLJw4ODBb3zr1NTj+9S59UbLCtbivrTduvjqzNmfPr/2x/MfcvGxkbHJmFy3nqN5i6o/+PPdd5iUpVfJRpAQM0IhRQya5gP9g8899/1tO0cbq+tRoqPF6p1W+0fnzl48/UP507VD/fHRPYPjXDTtNG2mqcOupcVOswFr3pRZubfICgy6qeSAYBx30/bVK5dPjH2+v9y/+u7imTM/fvlnp2n+7WND5eMHJoYx72TdkLaZbFZysz7MvLf22kpniSsITsH3pqi0axcLuUAmICoCcurFxaXpQ0fY6tuzV8oLf/nCyMDhwXIZJXS95MzGNtleb3Rm6o3fNdbvMnlrHTIH6JExAODQ+GOgYIVYyAMnBtggtDqlrPlELf7M+MiRgUoxS9PMpwDGUpLnr7X04uLylW62iEWEUows0O3aLgDY0CsEU0pdaiRgEJacIXDelzSPDta+OjG1L0ZMKW12giGOoiTAzOrq+frKG63QUlIXIRKHRAIQQJxZIRTsnXamYzixoggFD6pAQXagfv3xvfuzLG2s5RFB1S4nOrO0+uJy/XpHQoiKHEUcEsgDJsCqRBgMglEA2LLVDEFgDUakmLncRGuW65DcWFia2F7FuHSr439ze/VXC6s3Usg5ioxj9h1KWSDOCSDKWT0pMFjxuDHpt+hgUlBJlYU9cmaUJa3l2d5t1cjRzXprLgm+EFlkVlFVJchIjKDzRIo5gycFUCsCALJl4eC9n50CIOhGFAEh9UFVC4YtIqgAgP69QzaWqwIAwpac99o/7eTNuwCgRsEaAgVRVVXA+5pvcwk+IOH/EnCfC4DNqY69ff3v2v/+1/GhA/4GmR3jSX4uZYcAAAAASUVORK5CYII=">
-  
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0d1117;--surface:#161c26;--surface2:#1e2736;--surface3:#243040;
-  --border:#263044;--border2:#2d3a50;
-  --accent:#4a7cdc;--accent2:#5a8fef;
-  --text:#e6edf3;--muted:#6e7f96;--muted2:#8899ad;
-  --green:#3fb950;--orange:#f0883e;--red:#f85149;--purple:#a371f7;
-  --font:'Inter',sans-serif;
-}
-body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden}
+"""
+Extract structured data from a processed FIFO workbook for the dashboard.
+v2 - includes investment summary extraction
+"""
+import openpyxl
+from collections import defaultdict
 
-/* ── Sidebar ── */
-.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--surface);
-  border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100}
-.sidebar-logo{padding:1.1rem 1.25rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:flex-start}
-.sidebar-logo img{height:40px;width:auto;display:block}
-.sidebar-nav{flex:1;padding:0.75rem 0.75rem;display:flex;flex-direction:column;gap:2px}
-.nav-item{display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.75rem;border-radius:7px;
-  font-size:0.82rem;font-weight:500;color:var(--muted);cursor:pointer;transition:all 0.15s;border:none;
-  background:none;width:100%;text-align:left}
-.nav-item:hover{background:var(--surface2);color:var(--text)}
-.nav-item.active{background:rgba(74,124,220,0.15);color:var(--accent)}
-.nav-item svg{width:16px;height:16px;flex-shrink:0}
-.nav-section{font-size:0.65rem;font-weight:600;color:var(--muted);letter-spacing:0.08em;
-  text-transform:uppercase;padding:0.75rem 0.75rem 0.3rem;margin-top:0.5rem}
-.sidebar-footer{padding:1rem;border-top:1px solid var(--border);display:flex;align-items:center;
-  justify-content:space-between}
-.user-info{font-size:0.75rem}
-.user-name{color:var(--text);font-weight:500}
-.user-role{color:var(--muted);font-size:0.68rem;text-transform:capitalize}
-.logout-btn{font-size:0.72rem;color:var(--muted);background:none;border:1px solid var(--border);
-  border-radius:5px;padding:0.3rem 0.6rem;cursor:pointer;transition:all 0.15s}
-.logout-btn:hover{border-color:var(--accent);color:var(--accent)}
+LITERS_PER_GAL = 3.7854
 
-/* ── Main ── */
-.main{margin-left:220px;min-height:100vh;display:flex;flex-direction:column}
-.topbar{padding:1rem 1.75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;
-  justify-content:space-between;background:var(--surface);position:sticky;top:0;z-index:50}
-.page-title{font-size:1rem;font-weight:600}
-.upload-info{font-size:0.72rem;color:var(--muted);display:flex;align-items:center;gap:0.5rem}
-.dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
-.dot.stale{background:var(--orange)}
-.content{padding:1.75rem;flex:1}
+def extract(path, src_path=None):
+    wb     = openpyxl.load_workbook(path, data_only=True)
+    wb_src = openpyxl.load_workbook(src_path, data_only=True) if src_path else wb
 
-/* ── Tabs ── */
-.tab-panel{display:none}
-.tab-panel.active{display:block}
+    overall_summary = _extract_overall_summary(wb_src, wb_fifo=wb)
+    inventory       = _extract_inventory(wb)
+    fifo_rows       = _extract_fifo(wb)
+    meta            = _extract_meta(wb_src, wb_fifo=wb)
 
-/* ── KPI cards ── */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem}
-.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.25rem;
-  position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.kpi.blue::before{background:var(--accent)}
-.kpi.green::before{background:var(--green)}
-.kpi.orange::before{background:var(--orange)}
-.kpi.purple::before{background:var(--purple)}
-.kpi.red::before{background:var(--red)}
-.kpi-label{font-size:0.7rem;color:var(--muted);margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.05em}
-.kpi-value{font-size:1.4rem;font-weight:700;letter-spacing:-0.02em}
-.kpi-sub{font-size:0.68rem;color:var(--muted);margin-top:0.2rem}
+    bol_tab         = _extract_bol(wb_src)
+    overview_exp    = _extract_overview(wb_src)
+    investment      = _extract_investment_summary(wb_src)
+    return overall_summary, inventory, fifo_rows, meta, investment, bol_tab, overview_exp
 
-/* ── Charts grid ── */
-.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem}
-.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.25rem}
-.chart-card.wide{grid-column:1/-1}
-.chart-title{font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:1rem}
-.chart-wrap{position:relative;height:220px}
+# ── Overall Summary ────────────────────────────────────────────────────────────
+def _extract_overall_summary(wb, wb_fifo=None):
+    # Try reading from Overall Summary tab first (legacy)
+    try:
+        ws = wb["Overall Summary"]
+        rows = list(ws.iter_rows(values_only=True))
+        hdr_idx = next((i for i, r in enumerate(rows) if r[0] == "Row Labels"), None)
+        if hdr_idx is not None:
+            headers = [str(v).strip() if v else f"col{j}" for j, v in enumerate(rows[hdr_idx])]
+            result = []
+            for row in rows[hdr_idx + 1:]:
+                if not row[0]: continue
+                entry = {}
+                for j, h in enumerate(headers):
+                    v = row[j]
+                    entry[h] = float(v) if isinstance(v, (int, float)) else (str(v) if v else None)
+                entry["_wired"]     = entry.get("Total Wired Amount", 0) or 0
+                entry["_paid_gal"]  = entry.get("Paid for Gallons (Allocation)") or entry.get("Paid for Gallons ") or 0
+                entry["_pulled"]    = entry.get("Gallons Pulled from Allocation (RTB & RTC)") or entry.get("Gallons Pulled (RTB & RTC)") or 0
+                entry["_rem_alloc"] = entry.get("Remaining Gallons in Allocation") or 0
+                entry["_rem_inv"]   = entry.get("Remaining Gallons in Inventory") or 0
+                entry["_avg_cost"]  = entry.get("Weighted Average Cost in Inventory (MXN/L)") or entry.get("Weighted Average Cost in Inventory") or 0
+                entry["_paid_back"] = entry.get("Amount Paid Back by Mexico (MXN)") or entry.get("Amount Paid Back by Mexico ") or entry.get("Amount Paid Back by Mexico") or 0
+                entry["_balance"]   = entry.get("Mexico Balance (MXN)") or entry.get("Mexico Balance") or 0
+                result.append(entry)
+            if result:
+                return result
+    except KeyError:
+        pass
 
-/* ── Table ── */
-.table-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1.5rem}
-.table-header{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;
-  align-items:center;justify-content:space-between}
-.table-title{font-size:0.82rem;font-weight:600}
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:0.75rem}
-thead th{padding:0.65rem 1rem;text-align:right;color:var(--muted);font-weight:500;
-  border-bottom:1px solid var(--border);white-space:nowrap;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.04em}
-thead th:first-child{text-align:left}
-tbody td{padding:0.6rem 1rem;text-align:right;border-bottom:1px solid var(--border);color:var(--text)}
-tbody td:first-child{text-align:left;font-weight:500}
-tbody tr:last-child td{border-bottom:none}
-tbody tr:hover td{background:rgba(255,255,255,0.02)}
-.badge{display:inline-block;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.65rem;font-weight:600}
-.badge.green{background:rgba(63,185,80,0.15);color:var(--green)}
-.badge.orange{background:rgba(240,136,62,0.15);color:var(--orange)}
-.badge.blue{background:rgba(74,124,220,0.15);color:var(--accent)}
+    # Compute from raw sheets when Overall Summary tab is missing
+    from collections import defaultdict
+    f = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
 
-/* ── FIFO table ── */
-.fifo-table thead th{font-size:0.65rem}
-.fifo-table tbody td{font-size:0.72rem;padding:0.45rem 0.75rem}
-.type-rtb{color:var(--green);font-weight:600;font-size:0.65rem}
-.type-btc{color:var(--orange);font-weight:600;font-size:0.65rem}
+    # Supplier Invoices → wired, paid_gal per supplier
+    sup_data = defaultdict(lambda: {"wired": 0.0, "paid_gal": 0.0})
+    try:
+        ws_si = wb["Supplier Invoices"]
+        si_rows = list(ws_si.iter_rows(values_only=True))
+        si_hdr = next((i for i, r in enumerate(si_rows) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
+        if si_hdr is not None:
+            sc = {str(v).strip(): j for j, v in enumerate(si_rows[si_hdr]) if v}
+            for row in si_rows[si_hdr + 1:]:
+                if not any(row): break
+                s = str(row[sc.get("Supplier", 2)] or "").strip()
+                if not s or s == "Total": continue
+                sup_data[s]["wired"]    += f(row[sc.get("Wired Amount", 4)])
+                sup_data[s]["paid_gal"] += f(row[sc.get("Paid for Gallons", 6)])
+    except Exception:
+        pass
 
-/* ── Inventory tanks ── */
-.inv-section{margin-bottom:1.5rem}
-.inv-bp-title{font-size:0.9rem;font-weight:600;margin-bottom:1rem;color:var(--text);
-  display:flex;align-items:center;gap:0.5rem}
-.inv-bp-title::before{content:'';width:3px;height:1rem;background:var(--accent);border-radius:2px}
-.inv-product-wrap{display:flex;flex-direction:column;gap:1rem}
+    # Pulled gallons: use Supplier Invoices col W (Net RTB Gallons) — already computed there
+    # Remaining inventory: use FIFO Remaining L (BOL) per supplier
+    pulled_gal  = defaultdict(float)
+    rem_inv_gal = defaultdict(float)
+    rem_inv_mxn = defaultdict(float)
 
-/* Batch tank */
-.batch-tank{background:var(--surface);border:1px solid var(--border);border-radius:14px;
-  overflow:hidden;transition:box-shadow 0.2s}
-.batch-tank:hover{box-shadow:0 0 0 1px var(--accent)}
-.batch-header{padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;
-  cursor:pointer;user-select:none}
-.batch-left{display:flex;align-items:center;gap:0.75rem}
-.batch-icon{width:36px;height:36px;border-radius:8px;background:rgba(74,124,220,0.12);
-  border:1px solid rgba(74,124,220,0.2);display:flex;align-items:center;justify-content:center}
-.batch-icon svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:1.5}
-.batch-name{font-size:0.85rem;font-weight:600}
-.batch-meta{font-size:0.7rem;color:var(--muted);margin-top:0.1rem}
-.batch-right{display:flex;align-items:center;gap:1.5rem}
-.batch-stat{text-align:right}
-.batch-stat-val{font-size:0.9rem;font-weight:700}
-.batch-stat-lbl{font-size:0.65rem;color:var(--muted)}
-.chevron{transition:transform 0.2s;color:var(--muted)}
-.batch-tank.open .chevron{transform:rotate(180deg)}
+    # Col W (Net RTB Gallons) from SI — gallons pulled from allocation per invoice row
+    try:
+        ws_si2 = wb["Supplier Invoices"]
+        si_rows2 = list(ws_si2.iter_rows(values_only=True))
+        si_hdr2 = next((i for i, r in enumerate(si_rows2) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
+        if si_hdr2 is not None:
+            sc2 = {str(v).strip(): j for j, v in enumerate(si_rows2[si_hdr2]) if v}
+            col_w = sc2.get("Net RTB Gallons", 22)
+            for row in si_rows2[si_hdr2 + 1:]:
+                if not any(row): break
+                s = str(row[sc2.get("Supplier", 2)] or "").strip()
+                if not s or s == "Total": continue
+                pulled_gal[s] += f(row[col_w])
+    except Exception:
+        pass
 
-/* Tank progress bar */
-.tank-bar-wrap{padding:0 1.25rem 1rem}
-.tank-bar{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;position:relative}
-.tank-fill{height:100%;border-radius:4px;transition:width 0.6s ease}
-.tank-fill.high{background:linear-gradient(90deg,var(--green),#4ade80)}
-.tank-fill.mid{background:linear-gradient(90deg,var(--orange),#fbbf24)}
-.tank-fill.low{background:linear-gradient(90deg,var(--red),#fb923c)}
-.tank-pct{font-size:0.65rem;color:var(--muted);margin-top:0.3rem;text-align:right}
+    # Remaining inventory from FIFO sheet (Remaining L per BOL, need BOL→supplier map)
+    bol_sup = {}
+    try:
+        ws_bol_rtb = wb["Purchase to BOL-RTB"]
+        bol_rows = list(ws_bol_rtb.iter_rows(values_only=True))
+        bh = {str(v).strip(): j for j, v in enumerate(bol_rows[6]) if v}
+        for row in bol_rows[7:]:
+            if not row[bh.get("BOL", 5)]: continue
+            bol_sup[str(row[bh["BOL"]])] = str(row[bh.get("Supplier", 2)] or "").strip()
+    except Exception:
+        pass
 
-/* Invoice level */
-.inv-detail{border-top:1px solid var(--border);padding:1rem 1.25rem;display:none}
-.batch-tank.open .inv-detail{display:block}
-.inv-title{font-size:0.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;
-  letter-spacing:0.06em;margin-bottom:0.75rem}
-.invoice-group{margin-bottom:1rem}
-.invoice-label{font-size:0.72rem;font-weight:600;color:var(--accent2);margin-bottom:0.5rem;
-  display:flex;align-items:center;gap:0.4rem}
-.invoice-label svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2}
+    si_names = {s.upper(): s for s in sup_data}
+    def _match(raw): return si_names.get(raw.upper(), raw)
 
-/* BOL tanks */
-.bol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem}
-.bol-tank{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;
-  padding:0.85rem;position:relative;overflow:hidden;transition:border-color 0.15s}
-.bol-tank:hover{border-color:var(--accent)}
-.bol-tank-inner{position:relative;z-index:1}
-.bol-num{font-size:0.65rem;color:var(--muted);margin-bottom:0.3rem;font-weight:500}
-.bol-liters{font-size:1rem;font-weight:700;line-height:1}
-.bol-rem{font-size:0.65rem;color:var(--muted2);margin-top:0.15rem}
-.bol-cost{font-size:0.7rem;color:var(--accent2);margin-top:0.4rem;font-weight:500}
-/* Liquid fill bg */
-.bol-fill-bg{position:absolute;bottom:0;left:0;right:0;border-radius:0 0 9px 9px;transition:height 0.6s ease;opacity:0.15}
-.bol-fill-bg.high{background:var(--green)}
-.bol-fill-bg.mid{background:var(--orange)}
-.bol-fill-bg.low{background:var(--red)}
-.bol-fill-bg.empty{background:var(--red);opacity:0.05}
+    _wb_f = wb_fifo if wb_fifo is not None else wb
+    try:
+        ws_fifo = _wb_f["FIFO"]
+        fh = {str(v).strip(): j for j, v in enumerate(next(ws_fifo.iter_rows(values_only=True))) if v}
+        for row in ws_fifo.iter_rows(min_row=2, values_only=True):
+            if not row[0]: break
+            if row[fh["Type"]] != "RTB": continue
+            s = _match(bol_sup.get(str(row[fh["BOL"]]), ""))
+            remaining = f(row[fh["Remaining L (BOL)"]])
+            cost_l    = f(row[fh["Cost / L (MXN)"]])
+            rem_inv_gal[s] += remaining / 3.7854
+            rem_inv_mxn[s] += remaining * cost_l
+    except Exception:
+        pass
 
-/* Upload panel (admin only) */
-.upload-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;
-  padding:1.25rem;margin-bottom:1.5rem}
-.upload-panel-title{font-size:0.82rem;font-weight:600;margin-bottom:1rem}
-.upload-row{display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap}
-.drop-zone{border:1.5px dashed var(--border);border-radius:8px;padding:0.75rem 1.25rem;
-  cursor:pointer;position:relative;flex:1;min-width:200px;display:flex;align-items:center;gap:0.5rem;
-  font-size:0.78rem;color:var(--muted);transition:all 0.15s}
-.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
-.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);color:var(--text)}
-.drop-zone svg{width:16px;height:16px;stroke:var(--accent);fill:none;stroke-width:2;flex-shrink:0}
-.run-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:0.65rem 1.25rem;
-  font-family:var(--font);font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity 0.15s}
-.run-btn:hover:not(:disabled){opacity:0.85}
-.run-btn:disabled{opacity:0.4;cursor:not-allowed}
-.upload-status{font-size:0.75rem;color:var(--muted);display:flex;align-items:center;gap:0.4rem;margin-top:0.5rem}
-.upload-status.ok{color:var(--green)}
-.upload-status.err{color:var(--red)}
-.spinner{width:12px;height:12px;border:1.5px solid var(--border);border-top-color:var(--accent);
-  border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
-@keyframes spin{to{transform:rotate(360deg)}}
+    # BOL sheet → Mexico payments
+    # Open balance = only rows that HAVE an invoice number (actual open invoices)
+    total_received = total_balance = 0.0
+    try:
+        ws_bol_rtb = wb["Purchase to BOL-RTB"]
+        bol_rows = list(ws_bol_rtb.iter_rows(values_only=True))
+        bh = {str(v).strip(): j for j, v in enumerate(bol_rows[6]) if v}
+        for row in bol_rows[7:]:
+            if not row[0]: continue
+            inv_num = row[bh.get("Invoice #", 17)]
+            total_received += f(row[bh.get("Received Payments", 20)])
+            if inv_num:  # only invoiced rows count as open balance
+                total_balance += f(row[bh.get("Balance", 21)])
+    except Exception:
+        pass
 
-/* Loading */
-.loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--muted);
-  font-size:0.82rem;gap:0.5rem}
-.empty-state{text-align:center;padding:3rem;color:var(--muted);font-size:0.82rem}
-.empty-state svg{width:40px;height:40px;stroke:var(--border);fill:none;stroke-width:1.5;margin:0 auto 1rem;display:block}
+    # Col X (Remainder Gallons Paid and No BOL) = remaining in allocation per supplier
+    rem_alloc_gal = defaultdict(float)
+    try:
+        ws_si3 = wb["Supplier Invoices"]
+        si_rows3 = list(ws_si3.iter_rows(values_only=True))
+        si_hdr3 = next((i for i, r in enumerate(si_rows3) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
+        if si_hdr3 is not None:
+            sc3 = {str(v).strip(): j for j, v in enumerate(si_rows3[si_hdr3]) if v}
+            col_x = sc3.get("Remainder Gallons Paid and No BOL", 23)
+            for row in si_rows3[si_hdr3 + 1:]:
+                if not any(row): break
+                s = str(row[sc3.get("Supplier", 2)] or "").strip()
+                if not s or s == "Total": continue
+                rem_alloc_gal[s] += f(row[col_x])
+    except Exception:
+        pass
 
-/* Scrollbar */
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-</style>
-</head>
-<body>
+    # Per-supplier paid_back and balance from BOL sheet (convert MXN→USD using FX)
+    sup_paid_back = defaultdict(float)
+    sup_balance   = defaultdict(float)
+    try:
+        ws_bol2 = wb["Purchase to BOL-RTB"]
+        bol_rows2 = list(ws_bol2.iter_rows(values_only=True))
+        bh2 = {str(v).strip(): j for j, v in enumerate(bol_rows2[6]) if v}
+        for row in bol_rows2[7:]:
+            if not row[0]: continue
+            raw_s = str(row[bh2.get("Supplier", 2)] or "").strip()
+            s = _match(raw_s)
+            recv_usd = f(row[bh2.get("Received Payments", 20)])
+            inv_num  = row[bh2.get("Invoice #", 17)]
+            bal_usd  = f(row[bh2.get("Balance", 21)]) if inv_num else 0.0
+            # Received and Balance are already in USD
+            if recv_usd > 0:
+                sup_paid_back[s] += recv_usd
+            if bal_usd > 0 and inv_num:
+                sup_balance[s] += bal_usd
+    except Exception:
+        pass
 
-<!-- Sidebar -->
-<div class="sidebar">
-  <div class="sidebar-logo">
-    <img src="data:image/svg+xml;base64,{{ logo }}" alt="EGC">
-  </div>
-  <nav class="sidebar-nav">
-    {% if role == 'admin' or role == 'partner_investor' %}
-    <div class="nav-section">Operations</div>
-    <button class="nav-item {% if role != 'investor' and role != 'potential_investor' %}active{% endif %}" onclick="showTab('overview')" id="nav-overview">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Overview
-    </button>
-    <button class="nav-item" onclick="showTab('inventory')" id="nav-inventory">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Inventory
-    </button>
-    <button class="nav-item" onclick="showTab('fifo')" id="nav-fifo">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      FIFO Log
-    </button>
-    <button class="nav-item" onclick="showTab('bol')" id="nav-bol">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      Purchase BOLs
-    </button>
-    {% endif %}
-    {% if role != 'potential_investor' %}
-    <div class="nav-section">Reports</div>
-    <button class="nav-item {% if role == 'investor' %}active{% endif %}" onclick="showTab('investor')" id="nav-investor">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-      Investor Summary
-    </button>
-    {% endif %}
-    <div class="nav-section">Company</div>
-    <button class="nav-item {% if role == 'potential_investor' %}active{% endif %}" onclick="showTab('company')" id="nav-company">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Company Profile
-    </button>
-  </nav>
-  <div class="sidebar-footer">
-    <div class="user-info">
-      <div class="user-name">{{ user }}</div>
-      <div class="user-role">{{ role }}</div>
-    </div>
-    <a href="/logout"><button class="logout-btn">Sign out</button></a>
-  </div>
-</div>
+    result = []
+    for s in sup_data:
+        d = sup_data[s]
+        pulled   = pulled_gal.get(s, 0.0)
+        rem_inv  = rem_inv_gal.get(s, 0.0)
+        rem_alloc = rem_alloc_gal.get(s, 0.0)
+        inv_mxn  = rem_inv_mxn.get(s, 0.0)
+        avg_cost = (inv_mxn / (rem_inv * 3.7854)) if rem_inv > 0 else 0.0
+        result.append({
+            "Row Labels": s,
+            "_wired": d["wired"], "_paid_gal": d["paid_gal"],
+            "_pulled": pulled, "_rem_alloc": rem_alloc,
+            "_rem_inv": rem_inv, "_avg_cost": avg_cost,
+            "_paid_back": sup_paid_back.get(s, 0.0),
+            "_balance":   sup_balance.get(s, 0.0),
+        })
 
-<!-- Main -->
-<div class="main">
-  <div class="topbar">
-    <div class="page-title" id="page-title">Overview</div>
-    <div class="upload-info" id="upload-info">
-      <div class="dot stale" id="status-dot"></div>
-      <span id="upload-label">No data loaded</span>
-    </div>
-  </div>
+    total_wired     = sum(d["wired"]    for d in sup_data.values())
+    total_paid_gal  = sum(d["paid_gal"] for d in sup_data.values())
+    total_pulled    = sum(pulled_gal.values())
+    total_rem_inv   = sum(rem_inv_gal.values())
+    total_inv_mxn   = sum(rem_inv_mxn.values())
+    total_avg_cost  = (total_inv_mxn / (total_rem_inv * 3.7854)) if total_rem_inv > 0 else 0.0
+    total_rem_alloc = sum(rem_alloc_gal.values())
+    total_paid_back = sum(sup_paid_back.values())
+    total_balance   = sum(sup_balance.values())
 
-  <div class="content">
+    result.append({
+        "Row Labels": "Total",
+        "_wired": total_wired, "_paid_gal": total_paid_gal,
+        "_pulled": total_pulled, "_rem_alloc": total_rem_alloc,
+        "_rem_inv": total_rem_inv, "_avg_cost": total_avg_cost,
+        "_paid_back": total_paid_back, "_balance": total_balance,
+    })
+    return result
 
-    <!-- OVERVIEW TAB -->
-    <div class="tab-panel {% if role != 'potential_investor' %}active{% endif %}" id="tab-overview">
-      {% if role == 'admin' %}
-      <div class="upload-panel">
-        <div class="upload-panel-title">Process New File</div>
-        <div class="upload-row">
-          <div class="drop-zone" id="dropZone">
-            <input type="file" id="fileInput" accept=".xlsx">
-            <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-            <span id="fileLabel">Click to upload or drag & drop .xlsx</span>
-          </div>
-          <button class="run-btn" id="runBtn" disabled onclick="processFile()">Run FIFO Engine</button>
-          <div style="display:flex;align-items:center;gap:0.5rem;border-left:1px solid var(--border);padding-left:0.75rem;margin-left:0.25rem">
-            <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">LPA Markup</span>
-            <span style="font-size:0.72rem;color:var(--muted)">$</span>
-            <input id="markupInput" type="number" step="0.01" min="0" max="10" value="0.02"
-              style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-                     padding:0.3rem 0.45rem;color:var(--text);font-size:0.78rem;font-family:var(--font)">
-            <span style="font-size:0.72rem;color:var(--muted)">USD/gal</span>
-            <button onclick="saveMarkup()"
-              style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-                     padding:0.3rem 0.65rem;color:var(--muted);font-size:0.72rem;font-family:var(--font);
-                     cursor:pointer;transition:all 0.15s"
-              onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
-              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Save</button>
-            <span id="markupStatus" style="font-size:0.7rem;color:var(--green);display:none">✓</span>
-          </div>
-        </div>
-        <div class="upload-status" id="uploadStatus"></div>
-      </div>
-      {% endif %}
 
-      <div id="overview-content">
-        <div class="loading"><div class="spinner"></div> Loading data…</div>
-      </div>
-    </div>
+# ── Inventory (from FIFO sheet + Purchase to BOL-RTB) ─────────────────────────
+def _extract_inventory(wb):
+    """
+    Build hierarchy: bulk_plant -> product -> batch -> supplier -> invoice -> [bols]
 
-    <!-- INVENTORY TAB -->
-    <div class="tab-panel" id="tab-inventory">
-      <div id="inventory-content">
-        <div class="loading"><div class="spinner"></div> Loading inventory…</div>
-      </div>
-    </div>
+    BOLs that span two batches/invoices (e.g. Batch="1 | 2", Invoice="A | B")
+    are split into separate entries — one per batch/invoice — with proportional liters.
+    Each BOL always appears INDIVIDUALLY under its own invoice.
+    """
+    # Step 1: read FIFO sheet for each RTB BOL
+    ws_fifo = wb["FIFO"]
+    fifo_headers = [str(v).strip() if v else f"col{j}"
+                    for j, v in enumerate(next(ws_fifo.iter_rows(values_only=True)))]
 
-    <!-- FIFO LOG TAB -->
-    <div class="tab-panel" id="tab-fifo">
-      <div id="fifo-content">
-        <div class="loading"><div class="spinner"></div> Loading FIFO log…</div>
-      </div>
-    </div>
-
-    <!-- BOL TAB -->
-    <div class="tab-panel" id="tab-bol">
-      <div id="bol-content">
-        <div class="loading"><div class="spinner"></div> Loading BOL data…</div>
-      </div>
-    </div>
-
-    <!-- COMPANY PROFILE TAB -->
-    <div class="tab-panel {% if role == 'potential_investor' %}active{% endif %}" id="tab-company">
-      <div id="company-content"></div>
-    </div>
-
-    <!-- INVESTOR SUMMARY TAB -->
-    <div class="tab-panel {% if role == 'investor' %}active{% endif %}" id="tab-investor">
-      <div id="investor-content">
-        <div class="loading"><div class="spinner"></div> Loading summary…</div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<script>
-const ROLE = "{{ role }}";
-let dashData = null;
-let fileSelected = null;
-
-// ── Tab switching ──────────────────────────────────────────────────────────────
-const TAB_TITLES = {overview:'Overview',inventory:'Inventory',fifo:'FIFO Log',bol:'Purchase BOLs',investor:'Investor Summary',company:'Company Profile'};
-function showTab(name) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  document.getElementById('nav-' + name)?.classList.add('active');
-  document.getElementById('page-title').textContent = TAB_TITLES[name];
-}
-
-// ── File upload ────────────────────────────────────────────────────────────────
-const dropZone  = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const runBtn    = document.getElementById('runBtn');
-const fileLabel = document.getElementById('fileLabel');
-const uploadStatus = document.getElementById('uploadStatus');
-
-if (fileInput) {
-  fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
-}
-
-function setFile(f) {
-  fileSelected = f;
-  fileLabel.textContent = f.name;
-  if (runBtn) runBtn.disabled = false;
-}
-
-async function processFile() {
-  if (!fileSelected) return;
-  runBtn.disabled = true;
-  uploadStatus.className = 'upload-status';
-  uploadStatus.innerHTML = '<div class="spinner"></div> Processing…';
-
-  const fd = new FormData();
-  fd.append('file', fileSelected);
-  try {
-    const res = await fetch('/process', { method: 'POST', body: fd });
-    if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error'); }
-    uploadStatus.className = 'upload-status ok';
-    uploadStatus.textContent = '✓ Processed — downloading file & refreshing dashboard…';
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='FIFO_Output.xlsx'; a.click(); URL.revokeObjectURL(url);
-    setTimeout(() => loadData(), 1200);
-  } catch(e) {
-    uploadStatus.className = 'upload-status err';
-    uploadStatus.textContent = '✗ ' + e.message;
-  } finally {
-    if (runBtn) runBtn.disabled = false;
-  }
-}
-
-// ── Load data from API ─────────────────────────────────────────────────────────
-async function loadData() {
-  try {
-    const res = await fetch('/api/data');
-    dashData = await res.json();
-  } catch(e) {
-    console.error('loadData error:', e);
-    dashData = null;
-  }
-  if (!dashData) {
-    showEmpty(); return;
-  }
-  updateUploadInfo();
-  renderOverview();
-  if (ROLE === 'admin' || ROLE === 'partner_investor') { renderInventory(); renderFifo(); renderBol(); }
-  renderInvestor();
-  renderCompany();
-}
-
-function updateUploadInfo() {
-  const dot = document.getElementById('status-dot');
-  const lbl = document.getElementById('upload-label');
-  if (!dashData) { dot.className='dot stale'; lbl.textContent='No data loaded'; return; }
-  const d = new Date(dashData.uploaded_at);
-  const ago = timeSince(d);
-  dot.className = 'dot';
-  lbl.textContent = `${dashData.filename} · ${ago}`;
-}
-
-function timeSince(d) {
-  const s = Math.floor((new Date() - d) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return Math.floor(s/60) + 'm ago';
-  if (s < 86400) return Math.floor(s/3600) + 'h ago';
-  return Math.floor(s/86400) + 'd ago';
-}
-
-function showEmpty() {
-  const msg = `<div class="empty-state">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    No data yet. ${ROLE==='admin'?'Upload a file above to get started.':'Contact your admin to upload data.'}
-  </div>`;
-  ['overview-content','inventory-content','fifo-content','investor-content'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = msg;
-  });
-  document.getElementById('page-title').textContent = 'Overview';
-}
-
-// ── OVERVIEW ──────────────────────────────────────────────────────────────────
-function renderOverview() {
-  const m = dashData.meta || {};
-  const s = dashData.overall_summary || [];
-  const el = document.getElementById('overview-content');
-
-  const fmtUSD = v => v != null ? '$' + Number(v).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-  const fmtMXN = v => v != null ? Number(v).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-  const fmtNum = v => v != null ? Number(v).toLocaleString('en-US', {maximumFractionDigits:0}) : '—';
-  const fmtDec = v => v != null ? Number(v).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:4}) : '—';
-
-  // 8 KPI cards — use normalised _keys set by extract.py
-  const total = s.find(r => r['Row Labels'] && r['Row Labels'].toLowerCase().includes('total')) || {};
-  const tv = k => total[k] ?? null;
-  // Row 1: Deployment — what went out
-  // Row 2: Returns & inventory — what came back / what's left
-  // _pulled kept in data for table use
-  let html = `
-  <div style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem">Purchasing</div>
-  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">
-    <div class="kpi blue">
-      <div class="kpi-label">Total Wired Amount</div>
-      <div class="kpi-value">${fmtUSD(tv('_wired'))}</div>
-      <div class="kpi-sub">USD wired to suppliers</div>
-    </div>
-    <div class="kpi blue">
-      <div class="kpi-label">Total Purchased Gallons</div>
-      <div class="kpi-value">${fmtNum(tv('_paid_gal'))}</div>
-      <div class="kpi-sub">gallons purchased from suppliers</div>
-    </div>
-    <div class="kpi orange">
-      <div class="kpi-label">Remaining Gallons in Allocation</div>
-      <div class="kpi-value">${fmtNum(tv('_rem_alloc'))}</div>
-      <div class="kpi-sub">gallons paid, pending BOL</div>
-    </div>
-  </div>
-  <div style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem">Inventory</div>
-  <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:1.25rem">
-    <div class="kpi purple">
-      <div class="kpi-label">Remaining Gallons in Inventory</div>
-      <div class="kpi-value">${fmtNum(tv('_rem_inv'))}</div>
-      <div class="kpi-sub">gallons at bulk plant</div>
-    </div>
-    <div class="kpi purple">
-      <div class="kpi-label">Weighted Avg Cost in Inventory</div>
-      <div class="kpi-value">${fmtDec(tv('_avg_cost'))}</div>
-      <div class="kpi-sub">MXN/L</div>
-    </div>
-  </div>
-  <div style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem">Mexico Collections</div>
-  <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:1.25rem">
-    <div class="kpi green">
-      <div class="kpi-label">Amount Paid Back by Mexico</div>
-      <div class="kpi-value">${fmtMXN(tv('_paid_back'))}</div>
-      <div class="kpi-sub">USD received back</div>
-    </div>
-    <div class="kpi red">
-      <div class="kpi-label">Mexico Balance</div>
-      <div class="kpi-value">${fmtMXN(tv('_balance'))}</div>
-      <div class="kpi-sub">USD outstanding (invoiced)</div>
-    </div>
-  </div>`;
-
-  // Overall Summary table — exact Excel columns
-  const suppliers = s.filter(r => r['Row Labels'] && !r['Row Labels'].toLowerCase().includes('total'));
-  const rows = total['Row Labels'] ? [...suppliers, total] : suppliers;
-
-  // Detect column names (handle both old and new naming)
-  const colPaidGal   = suppliers[0]?.['Paid for Gallons (Allocation)'] !== undefined ? 'Paid for Gallons (Allocation)' : 'Paid for Gallons ';
-  const colPulled    = suppliers[0]?.['Gallons Pulled from Allocation (RTB & RTC)'] !== undefined ? 'Gallons Pulled from Allocation (RTB & RTC)' : 'Gallons Pulled (RTB & RTC)';
-  const colPaidBack  = suppliers[0]?.['Amount Paid Back by Mexico'] !== undefined ? 'Amount Paid Back by Mexico' : 'Amount Paid Back by Mexico ';
-
-  html += `<div class="table-card">
-    <div class="table-header"><div class="table-title">Overall Summary</div></div>
-    <div class="table-wrap"><table>
-      <thead><tr>
-        <th>Supplier</th>
-        <th>Total Wired Amount</th>
-        <th>Paid for Gallons (Allocation)</th>
-        <th>Gallons Pulled from Allocation (RTB &amp; RTC)</th>
-        <th>Remaining Gallons in Allocation</th>
-        <th>Remaining Gallons in Inventory</th>
-        <th>Weighted Avg Cost in Inventory (MXN/L)</th>
-        <th>Amount Paid Back by Mexico (MXN)</th>
-        <th>Mexico Balance (MXN)</th>
-      </tr></thead><tbody>`;
-
-  rows.forEach(r => {
-    html += `<tr>
-      <td>${r['Row Labels'] || ''}</td>
-      <td>${fmtUSD(r['_wired'])}</td>
-      <td>${fmtNum(r['_paid_gal'])}</td>
-      <td>${fmtNum(r['_pulled'])}</td>
-      <td>${fmtNum(r['_rem_alloc'])}</td>
-      <td>${fmtNum(r['_rem_inv'])}</td>
-      <td>${fmtDec(r['_avg_cost'])}</td>
-      <td>${fmtMXN(r['_paid_back'])}</td>
-      <td>${fmtMXN(r['_balance'])}</td>
-    </tr>`;
-  });
-
-  html += `</tbody></table></div></div>`;
-  el.innerHTML = html;
-}
-
-function chartOpts(unit) {
-  return {
-    responsive:true, maintainAspectRatio:false,
-    plugins:{legend:{labels:{color:'#6e7f96',font:{size:11},boxWidth:12}},tooltip:{callbacks:{label:ctx=>{
-      const v=ctx.raw; return ` ${ctx.dataset.label}: ${Number(v).toLocaleString('en-US',{maximumFractionDigits:0})} ${unit}`;
-    }}}},
-    scales:{
-      x:{ticks:{color:'#6e7f96',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'transparent'}},
-      y:{ticks:{color:'#6e7f96',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'transparent'}},
-    }
-  };
-}
-
-// ── INVENTORY ─────────────────────────────────────────────────────────────────
-let INV_UNIT = 'L';
-function setInvUnit(u) {
-  INV_UNIT = u;
-  document.getElementById('inv-unit-L').style.background = u==='L' ? 'var(--accent)' : 'transparent';
-  document.getElementById('inv-unit-L').style.color = u==='L' ? '#fff' : 'var(--muted)';
-  document.getElementById('inv-unit-G').style.background = u==='G' ? 'var(--accent)' : 'transparent';
-  document.getElementById('inv-unit-G').style.color = u==='G' ? '#fff' : 'var(--muted)';
-  renderInventory();
-}
-function renderInventory() {
-  const inv = dashData.inventory || {};
-  const el = document.getElementById('inventory-content');
-  if (!Object.keys(inv).length) { el.innerHTML = '<div class="empty-state">No inventory data.</div>'; return; }
-
-  let html = '';
-  for (const [bp, products] of Object.entries(inv)) {
-    html += `<div class="inv-section"><div class="inv-bp-title">${bp}</div><div class="inv-product-wrap">`;
-    for (const [prod, batches] of Object.entries(products)) {
-      for (const [batch, suppliers] of Object.entries(batches)) {
-        // Compute batch totals across all suppliers/invoices/bols
-        let totalL = 0, remL = 0, allCostPairs = [];
-        for (const invMap of Object.values(suppliers))
-          for (const bols of Object.values(invMap))
-            for (const b of bols) {
-              totalL += b.liters || 0;
-              remL   += b.remaining_l || 0;
-              allCostPairs.push([b.liters || 0, b.cost_per_l || 0]);
-            }
-
-        const pct = totalL > 0 ? Math.round(remL / totalL * 100) : 0;
-        const fillClass = pct > 60 ? 'high' : pct > 25 ? 'mid' : 'low';
-        const totalW = allCostPairs.reduce((s,[l])=>s+l, 0);
-        const avgCost = totalW > 0 ? allCostPairs.reduce((s,[l,c])=>s+l*c, 0) / totalW : 0;
-        const pctColor = pct > 60 ? 'green' : pct > 25 ? 'orange' : 'red';
-
-        const batchId = `batch-${bp}-${prod}-${batch}`.replace(/[\s|]/g,'_');
-        html += `<div class="batch-tank" id="${batchId}">
-          <div class="batch-header" onclick="toggleBatch('${batchId}')">
-            <div class="batch-left">
-              <div class="batch-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
-              <div><div class="batch-name">${prod} · Batch ${batch}</div><div class="batch-meta">${bp}</div></div>
-            </div>
-            <div class="batch-right">
-              <div class="batch-stat"><div class="batch-stat-val">${INV_UNIT==='L' ? fmtL(remL)+' L' : fmtL(remL/3.785411784)+' gal'}</div><div class="batch-stat-lbl">Remaining Inventory</div></div>
-              <div class="batch-stat"><div class="batch-stat-val">${avgCost.toFixed(4)}</div><div class="batch-stat-lbl">Avg MXN/L</div></div>
-              <div class="batch-stat"><div class="batch-stat-val" style="color:var(--${pctColor})">${pct}%</div><div class="batch-stat-lbl">Remaining</div></div>
-              <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-            </div>
-          </div>
-          <div class="tank-bar-wrap">
-            <div class="tank-bar"><div class="tank-fill ${fillClass}" style="width:${pct}%"></div></div>
-            <div class="tank-pct">${INV_UNIT==='L' ? fmtL(remL)+' of '+fmtL(totalL)+' L remaining' : fmtL(remL/3.785411784)+' of '+fmtL(totalL/3.785411784)+' gal remaining'}</div>
-          </div>
-          <div class="inv-detail">
-            <div class="inv-title">Supplier → Invoice → BOL breakdown</div>`;
-
-        // Drill: supplier -> invoice -> bols
-        for (const [supplier, invMap] of Object.entries(suppliers)) {
-          html += `<div style="margin-bottom:1rem">
-            <div style="font-size:0.72rem;font-weight:600;color:var(--muted2);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em">${supplier}</div>`;
-          for (const [inv_num, bols] of Object.entries(invMap)) {
-            html += `<div class="invoice-group">
-              <div class="invoice-label">
-                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                Invoice ${inv_num}
-              </div>
-              <div class="bol-grid">`;
-            for (const b of bols) {
-              const bpct = b.liters > 0 ? Math.round(b.remaining_l / b.liters * 100) : 0;
-              const bfc  = bpct > 60 ? 'high' : bpct > 25 ? 'mid' : bpct > 0 ? 'low' : 'empty';
-              html += `<div class="bol-tank">
-                <div class="bol-fill-bg ${bfc}" style="height:${bpct}%"></div>
-                <div class="bol-tank-inner">
-                  <div class="bol-num">BOL ${b.bol}</div>
-                  <div class="bol-liters">${INV_UNIT==='L' ? fmtL(b.remaining_l)+' L' : fmtL(b.remaining_l/3.785411784)+' gal'}</div>
-                  <div class="bol-rem">of ${INV_UNIT==='L' ? fmtL(b.liters)+' L' : fmtL(b.liters/3.785411784)+' gal'} · ${bpct}%</div>
-                  <div class="bol-cost">${b.cost_per_l?.toFixed(4)} MXN/L</div>
-                </div>
-              </div>`;
-            }
-            html += `</div></div>`;
-          }
-          html += `</div>`;
+    fifo_bols = {}  # bol_str -> {liters, remaining_l, cost_per_l, bp, prod}
+    for row in ws_fifo.iter_rows(min_row=2, values_only=True):
+        if not row[0]: break
+        entry = {h: row[j] for j, h in enumerate(fifo_headers)}
+        if entry.get("Type") != "RTB": continue
+        bol = str(entry.get("BOL", "") or "")
+        if not bol: continue
+        liters = float(entry.get("Liters", 0) or 0)
+        rem    = entry.get("Remaining L (BOL)")
+        fifo_bols[bol] = {
+            "liters":      liters,
+            "remaining_l": float(rem) if rem is not None else liters,
+            "cost_per_l":  float(entry.get("Cost / L (MXN)", 0) or 0),
+            "bp":          str(entry.get("Bulk Plant", "") or ""),
+            "prod":        str(entry.get("Product", "") or ""),
         }
 
-        html += `</div></div>`;
-      }
+    # Step 2: read Purchase to BOL-RTB for invoice, batch, supplier per BOL
+    # For split BOLs (e.g. Batch="1 | 2", Invoice="A | B"), split into two entries
+    bol_entries = []  # list of {bol, batch, invoice, supplier, alloc_frac}
+    try:
+        ws_bol = wb["Purchase to BOL-RTB"]
+        for row in ws_bol.iter_rows(min_row=8, values_only=True):
+            if not row[2]: break
+            bol_str  = str(row[5]).strip() if row[5] else ""
+            supplier = str(row[2]).strip() if row[2] else ""
+            inv_raw  = str(row[3]).strip() if row[3] else ""
+            bat_raw  = str(row[4]).strip() if row[4] else ""
+            cost_j   = float(row[9])  if row[9]  is not None else 0.0  # J Cost/Gal USD
+            cost_l_raw = str(row[11]).strip() if row[11] is not None else ""
+
+            if not bol_str: continue
+
+            # Split multi-batch/invoice BOLs into individual entries
+            batches  = [b.strip() for b in bat_raw.split("|")] if "|" in bat_raw else [bat_raw]
+            invoices = [v.strip() for v in inv_raw.split("|")] if "|" in inv_raw else [inv_raw]
+
+            if len(batches) > 1 or len(invoices) > 1:
+                # Cross-batch BOL: split proportionally
+                # We don't have exact split fractions here, so split equally
+                # (the FIFO sheet has the blended cost already)
+                n = max(len(batches), len(invoices))
+                for k in range(n):
+                    b = batches[k] if k < len(batches) else batches[-1]
+                    inv = invoices[k] if k < len(invoices) else invoices[-1]
+                    bol_entries.append({
+                        "bol": bol_str, "batch": b, "invoice": inv,
+                        "supplier": supplier, "split_n": n, "split_k": k,
+                    })
+            else:
+                bol_entries.append({
+                    "bol": bol_str, "batch": bat_raw, "invoice": inv_raw,
+                    "supplier": supplier, "split_n": 1, "split_k": 0,
+                })
+    except Exception as e:
+        pass
+
+    # Step 3: build hierarchy
+    result = {}
+    for entry in bol_entries:
+        bol      = entry["bol"]
+        batch    = entry["batch"]
+        invoice  = entry["invoice"]
+        supplier = entry["supplier"]
+        split_n  = entry["split_n"]
+        fifo     = fifo_bols.get(bol)
+        if not fifo: continue
+
+        bp   = fifo["bp"]
+        prod = fifo["prod"]
+        # Proportional liters for split BOLs
+        liters      = round(fifo["liters"]      / split_n, 4)
+        remaining_l = round(fifo["remaining_l"] / split_n, 4)
+        cost_per_l  = fifo["cost_per_l"]  # blended cost same for all splits
+
+        # Navigate: bp -> prod -> batch -> supplier -> invoice -> [bols]
+        result.setdefault(bp, {})
+        result[bp].setdefault(prod, {})
+        result[bp][prod].setdefault(batch, {})
+        result[bp][prod][batch].setdefault(supplier, {})
+        result[bp][prod][batch][supplier].setdefault(invoice, [])
+        result[bp][prod][batch][supplier][invoice].append({
+            "bol":         bol,
+            "liters":      liters,
+            "remaining_l": remaining_l,
+            "cost_per_l":  cost_per_l,
+        })
+
+    return result
+
+# ── FIFO rows ──────────────────────────────────────────────────────────────────
+def _extract_fifo(wb):
+    ws = wb["FIFO"]
+    rows = list(ws.iter_rows(values_only=True))
+    headers = [str(v).strip() if v else f"col{j}" for j, v in enumerate(rows[0])]
+
+    result = []
+    for row in rows[1:]:
+        if not row[0]: break
+        entry = {}
+        for j, h in enumerate(headers):
+            v = row[j]
+            if hasattr(v, 'isoformat'):
+                v = v.strftime("%d/%m/%Y")
+            elif isinstance(v, float):
+                v = round(v, 4)
+            entry[h] = v
+        result.append(entry)
+    return result
+
+# ── Meta ───────────────────────────────────────────────────────────────────────
+def _extract_meta(wb, wb_fifo=None):
+    os_rows = _extract_overall_summary(wb, wb_fifo=wb_fifo)
+    total_os = next((r for r in os_rows if r.get("Row Labels","").upper().find("TOTAL") >= 0), {})
+    return {
+        "total_invoiced_usd":      total_os.get("_wired", 0),
+        "total_gallons":           total_os.get("_paid_gal", 0),
+        "total_wired":             total_os.get("_wired", 0),
+        "paid_for_gallons":        total_os.get("_paid_gal", 0),
+        "gallons_pulled":          total_os.get("_pulled", 0),
+        "remaining_allocation":    total_os.get("_rem_alloc", 0),
+        "remaining_inventory_gal": total_os.get("_rem_inv", 0),
+        "avg_cost_inventory":      total_os.get("_avg_cost", 0),
+        "amount_paid_back":        total_os.get("_paid_back", 0),
+        "mexico_balance":          total_os.get("_balance", 0),
     }
-    html += `</div></div>`;
-  }
 
-  el.innerHTML = html;
-}
+# ── Investment Summary ─────────────────────────────────────────────────────────
+def _extract_investment_summary(wb, uploaded_at=None):
+    """
+    Compute Investment Summary replicating the exact Excel formulas from Table6
+    (Load Tracking) and Table7 (Supplier Invoices / allocation).
+    This avoids relying on Excel formula cache — works after a single FIFO run.
 
-function toggleBatch(id) {
-  document.getElementById(id).classList.toggle('open');
-}
-function fmtL(v) { return Number(v||0).toLocaleString('en-US',{maximumFractionDigits:0}); }
+    Key formulas replicated:
+      FreightCost/L  = Freight Cost / Delivered Net Liters
+      Comission/L    = COMISSION / Delivered Net Liters
+      Total Cost/L   = FreightCost/L + Supply Cost + Comission/L
+      Total Cost     = Total Cost/L * Delivered Net Liters
+      Price/L (BTC)  = (Fuel Cost / Liters) + FreightCost/L + Comission/L
+      Total Sale     = Price/L * Delivered Net Liters
+      Total Margin   = Total Sale - Total Cost
 
-// ── FIFO LOG ──────────────────────────────────────────────────────────────────
-let FIFO_UNIT = 'L';
-function setFifoUnit(u) {
-  FIFO_UNIT = u;
-  document.getElementById('fifo-unit-L').style.background = u==='L' ? 'var(--accent)' : 'transparent';
-  document.getElementById('fifo-unit-L').style.color      = u==='L' ? '#fff' : 'var(--muted)';
-  document.getElementById('fifo-unit-G').style.background = u==='G' ? 'var(--accent)' : 'transparent';
-  document.getElementById('fifo-unit-G').style.color      = u==='G' ? '#fff' : 'var(--muted)';
-  renderFifo();
-}
+      Inventory L    = SUM(RTB liters) - SUM(BTC liters)
+      Inventory MXN  = Inventory L * (SUM RTB cost / SUM RTB liters)
+      BTC/RTC Pending= SUMIFS(Total Cost, type, PENDING)
+      Recovered      = SUMIFS(Total Cost/Margin, type, PAID)
+    """
+    f  = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
 
-function renderFifo() {
-  const rows = dashData.fifo_rows || [];
-  const el = document.getElementById('fifo-content');
-  if (!rows.length) { el.innerHTML='<div class="empty-state">No FIFO data.</div>'; return; }
+    # ── 1. Committed Capital — user-entered, always cached ────────────────────
+    ws_inv = wb["Investment Summary"]
+    inv_rows = {i: list(row) for i, row in enumerate(ws_inv.iter_rows(values_only=True), start=1)}
 
-  const GAL = 3.785411784;
-  const fmtV = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4}) : '—';
-  const fmtN = v => v != null ? Number(v).toLocaleString('en-US',{maximumFractionDigits:0}) : '—';
+    r3 = inv_rows.get(3, [])
+    as_of_val = r3[6] if len(r3) > 6 else None
+    if hasattr(as_of_val, "strftime"):
+        as_of_str = as_of_val.strftime("%d-%b-%Y")
+    elif as_of_val:
+        as_of_str = str(as_of_val)
+    else:
+        as_of_str = uploaded_at or ""
 
-  // ── Summary cards from fifo_rows ───────────────────────────────────────────
-  const rtbRows = rows.filter(r => r['Type'] === 'RTB');
-  const btcRows = rows.filter(r => r['Type'] === 'BTC');
-  const rtcRows = rows.filter(r => r['Type'] === 'RTC');
+    commits = []
+    for ri in (7, 8):
+        row = inv_rows.get(ri, [])
+        if len(row) < 6: continue
+        usd = f(row[2]); fx = f(row[5])
+        dv  = row[4]
+        dstr = dv.strftime("%d-%b-%y") if hasattr(dv, "strftime") else str(dv or "")
+        mxn = usd * fx
+        if usd > 0:
+            commits.append({"round": str(row[1] or ""), "usd": usd, "mxn": mxn, "date": dstr, "fx": fx})
 
-  const totalRTB  = rtbRows.reduce((s,r) => s + (r['Liters']||0), 0);
-  const totalBTC  = btcRows.reduce((s,r) => s + (r['Liters']||0), 0);
-  const totalRTC  = rtcRows.reduce((s,r) => s + (r['Liters']||0), 0);
-  const remInv    = rtbRows.reduce((s,r) => s + (r['Remaining L (BOL)']||0), 0);
+    total_committed_usd = sum(c["usd"] for c in commits)
+    total_committed_mxn = sum(c["mxn"] for c in commits)
+    avg_fx = total_committed_mxn / total_committed_usd if total_committed_usd else 17.31
+    inv_share_pct = 0.40
 
-  const convL = v => FIFO_UNIT === 'L' ? fmtN(v) + ' L' : fmtN(v/GAL) + ' gal';
+    # ── 2. Allocation from Supplier Invoices (Table7) ─────────────────────────
+    alloc_mxn = alloc_lit = 0.0
+    try:
+        ws_si = wb["Supplier Invoices"]
+        si_rows = list(ws_si.iter_rows(values_only=True))
+        # Find header row
+        si_h = {}
+        for i, row in enumerate(si_rows):
+            if any(v and 'Status' in str(v) for v in row):
+                si_h = {str(v).strip(): j for j, v in enumerate(row) if v}
+                si_data_start = i + 1
+                break
+        if si_h:
+            for row in si_rows[si_data_start:]:
+                if not any(row): break
+                status = str(row[si_h.get('Status', 0)] or '').strip().upper()
+                if status == 'ACTIVE':
+                    alloc_mxn += f(row[si_h.get('Remainder Amount MXN', 0)])
+                    alloc_lit += f(row[si_h.get('Remainder Liters Paid and No BOL', 0)])
+    except:
+        pass
 
-  let html = `
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
-    <div style="font-size:0.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Summary</div>
-    <div style="display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden">
-      <button id="fifo-unit-L" onclick="setFifoUnit('L')" style="padding:0.25rem 0.65rem;font-size:0.7rem;font-family:var(--font);cursor:pointer;border:none;background:var(--accent);color:#fff;font-weight:600">L</button>
-      <button id="fifo-unit-G" onclick="setFifoUnit('G')" style="padding:0.25rem 0.65rem;font-size:0.7rem;font-family:var(--font);cursor:pointer;border:none;background:transparent;color:var(--muted)">Gal</button>
-    </div>
-  </div>
-  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
-    <div class="kpi blue">
-      <div class="kpi-label">RTB — Into Inventory</div>
-      <div class="kpi-value">${convL(totalRTB)}</div>
-      <div class="kpi-sub">total purchased into bulk plant</div>
-    </div>
-    <div class="kpi green">
-      <div class="kpi-label">BTC — Delivered</div>
-      <div class="kpi-value">${convL(totalBTC)}</div>
-      <div class="kpi-sub">bulk plant to customer</div>
-    </div>
-    <div class="kpi orange">
-      <div class="kpi-label">RTC — Direct</div>
-      <div class="kpi-value">${convL(totalRTC)}</div>
-      <div class="kpi-sub">rack to customer</div>
-    </div>
-    <div class="kpi purple">
-      <div class="kpi-label">Remaining Inventory</div>
-      <div class="kpi-value">${convL(remInv)}</div>
-      <div class="kpi-sub">still in bulk plant</div>
-    </div>
-  </div>`;
+    # ── 3. Load Tracking — replicate Table6 formulas ──────────────────────────
+    ws_lt = wb["Load Tracking"]
+    lt_rows = list(ws_lt.iter_rows(values_only=True))
+    lt_h = {str(v).strip(): i for i, v in enumerate(lt_rows[0]) if v}
 
-  // ── Table ──────────────────────────────────────────────────────────────────
-  const allHeaders = Object.keys(rows[0]);
-  const headers = ['Type', ...allHeaders.filter(h => h !== 'Type' && !h.toLowerCase().includes('total cost'))];
-  html += `<div class="table-card">
-    <div class="table-header"><div class="table-title">FIFO Allocation Log</div><div style="font-size:0.72rem;color:var(--muted)">${rows.length} entries</div></div>
-    <div class="table-wrap"><table class="fifo-table"><thead><tr>`;
-  headers.forEach(h => { html += `<th>${h}</th>`; });
-  html += `</tr></thead><tbody>`;
+    def _get(row, col_name, default=0.0):
+        idx = lt_h.get(col_name)
+        if idx is None: return default
+        return f(row[idx])
 
-  rows.forEach(r => {
-    html += '<tr>';
-    headers.forEach(h => {
-      let v = r[h];
-      if (h === 'Type') {
-        html += `<td><span class="type-${(v||'').toLowerCase()}">${v||''}</span></td>`;
-      } else if (typeof v === 'number') {
-        html += `<td>${fmtV(v)}</td>`;
-      } else {
-        html += `<td>${v ?? '—'}</td>`;
-      }
-    });
-    html += '</tr>';
-  });
+    rtb_total_cost = rtb_total_lit = 0.0
+    btc_total_lit = 0.0
+    btc_pend_mxn = btc_pend_lit = 0.0
+    rtc_pend_mxn = rtc_pend_lit = 0.0
+    rec_btc_tc = rec_btc_sale = rec_btc_margin = rec_btc_lit = 0.0
+    rec_rtc_tc = rec_rtc_sale = rec_rtc_margin = rec_rtc_lit = 0.0
 
-  html += `</tbody></table></div></div>`;
-  el.innerHTML = html;
-}
+    for row in lt_rows[1:]:
+        if not row[0]: continue
+        typ    = str(row[lt_h.get('Customer Groups', 10)] or '').strip()
+        status = str(row[lt_h.get('Invoice Status', 55)] or '').strip().upper()
+        liters = _get(row, 'Delivered Net Liters')
+        if liters <= 0:
+            liters = _get(row, 'Net Liters')
 
-// ── INVESTOR SUMMARY ──────────────────────────────────────────────────────────
-function renderInvestor() {
-  const rawInv = dashData.investment || {};
-  const el = document.getElementById('investor-content');
-  if (!rawInv || !rawInv.commits || !rawInv.commits.length) {
-    el.innerHTML = '<div class="empty-state">No investment data yet — upload a file to populate this section.</div>';
-    return;
-  }
+        supply_cost_l = _get(row, 'Supply Cost')
+        freight       = _get(row, 'Freight Cost')
+        commission    = _get(row, 'COMISSION')
+        fuel_cost     = _get(row, 'Fuel Cost')   # Mexico payment MXN
 
-  // ── Markup: +$0.10/gal applied only for partner_investor role ────────────────
-  const MARKUP       = dashData.markup === true;
-  const MARKUP_USD   = dashData.markup_usd || 0.02;          // USD per gallon
-  const L_PER_GAL    = 3.7854;
+        # Replicate Excel formulas
+        freight_l  = freight / liters   if liters > 0 else 0.0
+        comm_l     = commission / liters if liters > 0 else 0.0
+        total_cost_l = supply_cost_l + freight_l + comm_l
+        total_cost   = total_cost_l * liters
 
-  function getAvgFx() {
-    const rows = (dashData.bol_tab || {}).rows || [];
-    const vals = rows.map(r => r.fx_payment).filter(v => v > 0);
-    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 17.30;
-  }
+        if typ == 'BTC':
+            price_l    = (fuel_cost / liters) + freight_l + comm_l if liters > 0 else 0.0
+        elif typ == 'RTC':
+            price_l    = (fuel_cost / liters) + freight_l + comm_l if liters > 0 else 0.0
+        else:
+            price_l    = 0.0
 
-  function applyMarkup(src) {
-    if (!MARKUP) return src;
-    const avgFx = getAvgFx();
-    const mu = MARKUP_USD * avgFx / L_PER_GAL;   // MXN/L adder at delivery
-    const d = JSON.parse(JSON.stringify(src));     // deep clone
-    const ad = d.active_detail || {};
-    const rd = d.recovered_detail || {};
+        total_sale   = price_l * liters
+        total_margin = total_sale - total_cost
 
-    // Fee only affects recovered loads (already collected) — active capital unchanged
-    d.active_capital = ad.total_mxn;
-    d.available      = d.total_committed_mxn - d.active_capital;
+        if typ == 'RTB':
+            rtb_total_cost += total_cost
+            rtb_total_lit  += liters
+        elif typ == 'BTC':
+            btc_total_lit  += liters
+            if status == 'PAID':
+                rec_btc_tc     += total_cost
+                rec_btc_sale   += total_sale
+                rec_btc_margin += total_margin
+                rec_btc_lit    += liters
+            else:
+                btc_pend_mxn   += total_cost
+                btc_pend_lit   += liters
+        elif typ == 'RTC':
+            if status == 'PAID':
+                rec_rtc_tc     += total_cost
+                rec_rtc_sale   += total_sale
+                rec_rtc_margin += total_margin
+                rec_rtc_lit    += liters
+            else:
+                rtc_pend_mxn   += total_cost
+                rtc_pend_lit   += liters
 
-    // Recovered loads: delivery fee reduces margin only — tc (sale price) unchanged
-    function mu_load(ld) {
-      if (!ld || !ld.liters) return ld;
-      const extra = mu * ld.liters;
-      ld.margin -= extra;
-      ld.roi     = ld.tc     > 0 ? ld.margin / ld.tc     : 0;
-      ld.mxnl    = ld.liters > 0 ? ld.margin / ld.liters : 0;
-      ld.usdgal  = ld.liters > 0 ? ld.margin / ld.liters * L_PER_GAL / avgFx : 0;
-      return ld;
+    # Inventory: D19 = RTB liters - BTC liters; C19 = D19 * avg_rtb_cost/L
+    inv_lit = max(0.0, rtb_total_lit - btc_total_lit)
+    avg_rtb_cost_l = rtb_total_cost / rtb_total_lit if rtb_total_lit > 0 else 0.0
+    inv_mxn = inv_lit * avg_rtb_cost_l
+
+    # ── 4. KPIs ───────────────────────────────────────────────────────────────
+    active_capital = alloc_mxn + inv_mxn + btc_pend_mxn + rtc_pend_mxn
+    available      = total_committed_mxn - active_capital
+    # Excel E14 = C30 = sum(Total Cost of PAID loads) — capital recovered
+    recovered_mxn  = (rec_btc_tc + rec_rtc_tc)
+    revolved       = recovered_mxn / total_committed_mxn if total_committed_mxn else 0.0
+    total_margin   = rec_btc_margin + rec_rtc_margin
+    investor_share = total_margin * inv_share_pct
+
+    def _rec(tc, sale, margin, liters):
+        roi   = margin / tc    if tc     > 0 else 0.0
+        mxnl  = margin / liters if liters > 0 else 0.0
+        usdg  = mxnl * 3.7854 / avg_fx if avg_fx > 0 else 0.0
+        return {"tc": tc, "liters": liters, "margin": margin,
+                "roi": roi, "mxnl": mxnl, "usdgal": usdg}
+
+    btc_rec = _rec(rec_btc_tc, rec_btc_sale, rec_btc_margin, rec_btc_lit)
+    rtc_rec = _rec(rec_rtc_tc, rec_rtc_sale, rec_rtc_margin, rec_rtc_lit)
+    tot_lit = rec_btc_lit + rec_rtc_lit
+    tot_tc  = rec_btc_tc  + rec_rtc_tc
+    tot_rec = _rec(tot_tc, recovered_mxn, total_margin, tot_lit)
+
+    return {
+        "as_of":               as_of_str,
+        "commits":             commits,
+        "total_committed_usd": total_committed_usd,
+        "total_committed_mxn": total_committed_mxn,
+        "active_capital":      active_capital,
+        "available":           available,
+        "recovered_mxn":       recovered_mxn,
+        "revolved":            revolved,
+        "total_margin":        total_margin,
+        "investor_share":      investor_share,
+        "inv_share_pct":       inv_share_pct,
+        "active_detail": {
+            "alloc_mxn":       alloc_mxn,
+            "alloc_liters":    alloc_lit,
+            "inv_mxn":         inv_mxn,
+            "inv_liters":      inv_lit,
+            "rtc_pend_mxn":    rtc_pend_mxn,
+            "rtc_pend_liters": rtc_pend_lit,
+            "btc_pend_mxn":    btc_pend_mxn,
+            "btc_pend_liters": btc_pend_lit,
+            "total_mxn":       active_capital,
+            "total_liters":    alloc_lit + inv_lit + btc_pend_lit + rtc_pend_lit,
+        },
+        "recovered_detail": {
+            "btc":   btc_rec,
+            "rtc":   rtc_rec,
+            "total": tot_rec,
+        },
     }
-    rd.btc = mu_load(rd.btc);
-    rd.rtc = mu_load(rd.rtc);
-
-    const tot = rd.total || {};
-    const tl  = (rd.btc.liters||0) + (rd.rtc.liters||0);
-    tot.tc     = (rd.btc.tc||0)     + (rd.rtc.tc||0);
-    tot.margin = (rd.btc.margin||0) + (rd.rtc.margin||0);
-    tot.roi    = tot.tc > 0 ? tot.margin / tot.tc        : 0;
-    tot.mxnl   = tl   > 0 ? tot.margin / tl             : 0;
-    tot.usdgal = tl   > 0 ? tot.margin / tl * L_PER_GAL / avgFx : 0;
-    rd.total   = tot;
-
-    d.total_margin   = tot.margin;
-    d.investor_share = tot.margin * (d.inv_share_pct || 0.40);
-    d.active_detail    = ad;
-    d.recovered_detail = rd;
-    return d;
-  }
-
-  const inv = applyMarkup(rawInv);
-
-  // ── Formatters ───────────────────────────────────────────────────────────────
-  const fmxn = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—';
-  const fpct = v => v != null ? (Number(v)*100).toFixed(2)+'%' : '—';
-  const fnum = (v,d=2) => v != null ? Number(v).toFixed(d) : '—';
-  const date = inv.as_of || '—';
-
-  let html = `
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
-    <div>
-      <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">EGC — Investor Performance Report</div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;font-style:italic">All figures in MXN &amp; Liters</div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-size:0.7rem;color:var(--muted)">As of ${date}</div>
-      <div style="font-size:0.68rem;color:var(--muted);margin-top:0.1rem">${dashData.filename||''}</div>
-    </div>
-  </div>`;
-
-  // Committed Capital
-  html += `<div style="margin-bottom:2rem">
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Committed Capital</div>
-    <div class="table-wrap"><table>
-      <thead><tr>
-        <th>Round</th><th style="text-align:right">Committed (USD)</th><th style="text-align:right">Committed (MXN)</th><th style="text-align:right">Date</th><th style="text-align:right">FX Rate</th>
-      </tr></thead><tbody>`;
-  (inv.commits||[]).forEach(c => {
-    html += `<tr>
-      <td><span style="font-size:0.7rem;padding:2px 8px;border-radius:4px;background:rgba(74,124,220,0.12);color:var(--accent);font-weight:600">${c.round}</span></td>
-      <td style="text-align:right">$${Number(c.usd).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
-      <td style="text-align:right">$${Number(c.mxn).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
-      <td style="text-align:right;color:var(--muted)">${c.date}</td>
-      <td style="text-align:right;color:var(--muted)">${c.fx}</td>
-    </tr>`;
-  });
-  html += `<tr style="font-weight:600;background:var(--surface2)">
-    <td>Total Committed Capital</td>
-    <td style="text-align:right">$${Number(inv.total_committed_usd||0).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
-    <td style="text-align:right">$${Number(inv.total_committed_mxn||0).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
-    <td colspan="2"></td>
-  </tr></tbody></table></div></div>`;
-
-  // KPIs
-  const kpis = [
-    {label:'Total Committed',  val:'$'+fmxn(inv.total_committed_mxn), sub:'MXN'},
-    {label:'Active Capital',   val:'$'+fmxn(inv.active_capital),       sub:'MXN deployed'},
-    {label:'Available Capital',val:'$'+fmxn(inv.available),            sub:'MXN uninvested'},
-    {label:'Recovered Capital',val:'$'+fmxn(inv.recovered_mxn),        sub:'MXN returned', green:true},
-    ...(MARKUP ? [] : [{label:'Revolved Multiple',val:Number(inv.revolved||0).toFixed(2)+'×', sub:'capital turns'}]),
-    {label:'Total Profit',     val:'$'+fmxn(inv.total_margin),         sub:'MXN gross', green:true},
-    {label:'Investor Share',   val:'$'+fmxn(inv.investor_share),       sub:Math.round((inv.inv_share_pct||0.4)*100)+'% of profit', green:true},
-  ];
-  const kpiCols = kpis.length;
-  html += `<div style="margin-bottom:2rem">
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Key Performance Indicators (MXN)</div>
-    <div style="display:grid;grid-template-columns:repeat(${kpiCols},1fr);gap:8px">`;
-  kpis.forEach(k => {
-    html += `<div style="background:var(--surface2);border-radius:8px;padding:0.7rem 0.6rem;text-align:center">
-      <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:4px;line-height:1.3">${k.label}</div>
-      <div style="font-size:0.95rem;font-weight:700;color:${k.green?'var(--green)':'var(--text)'}">${k.val}</div>
-      <div style="font-size:0.62rem;color:var(--muted);margin-top:2px">${k.sub}</div>
-    </div>`;
-  });
-  html += `</div></div>`;
-
-  // Active Capital
-  const ad = inv.active_detail || {};
-  html += `<div style="margin-bottom:2rem">
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Active Capital — investor capital funding loads not yet collected</div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Type</th><th style="text-align:right">Capital (MXN)</th><th style="text-align:right">Liters</th></tr></thead>
-      <tbody>
-        <tr><td style="color:var(--muted)">Allocation</td><td style="text-align:right">${ad.alloc_mxn>0?'$'+fmxn(ad.alloc_mxn):'—'}</td><td style="text-align:right;color:var(--muted)">${ad.alloc_liters>0?fmxn(ad.alloc_liters):'—'}</td></tr>
-        <tr><td style="color:var(--muted)">Bulk Plant Inventory</td><td style="text-align:right">${ad.inv_mxn>0?'$'+fmxn(ad.inv_mxn):'—'}</td><td style="text-align:right;color:var(--muted)">${ad.inv_liters>0?fmxn(ad.inv_liters):'—'}</td></tr>
-        <tr><td style="color:var(--muted)">RTC (payment pending)</td><td style="text-align:right">${ad.rtc_pend_mxn>0?'$'+fmxn(ad.rtc_pend_mxn):'—'}</td><td style="text-align:right;color:var(--muted)">${ad.rtc_pend_liters>0?fmxn(ad.rtc_pend_liters):'—'}</td></tr>
-        <tr><td style="color:var(--muted)">BTC (payment pending)</td><td style="text-align:right">${ad.btc_pend_mxn>0?'$'+fmxn(ad.btc_pend_mxn):'—'}</td><td style="text-align:right;color:var(--muted)">${ad.btc_pend_liters>0?fmxn(ad.btc_pend_liters):'—'}</td></tr>
-        <tr style="font-weight:600;background:var(--surface2)"><td>Total Active Capital</td><td style="text-align:right">$${fmxn(ad.total_mxn)}</td><td style="text-align:right;color:var(--muted)">${fmxn(ad.total_liters)}</td></tr>
-      </tbody>
-    </table></div></div>`;
-
-  // Recovered Capital
-  const rd = inv.recovered_detail || {};
-  const recRows = [['RTC', rd.rtc||{}], ['BTC', rd.btc||{}], ['Total Recovered', rd.total||{}, true]];
-  html += `<div style="margin-bottom:2rem">
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Recovered Capital — cumulative from fully collected loads</div>
-    <div class="table-wrap"><table>
-      <thead><tr>
-        <th>Type</th>
-        <th style="text-align:right">Recovered (MXN)</th>
-        <th style="text-align:right">Liters</th>
-        <th style="text-align:right">Gross Profit (MXN)</th>
-        <th style="text-align:right">Avg ROI</th>
-        <th style="text-align:right">Avg Margin (MXN/L)</th>
-        <th style="text-align:right">Avg Margin (USD/Gal)</th>
-      </tr></thead><tbody>`;
-  recRows.forEach(([label, d, isTot]) => {
-    const style = isTot ? 'font-weight:600;background:var(--surface2)' : '';
-    const gc    = d.margin>0 ? 'color:var(--green)' : '';
-    html += `<tr style="${style}">
-      <td style="color:${isTot?'inherit':'var(--muted)'}">${label}</td>
-      <td style="text-align:right;${gc}">${d.tc>0?'$'+fmxn(d.tc):'—'}</td>
-      <td style="text-align:right;color:var(--muted)">${d.liters>0?fmxn(d.liters):'—'}</td>
-      <td style="text-align:right;${gc}">${d.margin>0?'$'+fmxn(d.margin):'—'}</td>
-      <td style="text-align:right;${gc}">${d.roi>0?fpct(d.roi):'—'}</td>
-      <td style="text-align:right">${d.mxnl>0?'$'+fnum(d.mxnl,4):'—'}</td>
-      <td style="text-align:right">${d.usdgal>0?'$'+fnum(d.usdgal,2):'—'}</td>
-    </tr>`;
-  });
-  html += `</tbody></table></div></div>`;
-
-  // ── How Your Capital Works (hardcoded — no Excel dependency) ────────────────
-  const STEPS = [
-    {
-      title: "1 · Allocation",
-      body:  "Your investment dollars are used to purchase fuel directly from U.S. suppliers. Once wired, those funds become allocated gallons — product you own but that hasn't moved to Mexico yet."
-    },
-    {
-      title: "2 · Inventory (Rack-to-Bulk / RTB)",
-      body:  "EGC dispatches the allocated fuel from the supplier's rack to a bulk storage plant in Mexico. The capital is now deployed as physical inventory — product in the tank, waiting to be sold."
-    },
-    {
-      title: "3 · Pending Collection (BTC & RTC)",
-      body:  "Product moves toward the customer. In a Bulk-to-Customer (BTC) load, fuel ships from the bulk plant to the end buyer. In a Rack-to-Customer (RTC) load, it goes directly from the rack without touching the plant. In both cases, capital is active until Mexico pays."
-    },
-    {
-      title: "4 · Recovered",
-      body:  "Once the customer pays, capital is recovered along with the gross margin earned on the trade. Recovered capital can be redeployed into the next cycle, compounding returns over time."
-    }
-  ];
-  const GLOSSARY = [
-    {
-      term: "RTB — Rack to Bulk",
-      def:  "Product moves from the U.S. supplier rack to ETP's bulk storage plant in Mexico. This is the inventory-building step."
-    },
-    {
-      term: "BTC — Bulk to Customer",
-      def:  "Product is dispatched from the bulk plant to the end customer in Mexico. This is the revenue-generating step for inventory loads."
-    },
-    {
-      term: "RTC — Rack to Customer",
-      def:  "Product goes directly from the U.S. rack to the Mexican end customer, bypassing the bulk plant. Faster cycle, no inventory holding period."
-    }
-  ];
-
-  html += `<div style="margin-bottom:2rem;margin-top:0.5rem">
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">How Your Capital Works</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem">`;
-  STEPS.forEach(s => {
-    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem">
-      <div style="font-size:0.75rem;font-weight:600;color:var(--accent);margin-bottom:0.4rem">${s.title}</div>
-      <div style="font-size:0.78rem;color:var(--muted);line-height:1.7">${s.body}</div>
-    </div>`;
-  });
-  html += `</div>
-    <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted2);margin-bottom:0.6rem">Glossary</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem">`;
-  GLOSSARY.forEach(g => {
-    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem">
-      <div style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.3rem">${g.term}</div>
-      <div style="font-size:0.73rem;color:var(--muted);line-height:1.65">${g.def}</div>
-    </div>`;
-  });
-  html += `</div></div>`;
-
-  html += `<div style="font-size:0.68rem;color:var(--muted);font-style:italic;padding-top:0.75rem;border-top:1px solid var(--border)">
-    This document is prepared for informational purposes only. Past performance does not guarantee future results. All figures sourced from EGC operational records.
-  </div>`;
-
-  el.innerHTML = html;
-}
 
 
-// ── PURCHASE BOLs ─────────────────────────────────────────────────────────────
-function renderBol() {
-  const bol = dashData.bol_tab || {};
-  const el  = document.getElementById('bol-content');
-  if (!bol.rows || !bol.rows.length) { el.innerHTML = '<div class="empty-state">No BOL data.</div>'; return; }
+# ── Purchase BOLs tab ──────────────────────────────────────────────────────────
+def _extract_bol(wb):
+    try:
+        ws = wb["Purchase to BOL-RTB"]
+        rows = list(ws.iter_rows(values_only=True))
+        # Find header row
+        header_row = None
+        for i, row in enumerate(rows):
+            if row[0] and 'DashFuel' in str(row[0]):
+                header_row = i
+                break
+        if header_row is None:
+            for i, row in enumerate(rows):
+                if any('DashFuel' in str(v) for v in row if v):
+                    header_row = i
+                    break
+        if header_row is None:
+            return {"rows": []}
 
-  const s   = bol.summary || {};
-  const fu  = v => v != null ? '$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
-  const fn  = v => v != null ? Number(v).toLocaleString('en-US',{maximumFractionDigits:0}) : '—';
-  const fd  = (v,d=4) => v != null ? Number(v).toFixed(d) : '—';
+        headers = rows[header_row]
+        def _col(name, default=None):
+            for j, h in enumerate(headers):
+                if h and name.lower() in str(h).lower():
+                    return j
+            return default
 
-  // Cards
-  let html = `<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
-    <div class="kpi blue"><div class="kpi-label">Total Invoiced</div><div class="kpi-value">${fu(s.total_invoiced)}</div><div class="kpi-sub">USD</div></div>
-    <div class="kpi green"><div class="kpi-label">Received Payments</div><div class="kpi-value">${fu(s.received_payments)}</div><div class="kpi-sub">USD collected</div></div>
-    <div class="kpi red"><div class="kpi-label">Open Balance</div><div class="kpi-value">${fu(s.open_balance)}</div><div class="kpi-sub">USD outstanding</div></div>
-    <div class="kpi orange"><div class="kpi-label">Not Invoiced Yet</div><div class="kpi-value">${fu(s.total_not_invoiced)}</div><div class="kpi-sub">USD pending invoice</div></div>
-  </div>`;
+        col_bol      = _col('BOL', 5)
+        col_supplier = _col('Supplier', 2)
+        col_inv      = _col('Supplier Invoice', 3)
+        col_batch    = _col('Batch', 4)
+        col_gal      = _col('Gallons', 6)
+        col_lit      = _col('Liters', 7)
+        col_prod     = _col('Product', 8)
+        col_cost_gal = _col('Cost/Gal USD', 9)
+        col_adder    = _col('Adder', 10)
+        col_total_gal= _col('Cost/Gal + Adder', 11)
+        col_mxnl     = _col('Supply Cost DashFuel', 12)
+        col_carrier  = _col('Carrier', 13)
+        col_freight  = _col('Freight/Load', 14)
+        col_inv_num  = _col('Invoice #', 17)
+        col_inv_amt  = _col('Invoice Amount', 18)
+        col_customer = _col('MX Customer', 19)
+        col_received = _col('Received Payments', 20)
+        col_balance  = _col('Balance', 21)
+        col_fx       = None
+        for j, h in enumerate(headers):
+            if h and 'FX' in str(h).upper() and 'PAYMENT' in str(h).upper():
+                col_fx = j
+                break
 
-  // Table
-  html += `<div class="table-card">
-    <div class="table-header">
-      <div class="table-title">Purchase to BOL-RTB</div>
-      <div style="font-size:0.72rem;color:var(--muted)">${bol.rows.length} BOLs</div>
-    </div>
-    <div class="table-wrap"><table>
-      <thead><tr>
-        <th>Product</th>
-        <th>BOL</th>
-        <th style="text-align:right">Gallons</th>
-        <th style="text-align:right">Total Cost/Gal (USD)</th>
-        <th style="text-align:right">FX Rate</th>
-        <th>Invoice #</th>
-        <th style="text-align:right">Invoice Amount</th>
-        <th style="text-align:right">Received Payments</th>
-        <th style="text-align:right">Balance</th>
-      </tr></thead><tbody>`;
+        f = lambda v: float(v) if isinstance(v, (int, float)) else None
 
-  bol.rows.forEach(r => {
-    // Conditional formatting on Balance:
-    // status='paid'         → green  (invoiced & fully paid)
-    // status='open'         → red    (invoiced & balance outstanding)
-    // status='not_invoiced' → muted  (no invoice yet)
-    const balColor = r.status === 'paid'         ? 'var(--green)'
-                   : r.status === 'open'         ? 'var(--red)'
-                   :                               'var(--muted)';
-    const balBg    = r.status === 'paid'         ? 'rgba(63,185,80,0.08)'
-                   : r.status === 'open'         ? 'rgba(248,81,73,0.08)'
-                   :                               'transparent';
+        result_rows = []
+        for row in rows[header_row + 1:]:
+            if not row[0] and not (col_supplier and row[col_supplier]):
+                if not any(v for v in row):
+                    break
+                continue
+            r = {
+                "bol":          str(row[col_bol] or '') if col_bol is not None else '',
+                "supplier":     str(row[col_supplier] or '') if col_supplier is not None else '',
+                "inv_num":      str(row[col_inv] or '') if col_inv is not None else '',
+                "batch":        str(row[col_batch] or '') if col_batch is not None else '',
+                "gallons":      f(row[col_gal]) if col_gal is not None else None,
+                "liters":       f(row[col_lit]) if col_lit is not None else None,
+                "product":      str(row[col_prod] or '') if col_prod is not None else '',
+                "cost_gal_usd": f(row[col_cost_gal]) if col_cost_gal is not None else None,
+                "adder":        f(row[col_adder]) if col_adder is not None else None,
+                "total_gal":    f(row[col_total_gal]) if col_total_gal is not None else None,
+                "mxn_l":        f(row[col_mxnl]) if col_mxnl is not None else None,
+                "carrier":      str(row[col_carrier] or '') if col_carrier is not None else '',
+                "freight":      f(row[col_freight]) if col_freight is not None else None,
+                "invoice_num":  str(row[col_inv_num] or '') if col_inv_num is not None else '',
+                "invoice_amt":  f(row[col_inv_amt]) if col_inv_amt is not None else None,
+                "customer":     str(row[col_customer] or '') if col_customer is not None else '',
+                "received":     f(row[col_received]) if col_received is not None else None,
+                "balance":      f(row[col_balance]) if col_balance is not None else None,
+                "fx_payment":   f(row[col_fx]) if col_fx is not None else None,
+            }
+            if r["bol"] or r["supplier"]:
+                result_rows.append(r)
 
-    html += `<tr>
-      <td>${r.product}</td>
-      <td style="font-weight:500">${r.bol}</td>
-      <td style="text-align:right">${fn(r.gallons)}</td>
-      <td style="text-align:right">${r.cost_gal>0 ? '$'+fd(r.cost_gal) : '—'}</td>
-      <td style="text-align:right">${r.fx_payment>0 ? fd(r.fx_payment,4) : '—'}</td>
-      <td style="color:var(--muted2);font-size:0.72rem">${r.invoice || '—'}</td>
-      <td style="text-align:right">${r.inv_amount>0 ? fu(r.inv_amount) : '—'}</td>
-      <td style="text-align:right">${r.received>0 ? fu(r.received) : '—'}</td>
-      <td style="text-align:right;font-weight:600;color:${balColor};background:${balBg};border-radius:4px;padding:0.3rem 0.6rem">${r.status==='not_invoiced' ? '<span style="font-weight:400;font-size:0.7rem">Not invoiced</span>' : fu(r.balance)}</td>
-    </tr>`;
-  });
+        # Compute summary KPIs
+        f2 = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
+        total_invoiced    = sum(f2(r["invoice_amt"]) for r in result_rows if r.get("invoice_amt"))
+        received_payments = sum(f2(r["received"])    for r in result_rows if r.get("received"))
+        # Open balance only for rows that have an invoice number
+        open_balance      = sum(f2(r["balance"]) for r in result_rows if r.get("invoice_num") and f2(r.get("balance", 0)) > 0)
 
-  html += `</tbody></table></div></div>`;
-  el.innerHTML = html;
-}
+        # Not invoiced yet: rows with no invoice number but have a BOL
+        # Read from BOL sheet header area (rows 2-5 before data)
+        total_not_invoiced = 0.0
+        try:
+            for row in ws.iter_rows(min_row=1, max_row=6, values_only=True):
+                for cell in row:
+                    if cell and "Total NOT Invoiced" in str(cell):
+                        # value is in next cell on same row
+                        row_vals = list(row)
+                        idx = row_vals.index(cell)
+                        if idx + 1 < len(row_vals) and isinstance(row_vals[idx+1], (int, float)):
+                            total_not_invoiced = float(row_vals[idx+1])
+        except Exception:
+            pass
 
-// ── COMPANY PROFILE ───────────────────────────────────────────────────────────
-function renderCompany() {
-  const el = document.getElementById('company-content');
-  el.innerHTML = `
-  <style>
-    .cp-section{margin-bottom:2.75rem}
-    .cp-label{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text);padding-bottom:0.6rem;border-bottom:2px solid var(--border2);margin-bottom:1.4rem}
-    .cp-p{font-size:0.875rem;color:var(--muted);line-height:1.75;margin-bottom:0.65rem}
-    .cp-p strong{color:var(--text);font-weight:500}
-    .cp-p:last-child{margin-bottom:0}
-    .cp-metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
-    .cp-metric{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem}
-    .cp-metric-val{font-size:1.45rem;font-weight:700;color:var(--text);letter-spacing:-0.02em}
-    .cp-metric-lbl{font-size:0.68rem;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em}
-    .cp-metric-sub{font-size:0.65rem;color:var(--muted2);margin-top:2px}
-    .cp-permit-entity{font-size:0.7rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;margin-top:1.2rem}
-    .cp-permit-entity:first-child{margin-top:0}
-    .cp-table{width:100%;border-collapse:collapse;font-size:0.78rem}
-    .cp-table th{font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);text-align:left!important;padding:6px 10px;border-bottom:1px solid var(--border)}
-    .cp-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top;text-align:left!important}
-    .cp-table td:first-child{color:var(--text);font-weight:500;text-align:left!important}
-    .cp-table tr:last-child td{border-bottom:none}
-    .cp-two{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-    .cp-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem}
-    .cp-card-title{font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--accent);margin-bottom:0.6rem}
-    .cp-card p{font-size:0.78rem;color:var(--muted);line-height:1.7;margin-bottom:0.5rem}
-    .cp-card p:last-child{margin-bottom:0}
-    .cp-card p strong{color:var(--text);font-weight:500}
-    .cp-four{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-    .cp-strength{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem}
-    .cp-strength-title{font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:0.35rem;display:flex;align-items:center;gap:0.45rem}
-    .cp-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0}
-    .cp-strength p{font-size:0.76rem;color:var(--muted);line-height:1.7;margin:0}
-    .cp-leaders{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
-    .cp-leader{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;display:flex;align-items:flex-start;gap:0.8rem}
-    .cp-avatar{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:var(--accent);flex-shrink:0}
-    .cp-leader-name{font-size:0.85rem;font-weight:600;color:var(--text)}
-    .cp-leader-role{font-size:0.7rem;color:var(--muted);margin-top:2px}
-    .cp-offices{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
-    .cp-office{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0.9rem 1.1rem}
-    .cp-office-flag{font-size:1rem;margin-bottom:3px}
-    .cp-office-city{font-size:0.85rem;font-weight:600;color:var(--text)}
-    .cp-footer{margin-top:2rem;padding-top:1.2rem;border-top:1px solid var(--border);font-size:0.67rem;color:var(--muted2);font-style:italic;text-align:center}
-    .cp-path-desc{display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;margin-top:1.1rem}
-    .cp-path-card{background:var(--surface);border-radius:8px;padding:0.65rem 0.85rem}
-  </style>
+        # Add status to each row
+        for r in result_rows:
+            if r.get("invoice_amt") and r.get("invoice_num"):
+                r["status"] = "paid" if (r.get("balance") or 0) <= 0.01 else "open"
+            else:
+                r["status"] = "not_invoiced"
 
-  <!-- Overview -->
-  <div class="cp-section">
-    <div class="cp-label">Overview</div>
-    <p class="cp-p">Elevar Global Commodities is a <strong>fully licensed refined fuels trading company</strong> operating across the U.S. and Mexico energy corridor. With active import permits from SENER and commercialization permits from the CRE/CNE, EGC occupies a rare position in a market where <strong>regulatory access has become the primary barrier to entry</strong>. The company sources product from U.S. refiners and terminals, importing directly into Mexico or acquiring locally, guided by real-time pricing and logistics analysis to optimize every transaction.</p>
-  </div>
+        return {
+            "rows": result_rows,
+            "summary": {
+                "total_invoiced":    total_invoiced,
+                "received_payments": received_payments,
+                "open_balance":      open_balance,
+                "total_not_invoiced": total_not_invoiced,
+            }
+        }
+    except Exception as e:
+        return {"rows": [], "summary": {}}
 
-  <!-- Key Metrics -->
-  <div class="cp-section">
-    <div class="cp-label">Key Metrics</div>
-    <div class="cp-metric-grid">
-      <div class="cp-metric"><div class="cp-metric-val">$240M</div><div class="cp-metric-lbl">Historical Sales</div><div class="cp-metric-sub">2024 – 2025</div></div>
-      <div class="cp-metric"><div class="cp-metric-val">~80M</div><div class="cp-metric-lbl">Gallons Moved</div><div class="cp-metric-sub">estimated, 2024 – 2025</div></div>
-      <div class="cp-metric"><div class="cp-metric-val">6.1B</div><div class="cp-metric-lbl">Gal Addressable Market</div><div class="cp-metric-sub">Mexico total annual diesel</div></div>
-    </div>
-  </div>
 
-  <!-- Business Model -->
-  <div class="cp-section">
-    <div class="cp-label">Business Model</div>
-    <div class="cp-two">
-      <div class="cp-card">
-        <div class="cp-card-title">Track 1 · U.S. to Mexico Import (via Petrotal)</div>
-        <p>EGC sources refined fuels from any U.S. supplier at any U.S. rack and imports into Mexico using <strong>Petrotal's SENER permits</strong>, which cover diesel, regular, and premium gasoline. Product moves through two main channels:</p>
-        <p>· <strong>By truck</strong> : crosses border points into bulk storage facilities</p>
-        <p>· <strong>By rail</strong> : ships to terminals in the Mexican interior</p>
-      </div>
-      <div class="cp-card">
-        <div class="cp-card-title">Track 2 · Domestic Mexico Commercialization</div>
-        <p style="margin-bottom:0.4rem">When domestic pricing or logistics favor it, EGC purchases fuel already inside Mexico, priced in MXN/L, from domestic suppliers including:</p>
-        <p style="margin-bottom:0.2rem">· <strong>PEMEX</strong></p>
-        <p style="margin-bottom:0.2rem">· <strong>Flint Hills Mexico</strong></p>
-        <p style="margin-bottom:0.2rem">· <strong>Glencore Mexico</strong></p>
-        <p style="margin-bottom:0.4rem">· <strong>Repsol Mexico</strong></p>
-        <p>Product is distributed to end customers under the CRE/CNE permits held by <strong>Apollo</strong> and <strong>Gasolinas y Rendimiento</strong>. No import permit is used in this track.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Key Strengths -->
-  <div class="cp-section">
-    <div class="cp-label">Key Strengths</div>
-    <div class="cp-four">
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Rare Regulatory Access</div><p>EGC holds active SENER import permits for all three major fuel products at a time when the Mexican government has revoked or declined to renew the majority of private importer permits.</p></div>
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Full Vertical Permit Stack</div><p>Import, commercialization, and transportation permits across multiple legal entities create a compliant, end-to-end operating structure from U.S. terminal to Mexican end customer.</p></div>
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Supply-Side Flexibility</div><p>With no exclusive supplier commitments, EGC sources from any U.S. refiner or terminal and toggles between import and domestic purchase based on real-time pricing.</p></div>
-      <div class="cp-strength"><div class="cp-strength-title"><span class="cp-dot"></span>Compliant by Design</div><p>EGC's multi-entity structure matches each regulated activity to the correct permit type, fully aligned with the 2025 SENER/CNE regulatory consolidation and SAT's updated CFDI hydrocarbon complement requirements.</p></div>
-    </div>
-  </div>
-
-  <!-- Delivery Paths -->
-  <div class="cp-section">
-    <div class="cp-label">Delivery Paths &amp; Commercialization Model — Track 1 (Import) &amp; Track 2 (Domestic)</div>
-    <div class="cp-card" style="padding:1.5rem;overflow-x:auto">
-      <svg viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:700px;display:block">
-        <defs>
-          <marker id="dp-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </marker>
-        </defs>
-        <rect x="14" y="140" width="160" height="60" rx="10" fill="#161c26" stroke="#8899ad" stroke-width="1.8"/>
-        <text x="94" y="163" text-anchor="middle" font-size="13" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">U.S. Rack /</text>
-        <text x="94" y="181" text-anchor="middle" font-size="13" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Domestic supplier</text>
-        <rect x="390" y="200" width="200" height="56" rx="10" fill="#161c26" stroke="#378ADD" stroke-width="1.8"/>
-        <text x="490" y="223" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Bulk Plant · Inventory</text>
-        <text x="490" y="240" text-anchor="middle" font-size="9" fill="#aecbf0" font-family="Inter,sans-serif">blend-capable · higher margin · longer cycle</text>
-        <rect x="790" y="60" width="156" height="44" rx="8" fill="#161c26" stroke="#263044" stroke-width="1"/>
-        <text x="868" y="78" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer picks up</text>
-        <text x="868" y="96" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">at rack</text>
-        <rect x="790" y="124" width="156" height="44" rx="8" fill="#161c26" stroke="#263044" stroke-width="1"/>
-        <text x="868" y="142" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">EGC delivers</text>
-        <text x="868" y="160" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">from rack</text>
-        <rect x="790" y="204" width="156" height="44" rx="8" fill="#161c26" stroke="#263044" stroke-width="1"/>
-        <text x="868" y="222" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">Customer picks up</text>
-        <text x="868" y="240" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">at bulk plant</text>
-        <rect x="790" y="268" width="156" height="44" rx="8" fill="#161c26" stroke="#263044" stroke-width="1"/>
-        <text x="868" y="286" text-anchor="middle" font-size="12" font-weight="600" fill="#e6edf3" font-family="Inter,sans-serif">EGC delivers</text>
-        <text x="868" y="304" text-anchor="middle" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">from bulk plant</text>
-        <line x1="174" y1="155" x2="446" y2="82" stroke="#e74c3c" stroke-width="1.5"/>
-        <rect x="428" y="74" width="44" height="16" rx="3" fill="#0d1117"/>
-        <text x="450" y="86" text-anchor="middle" font-size="8" font-weight="700" fill="#e74c3c" font-family="Inter,sans-serif">RTC I</text>
-        <line x1="472" y1="82" x2="790" y2="82" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#dp-a)"/>
-        <line x1="174" y1="165" x2="446" y2="146" stroke="#e74c3c" stroke-width="1.5"/>
-        <rect x="426" y="138" width="46" height="16" rx="3" fill="#0d1117"/>
-        <text x="449" y="150" text-anchor="middle" font-size="8" font-weight="700" fill="#e74c3c" font-family="Inter,sans-serif">RTC II</text>
-        <line x1="472" y1="146" x2="790" y2="146" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#dp-a)"/>
-        <line x1="174" y1="180" x2="296" y2="220" stroke="#378ADD" stroke-width="1.8"/>
-        <rect x="274" y="212" width="36" height="16" rx="3" fill="#0d1117"/>
-        <text x="292" y="224" text-anchor="middle" font-size="8" font-weight="700" fill="#378ADD" font-family="Inter,sans-serif">RTB</text>
-        <line x1="310" y1="226" x2="390" y2="228" stroke="#378ADD" stroke-width="1.8" marker-end="url(#dp-a)"/>
-        <line x1="590" y1="218" x2="666" y2="224" stroke="#378ADD" stroke-width="1.5"/>
-        <rect x="646" y="216" width="42" height="16" rx="3" fill="#0d1117"/>
-        <text x="667" y="228" text-anchor="middle" font-size="8" font-weight="700" fill="#378ADD" font-family="Inter,sans-serif">BTC II</text>
-        <line x1="688" y1="224" x2="790" y2="224" stroke="#378ADD" stroke-width="1.5" marker-end="url(#dp-a)"/>
-        <line x1="590" y1="238" x2="666" y2="288" stroke="#378ADD" stroke-width="1.5"/>
-        <rect x="647" y="280" width="40" height="16" rx="3" fill="#0d1117"/>
-        <text x="667" y="292" text-anchor="middle" font-size="8" font-weight="700" fill="#378ADD" font-family="Inter,sans-serif">BTC I</text>
-        <line x1="687" y1="288" x2="790" y2="288" stroke="#378ADD" stroke-width="1.5" marker-end="url(#dp-a)"/>
-        <g opacity="0.5">
-          <rect x="14" y="340" width="160" height="44" rx="9" fill="#0d1117" stroke="#6e7f96" stroke-width="1" stroke-dasharray="5 3"/>
-          <text x="94" y="358" text-anchor="middle" font-size="11" font-weight="600" fill="#8899ad" font-family="Inter,sans-serif">U.S. Rack</text>
-          <text x="94" y="375" text-anchor="middle" font-size="9" fill="#6e7f96" font-family="Inter,sans-serif">any U.S. supplier</text>
-          <line x1="174" y1="362" x2="296" y2="362" stroke="#6e7f96" stroke-width="1.2" stroke-dasharray="5 3"/>
-          <rect x="273" y="354" width="46" height="16" rx="3" fill="#0d1117"/>
-          <text x="296" y="366" text-anchor="middle" font-size="8" font-weight="600" fill="#6e7f96" font-family="Inter,sans-serif">by rail</text>
-          <line x1="319" y1="362" x2="390" y2="362" stroke="#6e7f96" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#dp-a)"/>
-          <rect x="390" y="340" width="200" height="44" rx="9" fill="#0d1117" stroke="#6e7f96" stroke-width="1" stroke-dasharray="5 3"/>
-          <text x="490" y="358" text-anchor="middle" font-size="11" font-weight="600" fill="#8899ad" font-family="Inter,sans-serif">Rail Terminal</text>
-          <text x="490" y="374" text-anchor="middle" font-size="9" fill="#6e7f96" font-family="Inter,sans-serif">Mexican interior</text>
-          <line x1="590" y1="354" x2="680" y2="340" stroke="#6e7f96" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#dp-a)"/>
-          <rect x="680" y="326" width="266" height="30" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
-          <text x="813" y="344" text-anchor="middle" font-size="9" fill="#6e7f96" font-family="Inter,sans-serif">same RTC / RTB / BTC paths apply from terminal</text>
-        </g>
-        <line x1="14" y1="410" x2="946" y2="410" stroke="#1e2736" stroke-width="1"/>
-        <text x="14" y="426" font-size="9" font-weight="700" fill="#6e7f96" font-family="Inter,sans-serif" letter-spacing="0.6">PATH REFERENCE · applies to Track 1 (import) and Track 2 (domestic)</text>
-        <rect x="14"  y="434" width="178" height="90" rx="8" fill="#161c26" stroke="#e74c3c" stroke-width="1"/>
-        <text x="24"  y="452" font-size="9" font-weight="700" fill="#e74c3c" font-family="Inter,sans-serif">RTC I · Rack to Customer</text>
-        <text x="24"  y="468" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Customer picks up at rack.</text>
-        <text x="24"  y="482" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">No logistics involved.</text>
-        <text x="24"  y="496" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Fastest capital turn.</text>
-        <text x="24"  y="510" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Smallest margin.</text>
-        <rect x="202" y="434" width="178" height="90" rx="8" fill="#161c26" stroke="#e74c3c" stroke-width="1"/>
-        <text x="212" y="452" font-size="9" font-weight="700" fill="#e74c3c" font-family="Inter,sans-serif">RTC II · Rack to Customer</text>
-        <text x="212" y="468" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">EGC delivers from rack.</text>
-        <text x="212" y="482" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">EGC handles logistics.</text>
-        <text x="212" y="496" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Fast turn. Slightly higher</text>
-        <text x="212" y="510" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">margin than RTC I.</text>
-        <rect x="390" y="434" width="178" height="90" rx="8" fill="#161c26" stroke="#378ADD" stroke-width="1"/>
-        <text x="400" y="452" font-size="9" font-weight="700" fill="#378ADD" font-family="Inter,sans-serif">RTB · Rack to Bulk Plant</text>
-        <text x="400" y="468" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Product enters inventory.</text>
-        <text x="400" y="482" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Slower capital turn.</text>
-        <text x="400" y="496" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Higher margins via</text>
-        <text x="400" y="510" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">blending capabilities.</text>
-        <rect x="578" y="434" width="178" height="90" rx="8" fill="#161c26" stroke="#378ADD" stroke-width="1"/>
-        <text x="588" y="452" font-size="9" font-weight="700" fill="#378ADD" font-family="Inter,sans-serif">BTC I · Bulk to Customer</text>
-        <text x="588" y="468" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">EGC delivers from plant.</text>
-        <text x="588" y="482" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Last-mile logistics.</text>
-        <text x="588" y="496" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Slower turn. Highest</text>
-        <text x="588" y="510" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">margin of all paths.</text>
-        <rect x="766" y="434" width="180" height="90" rx="8" fill="#161c26" stroke="#378ADD" stroke-width="1"/>
-        <text x="776" y="452" font-size="9" font-weight="700" fill="#378ADD" font-family="Inter,sans-serif">BTC II · Bulk to Customer</text>
-        <text x="776" y="468" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Customer picks up at plant.</text>
-        <text x="776" y="482" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">No last-mile logistics.</text>
-        <text x="776" y="496" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">Slower turn. High margin,</text>
-        <text x="776" y="510" font-size="9" fill="#8899ad" font-family="Inter,sans-serif">slightly less than BTC I.</text>
-        <line x1="14"  y1="540" x2="40"  y2="540" stroke="#e74c3c" stroke-width="2"/>
-        <text x="46"  y="544" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">RTC paths</text>
-        <line x1="130" y1="540" x2="156" y2="540" stroke="#378ADD" stroke-width="2"/>
-        <text x="162" y="544" font-size="10" fill="#8899ad" font-family="Inter,sans-serif">RTB / BTC paths</text>
-        <line x1="278" y1="540" x2="304" y2="540" stroke="#6e7f96" stroke-width="1.2" stroke-dasharray="5 3" opacity="0.6"/>
-        <text x="310" y="544" font-size="10" fill="#6e7f96" font-family="Inter,sans-serif">Rail (future)</text>
-      </svg>
-    </div>
-  </div>
-
-  <!-- Permits -->
-  <div class="cp-section">
-    <div class="cp-label">Regulatory Permits</div>
-    <div class="cp-permit-entity">SENER Import Permits — Petrotal SA de CV</div>
-    <table class="cp-table" style="table-layout:fixed;width:100%">
-      <colgroup><col style="width:25%"><col style="width:30%"><col style="width:25%"><col style="width:20%"></colgroup>
-      <thead><tr><th>Product</th><th>Permit Number</th><th>Volume</th><th>Approx. Gallons</th></tr></thead>
-      <tbody>
-        <tr><td>Diesel</td><td>1701C125001774</td><td>84,000,000 L</td><td>~22.2M gal</td></tr>
-        <tr><td>Regular Gasoline</td><td>1701C125001773</td><td>300,000,000 L</td><td>~79.3M gal</td></tr>
-        <tr><td>Premium Gasoline</td><td>1701C125001772</td><td>24,000,000 L</td><td>~6.3M gal</td></tr>
-      </tbody>
-    </table>
-    <div class="cp-permit-entity">CRE / CNE Operating Permits</div>
-    <table class="cp-table" style="table-layout:fixed;width:100%">
-      <colgroup><col style="width:35%"><col style="width:30%"><col style="width:20%"><col style="width:15%"></colgroup>
-      <thead><tr><th>Entity</th><th>Permit Number</th><th>Type</th><th>Authorization</th></tr></thead>
-      <tbody>
-        <tr><td>Importadora Apollo del Norte SA de CV</td><td>H/26101/COM/2024</td><td>Commercialization</td><td>Activity-based</td></tr>
-        <tr><td>Gasolinas y Rendimiento SA de CV</td><td>H/23478/COM/2020</td><td>Commercialization</td><td>Activity-based</td></tr>
-        <tr><td>Gasolinas y Rendimiento SA de CV</td><td>PL/23627/TRA/OM/2020</td><td>Transportation</td><td>Activity-based</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Leadership -->
-  <div class="cp-section">
-    <div class="cp-label">Leadership</div>
-    <div class="cp-leaders">
-      <div class="cp-leader"><div class="cp-avatar">JD</div><div><div class="cp-leader-name">Jeremy Dickens</div><div class="cp-leader-role">Principal</div></div></div>
-      <div class="cp-leader"><div class="cp-avatar">BH</div><div><div class="cp-leader-name">Ben Hart</div><div class="cp-leader-role">Principal</div></div></div>
-      <div class="cp-leader"><div class="cp-avatar">BS</div><div><div class="cp-leader-name">Benjamin Stern</div><div class="cp-leader-role">Principal</div></div></div>
-    </div>
-  </div>
-
-  <!-- Offices -->
-  <div class="cp-section">
-    <div class="cp-label">Offices</div>
-    <div class="cp-offices">
-      <div class="cp-office"><div class="cp-office-flag">🇺🇸</div><div class="cp-office-city">The Woodlands, TX</div></div>
-      <div class="cp-office"><div class="cp-office-flag">🇲🇽</div><div class="cp-office-city">Mexico City</div></div>
-      <div class="cp-office"><div class="cp-office-flag">🇰🇳</div><div class="cp-office-city">St. Kitts &amp; Nevis</div></div>
-    </div>
-  </div>
-
-  <div class="cp-footer">This document is confidential and prepared for informational purposes only. It does not constitute an offer or solicitation. All information sourced from EGC operational records.</div>
-  `;
-}
-
-// ── Markup setting ────────────────────────────────────────────────────────────
-async function saveMarkup() {
-  const inp = document.getElementById('markupInput');
-  const val = parseFloat(inp.value);
-  if (isNaN(val) || val < 0 || val > 10) return;
-  const res = await fetch('/api/settings', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({markup_usd: val})
-  });
-  if (res.ok) {
-    const st = document.getElementById('markupStatus');
-    st.style.display = 'inline';
-    setTimeout(() => st.style.display = 'none', 2000);
-    if (dashData) { dashData.markup_usd = val; renderInvestor(); }
-  }
-}
-
-async function loadMarkupSetting() {
-  if (ROLE !== 'admin') return;
-  try {
-    const res = await fetch('/api/settings');
-    if (!res.ok) return;
-    const d = await res.json();
-    const inp = document.getElementById('markupInput');
-    if (inp && d.markup_usd != null) inp.value = d.markup_usd;
-  } catch(e) { console.error('loadMarkupSetting:', e); }
-}
-
-// ── Init ───────────────────────────────────────────────────────────────────────
-loadData();
-loadMarkupSetting();
-if (ROLE === 'potential_investor') showTab('company');
-else if (ROLE === 'investor') showTab('investor');
-</script>
-</body>
-</html>
+# ── Overview / How Capital Works ───────────────────────────────────────────────
+def _extract_overview(wb):
+    try:
+        ws = wb["Overview"]
+        rows = list(ws.iter_rows(values_only=True))
+        steps = []
+        glossary = []
+        in_glossary = False
+        for i, row in enumerate(rows, start=1):
+            if not any(v for v in row): continue
+            label = str(row[1]).strip() if row[1] else ""
+            text  = str(row[2]).strip() if row[2] else ""
+            if label == "GLOSSARY":
+                in_glossary = True
+                continue
+            if label == "HOW YOUR CAPITAL WORKS": continue
+            if "This document" in label: continue
+            if not label: continue
+            if in_glossary and text:
+                glossary.append({"term": label, "definition": text})
+            elif not in_glossary and text:
+                steps.append({"title": label, "body": text})
+        return {"steps": steps, "glossary": glossary}
+    except:
+        return {"steps": [], "glossary": []}
