@@ -458,30 +458,28 @@ function renderOverview() {
   const tv = k => total[k] ?? null;
   // Row 1: Deployment — what went out
   // Row 2: Returns & inventory — what came back / what's left
+  // _pulled kept in data for table use
   let html = `
-  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:0.75rem">
+  <div style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem">Purchasing</div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">
     <div class="kpi blue">
       <div class="kpi-label">Total Wired Amount</div>
       <div class="kpi-value">${fmtUSD(tv('_wired'))}</div>
-      <div class="kpi-sub">USD deployed to suppliers</div>
+      <div class="kpi-sub">USD wired to suppliers</div>
     </div>
     <div class="kpi blue">
-      <div class="kpi-label">Paid for Gallons (Allocation)</div>
+      <div class="kpi-label">Total Purchased Gallons</div>
       <div class="kpi-value">${fmtNum(tv('_paid_gal'))}</div>
-      <div class="kpi-sub">gallons available to pull</div>
-    </div>
-    <div class="kpi green">
-      <div class="kpi-label">Gallons Pulled from Allocation</div>
-      <div class="kpi-value">${fmtNum(tv('_pulled'))}</div>
-      <div class="kpi-sub">RTB &amp; RTC delivered</div>
+      <div class="kpi-sub">gallons purchased from suppliers</div>
     </div>
     <div class="kpi orange">
-      <div class="kpi-label">Remaining in Allocation</div>
+      <div class="kpi-label">Remaining Gallons in Allocation</div>
       <div class="kpi-value">${fmtNum(tv('_rem_alloc'))}</div>
-      <div class="kpi-sub">gallons paid, not pulled yet</div>
+      <div class="kpi-sub">gallons paid, pending BOL</div>
     </div>
   </div>
-  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+  <div style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem">Inventory</div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:1.25rem">
     <div class="kpi purple">
       <div class="kpi-label">Remaining Gallons in Inventory</div>
       <div class="kpi-value">${fmtNum(tv('_rem_inv'))}</div>
@@ -492,6 +490,9 @@ function renderOverview() {
       <div class="kpi-value">${fmtDec(tv('_avg_cost'))}</div>
       <div class="kpi-sub">MXN/L</div>
     </div>
+  </div>
+  <div style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem">Mexico Collections</div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:1.25rem">
     <div class="kpi green">
       <div class="kpi-label">Amount Paid Back by Mexico</div>
       <div class="kpi-value">${fmtMXN(tv('_paid_back'))}</div>
@@ -500,7 +501,7 @@ function renderOverview() {
     <div class="kpi red">
       <div class="kpi-label">Mexico Balance</div>
       <div class="kpi-value">${fmtMXN(tv('_balance'))}</div>
-      <div class="kpi-sub">USD outstanding</div>
+      <div class="kpi-sub">USD outstanding (invoiced)</div>
     </div>
   </div>`;
 
@@ -560,6 +561,15 @@ function chartOpts(unit) {
 }
 
 // ── INVENTORY ─────────────────────────────────────────────────────────────────
+let INV_UNIT = 'L';
+function setInvUnit(u) {
+  INV_UNIT = u;
+  document.getElementById('inv-unit-L').style.background = u==='L' ? 'var(--accent)' : 'transparent';
+  document.getElementById('inv-unit-L').style.color = u==='L' ? '#fff' : 'var(--muted)';
+  document.getElementById('inv-unit-G').style.background = u==='G' ? 'var(--accent)' : 'transparent';
+  document.getElementById('inv-unit-G').style.color = u==='G' ? '#fff' : 'var(--muted)';
+  renderInventory();
+}
 function renderInventory() {
   const inv = dashData.inventory || {};
   const el = document.getElementById('inventory-content');
@@ -594,8 +604,7 @@ function renderInventory() {
               <div><div class="batch-name">${prod} · Batch ${batch}</div><div class="batch-meta">${bp}</div></div>
             </div>
             <div class="batch-right">
-              <div class="batch-stat"><div class="batch-stat-val">${fmtL(remL)}</div><div class="batch-stat-lbl">Remaining L</div></div>
-              <div class="batch-stat"><div class="batch-stat-val">${fmtL(totalL)}</div><div class="batch-stat-lbl">Total RTB L</div></div>
+              <div class="batch-stat"><div class="batch-stat-val">${INV_UNIT==='L' ? fmtL(remL)+' L' : fmtL(remL/3.785411784)+' gal'}</div><div class="batch-stat-lbl">Remaining Inventory</div></div>
               <div class="batch-stat"><div class="batch-stat-val">${avgCost.toFixed(4)}</div><div class="batch-stat-lbl">Avg MXN/L</div></div>
               <div class="batch-stat"><div class="batch-stat-val" style="color:var(--${pctColor})">${pct}%</div><div class="batch-stat-lbl">Remaining</div></div>
               <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
@@ -603,7 +612,7 @@ function renderInventory() {
           </div>
           <div class="tank-bar-wrap">
             <div class="tank-bar"><div class="tank-fill ${fillClass}" style="width:${pct}%"></div></div>
-            <div class="tank-pct">${fmtL(remL)} of ${fmtL(totalL)} L remaining</div>
+            <div class="tank-pct">${INV_UNIT==='L' ? fmtL(remL)+' of '+fmtL(totalL)+' L remaining' : fmtL(remL/3.785411784)+' of '+fmtL(totalL/3.785411784)+' gal remaining'}</div>
           </div>
           <div class="inv-detail">
             <div class="inv-title">Supplier → Invoice → BOL breakdown</div>`;
@@ -626,8 +635,8 @@ function renderInventory() {
                 <div class="bol-fill-bg ${bfc}" style="height:${bpct}%"></div>
                 <div class="bol-tank-inner">
                   <div class="bol-num">BOL ${b.bol}</div>
-                  <div class="bol-liters">${fmtL(b.remaining_l)}<span style="font-size:0.6rem;color:var(--muted);font-weight:400"> L</span></div>
-                  <div class="bol-rem">of ${fmtL(b.liters)} L · ${bpct}%</div>
+                  <div class="bol-liters">${INV_UNIT==='L' ? fmtL(b.remaining_l)+' L' : fmtL(b.remaining_l/3.785411784)+' gal'}</div>
+                  <div class="bol-rem">of ${INV_UNIT==='L' ? fmtL(b.liters)+' L' : fmtL(b.liters/3.785411784)+' gal'} · ${bpct}%</div>
                   <div class="bol-cost">${b.cost_per_l?.toFixed(4)} MXN/L</div>
                 </div>
               </div>`;
@@ -652,15 +661,72 @@ function toggleBatch(id) {
 function fmtL(v) { return Number(v||0).toLocaleString('en-US',{maximumFractionDigits:0}); }
 
 // ── FIFO LOG ──────────────────────────────────────────────────────────────────
+let FIFO_UNIT = 'L';
+function setFifoUnit(u) {
+  FIFO_UNIT = u;
+  document.getElementById('fifo-unit-L').style.background = u==='L' ? 'var(--accent)' : 'transparent';
+  document.getElementById('fifo-unit-L').style.color      = u==='L' ? '#fff' : 'var(--muted)';
+  document.getElementById('fifo-unit-G').style.background = u==='G' ? 'var(--accent)' : 'transparent';
+  document.getElementById('fifo-unit-G').style.color      = u==='G' ? '#fff' : 'var(--muted)';
+  renderFifo();
+}
+
 function renderFifo() {
   const rows = dashData.fifo_rows || [];
   const el = document.getElementById('fifo-content');
   if (!rows.length) { el.innerHTML='<div class="empty-state">No FIFO data.</div>'; return; }
 
-  // Type first, exclude Total Cost column
+  const GAL = 3.785411784;
+  const fmtV = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4}) : '—';
+  const fmtN = v => v != null ? Number(v).toLocaleString('en-US',{maximumFractionDigits:0}) : '—';
+
+  // ── Summary cards from fifo_rows ───────────────────────────────────────────
+  const rtbRows = rows.filter(r => r['Type'] === 'RTB');
+  const btcRows = rows.filter(r => r['Type'] === 'BTC');
+  const rtcRows = rows.filter(r => r['Type'] === 'RTC');
+
+  const totalRTB  = rtbRows.reduce((s,r) => s + (r['Liters']||0), 0);
+  const totalBTC  = btcRows.reduce((s,r) => s + (r['Liters']||0), 0);
+  const totalRTC  = rtcRows.reduce((s,r) => s + (r['Liters']||0), 0);
+  const remInv    = rtbRows.reduce((s,r) => s + (r['Remaining L (BOL)']||0), 0);
+
+  const convL = v => FIFO_UNIT === 'L' ? fmtN(v) + ' L' : fmtN(v/GAL) + ' gal';
+
+  let html = `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+    <div style="font-size:0.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Summary</div>
+    <div style="display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+      <button id="fifo-unit-L" onclick="setFifoUnit('L')" style="padding:0.25rem 0.65rem;font-size:0.7rem;font-family:var(--font);cursor:pointer;border:none;background:var(--accent);color:#fff;font-weight:600">L</button>
+      <button id="fifo-unit-G" onclick="setFifoUnit('G')" style="padding:0.25rem 0.65rem;font-size:0.7rem;font-family:var(--font);cursor:pointer;border:none;background:transparent;color:var(--muted)">Gal</button>
+    </div>
+  </div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
+    <div class="kpi blue">
+      <div class="kpi-label">RTB — Into Inventory</div>
+      <div class="kpi-value">${convL(totalRTB)}</div>
+      <div class="kpi-sub">total purchased into bulk plant</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">BTC — Delivered</div>
+      <div class="kpi-value">${convL(totalBTC)}</div>
+      <div class="kpi-sub">bulk plant to customer</div>
+    </div>
+    <div class="kpi orange">
+      <div class="kpi-label">RTC — Direct</div>
+      <div class="kpi-value">${convL(totalRTC)}</div>
+      <div class="kpi-sub">rack to customer</div>
+    </div>
+    <div class="kpi purple">
+      <div class="kpi-label">Remaining Inventory</div>
+      <div class="kpi-value">${convL(remInv)}</div>
+      <div class="kpi-sub">still in bulk plant</div>
+    </div>
+  </div>`;
+
+  // ── Table ──────────────────────────────────────────────────────────────────
   const allHeaders = Object.keys(rows[0]);
   const headers = ['Type', ...allHeaders.filter(h => h !== 'Type' && !h.toLowerCase().includes('total cost'))];
-  let html = `<div class="table-card">
+  html += `<div class="table-card">
     <div class="table-header"><div class="table-title">FIFO Allocation Log</div><div style="font-size:0.72rem;color:var(--muted)">${rows.length} entries</div></div>
     <div class="table-wrap"><table class="fifo-table"><thead><tr>`;
   headers.forEach(h => { html += `<th>${h}</th>`; });
@@ -673,7 +739,7 @@ function renderFifo() {
       if (h === 'Type') {
         html += `<td><span class="type-${(v||'').toLowerCase()}">${v||''}</span></td>`;
       } else if (typeof v === 'number') {
-        html += `<td>${Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</td>`;
+        html += `<td>${fmtV(v)}</td>`;
       } else {
         html += `<td>${v ?? '—'}</td>`;
       }
