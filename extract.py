@@ -459,12 +459,14 @@ def _extract_investment_summary(wb, uploaded_at=None):
         supply_cost_l = _get(row, 'Supply Cost')
         freight       = _get(row, 'Freight Cost')
         commission    = _get(row, 'COMISSION')
+        extra         = _get(row, 'EXTRA')
         fuel_cost     = _get(row, 'Fuel Cost')   # Mexico payment MXN
 
-        # Replicate Excel formulas
-        freight_l  = freight / liters   if liters > 0 else 0.0
-        comm_l     = commission / liters if liters > 0 else 0.0
-        total_cost_l = supply_cost_l + freight_l + comm_l
+        # Replicate Excel formulas (Total Cost/L now includes Extra/L)
+        freight_l    = freight / liters    if liters > 0 else 0.0
+        comm_l       = commission / liters if liters > 0 else 0.0
+        extra_l      = extra / liters      if liters > 0 else 0.0
+        total_cost_l = supply_cost_l + freight_l + comm_l + extra_l
         total_cost   = total_cost_l * liters
 
         if typ == 'BTC':
