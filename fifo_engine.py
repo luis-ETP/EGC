@@ -206,10 +206,10 @@ def run_fifo(SRC, DST):
     # Load Tracking (0-indexed): K(10)=Groups, L(11)=LocationName, O(14)=LocCity,
     #   P(15)=Product, W(22)=NetLiters, Z(25)=TerminalName, AE(30)=BOL,
     #   AR(43)=SupplyCost, AV(47)=TotalCost/L
-    # Write-back (1-indexed): AR(44), BE(57)=Batch, BF(58)=SupplierInv, BG(59)=BOLSource
+    # Write-back (1-indexed): AR(44)=SupplyCost, BE(57)=InvoiceStatus, BF(58)=Batch, BG(59)=SupplierInv, BH(60)=BOLSource, BI(61)=BatchSource
     # ══════════════════════════════════════════════════════════════════════════════
-    ws_lt.cell(row=1, column=59).value = "BOL Source"
-    ws_lt.cell(row=1, column=60).value = "Batch Source"
+    ws_lt.cell(row=1, column=60).value = "BOL Source"
+    ws_lt.cell(row=1, column=61).value = "Batch Source"
 
     inventory      = {}   # (product, bulk_plant) → deque of slots
     fifo_log       = []
@@ -264,10 +264,10 @@ def run_fifo(SRC, DST):
             bol_remaining[bol] = net_liters
 
             ws_lt.cell(row=i, column=44).value = supply_cost
-            ws_lt.cell(row=i, column=57).value = batch_str   # BE Batch
-            ws_lt.cell(row=i, column=58).value = inv_str     # BF Supplier Invoice
-            ws_lt.cell(row=i, column=59).value = ""          # BG BOL Source
-            ws_lt.cell(row=i, column=60).value = ""          # BH Batch Source
+            ws_lt.cell(row=i, column=58).value = batch_str   # BF Batch
+            ws_lt.cell(row=i, column=59).value = inv_str     # BG Supplier Invoice
+            ws_lt.cell(row=i, column=60).value = ""          # BH BOL Source
+            ws_lt.cell(row=i, column=61).value = ""          # BI Batch Source
 
             queue_rem = sum(s["liters"] for s in inventory[key])
             fifo_log.append({
@@ -282,10 +282,10 @@ def run_fifo(SRC, DST):
 
         elif grp == "RTC":
             alloc     = bol_alloc.get(bol, {})
-            ws_lt.cell(row=i, column=57).value = alloc.get("batch_str", "")  # BE Batch
-            ws_lt.cell(row=i, column=58).value = alloc.get("inv_str", "")    # BF Supplier Invoice
-            ws_lt.cell(row=i, column=59).value = ""                           # BG BOL Source
-            ws_lt.cell(row=i, column=60).value = ""                           # BH Batch Source
+            ws_lt.cell(row=i, column=58).value = alloc.get("batch_str", "")  # BF Batch
+            ws_lt.cell(row=i, column=59).value = alloc.get("inv_str", "")    # BG Supplier Invoice
+            ws_lt.cell(row=i, column=60).value = ""                           # BH BOL Source
+            ws_lt.cell(row=i, column=61).value = ""                           # BI Batch Source
 
         elif grp == "BTC":
             remaining, allocations = net_liters, []
@@ -323,10 +323,10 @@ def run_fifo(SRC, DST):
             used_fallback = not any_av and existing_ar > 0
             final_cost  = existing_ar if used_fallback else round(cost_per_l, 6)
             ws_lt.cell(row=i, column=44).value = final_cost
-            ws_lt.cell(row=i, column=57).value = ""           # BE Batch (blank for BTC)
-            ws_lt.cell(row=i, column=58).value = ""           # BF Supplier Invoice (blank for BTC)
-            ws_lt.cell(row=i, column=59).value = bols_str     # BG BOL Source
-            ws_lt.cell(row=i, column=60).value = batch_str    # BH Batch Source
+            ws_lt.cell(row=i, column=58).value = ""           # BF Batch (blank for BTC)
+            ws_lt.cell(row=i, column=59).value = ""           # BG Supplier Invoice (blank for BTC)
+            ws_lt.cell(row=i, column=60).value = bols_str     # BH BOL Source
+            ws_lt.cell(row=i, column=61).value = batch_str    # BI Batch Source
 
             fifo_log.append({
                 "type": "BTC", "ld": ld_num, "pickup": pickup,
