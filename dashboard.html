@@ -571,9 +571,11 @@ function chartOpts(unit) {
 let INV_UNIT = 'L';
 function setInvUnit(u) {
   INV_UNIT = u;
-  document.getElementById('inv-unit-L').classList.toggle('unit-active', u==='L');
-  document.getElementById('inv-unit-G').classList.toggle('unit-active', u==='G');
+  // Remember which batches are open
+  const openIds = [...document.querySelectorAll('.batch-tank.open')].map(el => el.id);
   renderInventory();
+  // Restore open state
+  openIds.forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('open'); });
 }
 function renderInventory() {
   const inv = dashData.inventory || {};
@@ -583,8 +585,8 @@ function renderInventory() {
   const convLInv = v => INV_UNIT === 'L' ? fmtL(v) + ' L' : fmtL(v/3.785411784) + ' gal';
   let html = '<div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem">';
   html += '<div style="display:flex;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden">';
-  html += '<button id="inv-unit-L" onclick="setInvUnit(\'L\')" class="unit-btn unit-active">L</button>';
-  html += '<button id="inv-unit-G" onclick="setInvUnit(\'G\')" class="unit-btn">Gal</button>';
+  html += '<button id="inv-unit-L" onclick="setInvUnit(\'L\')" class="unit-btn' + (INV_UNIT==='L' ? ' unit-active' : '') + '">L</button>';
+  html += '<button id="inv-unit-G" onclick="setInvUnit(\'G\')" class="unit-btn' + (INV_UNIT==='G' ? ' unit-active' : '') + '">Gal</button>';
   html += '</div></div>';
   for (const [bp, products] of Object.entries(inv)) {
     html += `<div class="inv-section"><div class="inv-bp-title">${bp}</div><div class="inv-product-wrap">`;
@@ -674,9 +676,8 @@ function fmtL(v) { return Number(v||0).toLocaleString('en-US',{maximumFractionDi
 let FIFO_UNIT = 'L';
 function setFifoUnit(u) {
   FIFO_UNIT = u;
-  document.getElementById('fifo-unit-L').classList.toggle('unit-active', u==='L');
-  document.getElementById('fifo-unit-G').classList.toggle('unit-active', u==='G');
   renderFifo();
+  // buttons are re-rendered with correct class from FIFO_UNIT state
 }
 
 function renderFifo() {
@@ -717,15 +718,16 @@ function renderFifo() {
   let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">';
   html += '<div style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted)">Flow Summary</div>';
   html += '<div style="display:flex;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden">';
-  html += '<button id="fifo-unit-L" onclick="setFifoUnit(\'L\')" class="unit-btn unit-active">L</button>';
-  html += '<button id="fifo-unit-G" onclick="setFifoUnit(\'G\')" class="unit-btn">Gal</button>';
+  html += '<button id="fifo-unit-L" onclick="setFifoUnit(\'L\')" class="unit-btn' + (FIFO_UNIT==='L' ? ' unit-active' : '') + '">L</button>';
+  html += '<button id="fifo-unit-G" onclick="setFifoUnit(\'G\')" class="unit-btn' + (FIFO_UNIT==='G' ? ' unit-active' : '') + '">Gal</button>';
   html += '</div></div>';
 
-  // Flow summary cards (3)
-  html += '<div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">';
-  html += '<div class="kpi blue"><div class="kpi-label">RTB — Into Inventory</div><div class="kpi-value">' + convL(totalRTB) + '</div><div class="kpi-sub">total purchased into bulk plant</div></div>';
-  html += '<div class="kpi green"><div class="kpi-label">BTC — Delivered</div><div class="kpi-value">' + convL(totalBTC) + '</div><div class="kpi-sub">bulk plant to customer · FIFO tracked</div></div>';
+  // Flow summary cards (4 — RTB, BTC, Remaining, RTC)
+  html += '<div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">';
+  html += '<div class="kpi blue"><div class="kpi-label">RTB</div><div class="kpi-value">' + convL(totalRTB) + '</div><div class="kpi-sub">total purchased into bulk plant</div></div>';
+  html += '<div class="kpi green"><div class="kpi-label">BTC</div><div class="kpi-value">' + convL(totalBTC) + '</div><div class="kpi-sub">bulk plant to customer · FIFO tracked</div></div>';
   html += '<div class="kpi purple"><div class="kpi-label">Remaining in Inventory</div><div class="kpi-value">' + convL(remInv) + '</div><div class="kpi-sub">still in bulk plant</div></div>';
+  html += '<div class="kpi orange"><div class="kpi-label">RTC</div><div class="kpi-value">' + convL(totalRTC) + '</div><div class="kpi-sub">rack to customer · does not affect FIFO or inventory</div></div>';
   html += '</div>';
 
   // Per-product inventory cards
@@ -739,18 +741,10 @@ function renderFifo() {
     html += '<div style="font-size:0.8rem;font-weight:700;color:var(--text);margin-bottom:0.75rem">' + d.prod + ' &nbsp;<span style="color:var(--muted);font-weight:400;font-size:0.72rem">· ' + d.bp + '</span></div>';
     html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem">';
     html += '<div><div class="kpi-label">Remaining</div><div style="font-size:1rem;font-weight:700">' + convL(d.remL) + '</div></div>';
-    html += '<div><div class="kpi-label">Avg Cost</div><div style="font-size:1rem;font-weight:700">' + avgCost.toFixed(4) + ' <span style="font-size:0.65rem;color:var(--muted)">MXN/L</span></div></div>';
+    html += '<div><div class="kpi-label">Avg Cost in Inventory</div><div style="font-size:1rem;font-weight:700">' + avgCost.toFixed(4) + ' <span style="font-size:0.65rem;color:var(--muted)">MXN/L</span></div></div>';
     html += '<div><div class="kpi-label">Next Cost/L</div><div style="font-size:1rem;font-weight:700;color:var(--accent)">' + d.nextCost.toFixed(4) + ' <span style="font-size:0.65rem;color:var(--muted)">MXN/L</span></div></div>';
     html += '</div></div>';
   });
-  html += '</div>';
-
-  // RTC section
-  html += '<div style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem">RTC — Rack to Customer';
-  html += ' <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(direct · does not affect bulk inventory or FIFO cost)</span></div>';
-  html += '<div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:1.5rem">';
-  html += '<div class="kpi orange"><div class="kpi-label">Total RTC Volume</div><div class="kpi-value">' + convL(totalRTC) + '</div><div class="kpi-sub">rack direct to customer</div></div>';
-  html += '<div class="kpi" style="opacity:0.5"><div class="kpi-label">FIFO Impact</div><div class="kpi-value">None</div><div class="kpi-sub">RTC bypasses bulk inventory</div></div>';
   html += '</div>';
 
   // Table
@@ -1068,10 +1062,10 @@ function renderBol() {
       <td>${r.product}</td>
       <td style="font-weight:500">${r.bol}</td>
       <td style="text-align:right">${fn(r.gallons)}</td>
-      <td style="text-align:right">${r.cost_gal>0 ? '$'+fd(r.cost_gal) : '—'}</td>
+      <td style="text-align:right">${r.cost_gal_usd>0 ? '$'+fd(r.cost_gal_usd) : '—'}</td>
       <td style="text-align:right">${r.fx_payment>0 ? fd(r.fx_payment,4) : '—'}</td>
-      <td style="color:var(--muted2);font-size:0.72rem">${r.invoice || '—'}</td>
-      <td style="text-align:right">${r.inv_amount>0 ? fu(r.inv_amount) : '—'}</td>
+      <td style="color:var(--muted2);font-size:0.72rem">${r.invoice_num || '—'}</td>
+      <td style="text-align:right">${r.invoice_amt>0 ? fu(r.invoice_amt) : '—'}</td>
       <td style="text-align:right">${r.received>0 ? fu(r.received) : '—'}</td>
       <td style="text-align:right;font-weight:600;color:${balColor};background:${balBg};border-radius:4px;padding:0.3rem 0.6rem">${r.status==='not_invoiced' ? '<span style="font-weight:400;font-size:0.7rem">Not invoiced</span>' : fu(r.balance)}</td>
     </tr>`;
