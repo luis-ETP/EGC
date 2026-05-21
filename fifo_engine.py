@@ -449,6 +449,15 @@ def run_fifo(SRC, DST):
         dat(ws_f.cell(row=row_num, column=5), round(avg_cost, 6),
             num_fmt="#,##0.0000", fill=FILL_SUBHDR)
 
+    # ── Timestamp ─────────────────────────────────────────────────────────────
+    from datetime import datetime as _dt
+    ts_row = summary_data_start + len(inv_items) + 1
+    ws_f.cell(row=ts_row, column=1).value = "Last updated"
+    ws_f.cell(row=ts_row, column=1).font  = Font(italic=True, size=9, color="888888")
+    ts_cell = ws_f.cell(row=ts_row, column=2)
+    ts_cell.value = _dt.now().strftime("%d-%b-%Y  %H:%M")
+    ts_cell.font  = Font(italic=True, size=9, color="888888")
+
     # Overall Summary — skip gracefully if tab deleted
     try:
         # ══════════════════════════════════════════════════════════════════════════════
