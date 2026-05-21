@@ -470,9 +470,9 @@ def _extract_investment_summary(wb, uploaded_at=None):
         total_cost   = total_cost_l * liters
 
         if typ == 'BTC':
-            price_l    = (fuel_cost / liters) + freight_l + comm_l if liters > 0 else 0.0
+            price_l    = (fuel_cost / liters) + freight_l + comm_l + extra_l if liters > 0 else 0.0
         elif typ == 'RTC':
-            price_l    = (fuel_cost / liters) + freight_l + comm_l if liters > 0 else 0.0
+            price_l    = (fuel_cost / liters) + freight_l + comm_l + extra_l if liters > 0 else 0.0
         else:
             price_l    = 0.0
 
