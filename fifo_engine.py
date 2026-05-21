@@ -239,8 +239,16 @@ def run_fifo(SRC, DST):
 
         if grp == "RTB":
             supply_cost  = float(row[43]) if row[43] else 0.0
-            av_available = row[47] is not None
-            total_cost_l = float(row[47]) if row[47] else (float(row[43]) if row[43] else 0.0)
+            freight_cost = float(row[39]) if row[39] else 0.0
+            commission   = float(row[44]) if row[44] else 0.0
+            extra        = float(row[45]) if row[45] else 0.0
+            # Compute Total Cost/L from raw values — don't rely on formula cache
+            # FreightCost/L + Supply Cost + Comission/L + Extra/L
+            freight_l    = freight_cost / net_liters if net_liters > 0 else 0.0
+            comm_l       = commission   / net_liters if net_liters > 0 else 0.0
+            extra_l      = extra        / net_liters if net_liters > 0 else 0.0
+            total_cost_l = supply_cost + freight_l + comm_l + extra_l
+            av_available = row[47] is not None  # kept for legacy compat
             alloc        = bol_alloc.get(bol, {})
             batch_str    = alloc.get("batch_str", "")
             inv_str      = alloc.get("inv_str", "")
