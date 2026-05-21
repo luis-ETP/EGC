@@ -140,12 +140,51 @@ def _extract_overall_summary(wb, wb_fifo=None):
     except Exception:
         pass
 
+    # Col X (Remainder Gallons Paid and No BOL) = remaining in allocation per supplier
+    rem_alloc_gal = defaultdict(float)
+    try:
+        ws_si3 = wb["Supplier Invoices"]
+        si_rows3 = list(ws_si3.iter_rows(values_only=True))
+        si_hdr3 = next((i for i, r in enumerate(si_rows3) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
+        if si_hdr3 is not None:
+            sc3 = {str(v).strip(): j for j, v in enumerate(si_rows3[si_hdr3]) if v}
+            col_x = sc3.get("Remainder Gallons Paid and No BOL", 23)
+            for row in si_rows3[si_hdr3 + 1:]:
+                if not any(row): break
+                s = str(row[sc3.get("Supplier", 2)] or "").strip()
+                if not s or s == "Total": continue
+                rem_alloc_gal[s] += f(row[col_x])
+    except Exception:
+        pass
+
+    # Per-supplier paid_back and balance from BOL sheet (convert MXN→USD using FX)
+    sup_paid_back = defaultdict(float)
+    sup_balance   = defaultdict(float)
+    try:
+        ws_bol2 = wb["Purchase to BOL-RTB"]
+        bol_rows2 = list(ws_bol2.iter_rows(values_only=True))
+        bh2 = {str(v).strip(): j for j, v in enumerate(bol_rows2[6]) if v}
+        for row in bol_rows2[7:]:
+            if not row[0]: continue
+            raw_s = str(row[bh2.get("Supplier", 2)] or "").strip()
+            s = _match(raw_s)
+            recv_usd = f(row[bh2.get("Received Payments", 20)])
+            inv_num  = row[bh2.get("Invoice #", 17)]
+            bal_usd  = f(row[bh2.get("Balance", 21)]) if inv_num else 0.0
+            # Received and Balance are already in USD
+            if recv_usd > 0:
+                sup_paid_back[s] += recv_usd
+            if bal_usd > 0 and inv_num:
+                sup_balance[s] += bal_usd
+    except Exception:
+        pass
+
     result = []
     for s in sup_data:
         d = sup_data[s]
         pulled   = pulled_gal.get(s, 0.0)
         rem_inv  = rem_inv_gal.get(s, 0.0)
-        rem_alloc = max(0.0, d["paid_gal"] - pulled - rem_inv)
+        rem_alloc = rem_alloc_gal.get(s, 0.0)
         inv_mxn  = rem_inv_mxn.get(s, 0.0)
         avg_cost = (inv_mxn / (rem_inv * 3.7854)) if rem_inv > 0 else 0.0
         result.append({
@@ -153,23 +192,26 @@ def _extract_overall_summary(wb, wb_fifo=None):
             "_wired": d["wired"], "_paid_gal": d["paid_gal"],
             "_pulled": pulled, "_rem_alloc": rem_alloc,
             "_rem_inv": rem_inv, "_avg_cost": avg_cost,
-            "_paid_back": 0.0, "_balance": 0.0,
+            "_paid_back": sup_paid_back.get(s, 0.0),
+            "_balance":   sup_balance.get(s, 0.0),
         })
 
-    total_wired    = sum(d["wired"]    for d in sup_data.values())
-    total_paid_gal = sum(d["paid_gal"] for d in sup_data.values())
-    total_pulled   = sum(pulled_gal.values())
-    total_rem_inv  = sum(rem_inv_gal.values())
-    total_inv_mxn  = sum(rem_inv_mxn.values())
-    total_avg_cost = (total_inv_mxn / (total_rem_inv * 3.7854)) if total_rem_inv > 0 else 0.0
-    total_rem_alloc = max(0.0, total_paid_gal - total_pulled - total_rem_inv)
+    total_wired     = sum(d["wired"]    for d in sup_data.values())
+    total_paid_gal  = sum(d["paid_gal"] for d in sup_data.values())
+    total_pulled    = sum(pulled_gal.values())
+    total_rem_inv   = sum(rem_inv_gal.values())
+    total_inv_mxn   = sum(rem_inv_mxn.values())
+    total_avg_cost  = (total_inv_mxn / (total_rem_inv * 3.7854)) if total_rem_inv > 0 else 0.0
+    total_rem_alloc = sum(rem_alloc_gal.values())
+    total_paid_back = sum(sup_paid_back.values())
+    total_balance   = sum(sup_balance.values())
 
     result.append({
         "Row Labels": "Total",
         "_wired": total_wired, "_paid_gal": total_paid_gal,
         "_pulled": total_pulled, "_rem_alloc": total_rem_alloc,
         "_rem_inv": total_rem_inv, "_avg_cost": total_avg_cost,
-        "_paid_back": total_received, "_balance": total_balance,
+        "_paid_back": total_paid_back, "_balance": total_balance,
     })
     return result
 
