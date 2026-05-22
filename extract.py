@@ -16,7 +16,7 @@ def extract(path, src_path=None):
     fifo_rows       = _extract_fifo(wb)
     meta            = _extract_meta(wb_src, wb_fifo=wb)
 
-    bol_tab         = _extract_bol(wb_src)
+    bol_tab         = _extract_bol(wb, wb_src=wb_src)
     overview_exp    = _extract_overview(wb_src)
     investment      = _extract_investment_summary(wb_src)
     return overall_summary, inventory, fifo_rows, meta, investment, bol_tab, overview_exp
@@ -562,10 +562,19 @@ def _extract_investment_summary(wb, uploaded_at=None):
 
 
 # ── Purchase BOLs tab ──────────────────────────────────────────────────────────
-def _extract_bol(wb):
+def _extract_bol(wb, wb_src=None):
     try:
         ws = wb["Purchase to BOL-RTB"]
         rows = list(ws.iter_rows(values_only=True))
+        # Also load source rows for fallback (freight, invoice amounts)
+        src_rows = None
+        if wb_src is not None:
+            try:
+                ws_src = wb_src["Purchase to BOL-RTB"]
+                src_rows = list(ws_src.iter_rows(values_only=True))
+            except Exception:
+                pass
+
         # Find header row
         header_row = None
         for i, row in enumerate(rows):
@@ -618,22 +627,30 @@ def _extract_bol(wb):
         col_freight_gal = _col('Freight/Gal', 15)
 
         result_rows = []
-        for row in rows[header_row + 1:]:
+        for row_idx, row in enumerate(rows[header_row + 1:]):
             if not row[0] and not (col_supplier and row[col_supplier]):
                 if not any(v for v in row):
                     break
                 continue
 
-            gallons      = f(row[col_gal])      if col_gal      is not None else 0.0
-            cost_adder   = f(row[col_total_gal]) if col_total_gal is not None else 0.0  # Cost/Gal + Adder
-            freight_gal  = f(row[col_freight_gal]) if col_freight_gal is not None else 0.0
-            received     = f(row[col_received])  if col_received  is not None else 0.0
-            inv_num      = str(row[col_inv_num] or '') if col_inv_num is not None else ''
+            # Use source row as fallback for freight/cost values the engine may not write
+            src_row = src_rows[header_row + 1 + row_idx] if src_rows and header_row + 1 + row_idx < len(src_rows) else None
+
+            gallons    = f(row[col_gal])        if col_gal        is not None else 0.0
+            cost_adder = f(row[col_total_gal])  if col_total_gal  is not None else 0.0
+
+            # Freight/gal: prefer output, fall back to source
+            freight_gal = f(row[col_freight_gal]) if col_freight_gal is not None else 0.0
+            if freight_gal == 0 and src_row is not None and col_freight_gal is not None:
+                freight_gal = f(src_row[col_freight_gal])
+
+            received = f(row[col_received]) if col_received is not None else 0.0
+            inv_num  = str(row[col_inv_num] or '') if col_inv_num is not None else ''
 
             # Compute formula columns from raw values
             liters       = gallons * 3.78541178
-            total_cost_g = cost_adder + freight_gal          # Total Cost/Gal = Cost/Gal+Adder + Freight/Gal
-            invoice_amt  = total_cost_g * gallons             # Invoice Amount = Total Cost/Gal * Gallons
+            total_cost_g = cost_adder + freight_gal
+            invoice_amt  = total_cost_g * gallons
             balance      = (invoice_amt - received) if inv_num else invoice_amt
 
             r = {
