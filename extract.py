@@ -611,7 +611,11 @@ def _extract_bol(wb):
                 col_fx = j
                 break
 
-        f = lambda v: float(v) if isinstance(v, (int, float)) else None
+        fv = lambda v: float(v) if isinstance(v, (int, float)) else None
+        f  = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
+
+        # Col indices for raw (non-formula) fields
+        col_freight_gal = _col('Freight/Gal', 15)
 
         result_rows = []
         for row in rows[header_row + 1:]:
@@ -619,26 +623,39 @@ def _extract_bol(wb):
                 if not any(v for v in row):
                     break
                 continue
+
+            gallons      = f(row[col_gal])      if col_gal      is not None else 0.0
+            cost_adder   = f(row[col_total_gal]) if col_total_gal is not None else 0.0  # Cost/Gal + Adder
+            freight_gal  = f(row[col_freight_gal]) if col_freight_gal is not None else 0.0
+            received     = f(row[col_received])  if col_received  is not None else 0.0
+            inv_num      = str(row[col_inv_num] or '') if col_inv_num is not None else ''
+
+            # Compute formula columns from raw values
+            liters       = gallons * 3.78541178
+            total_cost_g = cost_adder + freight_gal          # Total Cost/Gal = Cost/Gal+Adder + Freight/Gal
+            invoice_amt  = total_cost_g * gallons             # Invoice Amount = Total Cost/Gal * Gallons
+            balance      = (invoice_amt - received) if inv_num else invoice_amt
+
             r = {
-                "bol":          str(row[col_bol] or '') if col_bol is not None else '',
+                "bol":          str(row[col_bol] or '')      if col_bol      is not None else '',
                 "supplier":     str(row[col_supplier] or '') if col_supplier is not None else '',
-                "inv_num":      str(row[col_inv] or '') if col_inv is not None else '',
-                "batch":        str(row[col_batch] or '') if col_batch is not None else '',
-                "gallons":      f(row[col_gal]) if col_gal is not None else None,
-                "liters":       f(row[col_lit]) if col_lit is not None else None,
-                "product":      str(row[col_prod] or '') if col_prod is not None else '',
-                "cost_gal_usd": f(row[col_cost_gal]) if col_cost_gal is not None else None,
-                "adder":        f(row[col_adder]) if col_adder is not None else None,
-                "total_gal":    f(row[col_total_gal]) if col_total_gal is not None else None,
-                "mxn_l":        f(row[col_mxnl]) if col_mxnl is not None else None,
-                "carrier":      str(row[col_carrier] or '') if col_carrier is not None else '',
-                "freight":      f(row[col_freight]) if col_freight is not None else None,
-                "invoice_num":  str(row[col_inv_num] or '') if col_inv_num is not None else '',
-                "invoice_amt":  f(row[col_inv_amt]) if col_inv_amt is not None else None,
+                "inv_num":      str(row[col_inv] or '')      if col_inv      is not None else '',
+                "batch":        str(row[col_batch] or '')    if col_batch    is not None else '',
+                "gallons":      gallons if gallons else None,
+                "liters":       liters  if gallons else None,
+                "product":      str(row[col_prod] or '')     if col_prod     is not None else '',
+                "cost_gal_usd": total_cost_g if total_cost_g else None,
+                "adder":        fv(row[col_adder])           if col_adder    is not None else None,
+                "total_gal":    cost_adder if cost_adder else None,
+                "mxn_l":        fv(row[col_mxnl])            if col_mxnl     is not None else None,
+                "carrier":      str(row[col_carrier] or '')  if col_carrier  is not None else '',
+                "freight":      fv(row[col_freight])          if col_freight  is not None else None,
+                "invoice_num":  inv_num,
+                "invoice_amt":  invoice_amt if invoice_amt else None,
                 "customer":     str(row[col_customer] or '') if col_customer is not None else '',
-                "received":     f(row[col_received]) if col_received is not None else None,
-                "balance":      f(row[col_balance]) if col_balance is not None else None,
-                "fx_payment":   f(row[col_fx]) if col_fx is not None else None,
+                "received":     received if received else None,
+                "balance":      balance,
+                "fx_payment":   fv(row[col_fx])              if col_fx       is not None else None,
             }
             if r["bol"] or r["supplier"]:
                 result_rows.append(r)
