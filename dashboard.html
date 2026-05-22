@@ -274,6 +274,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
             <span id="fileLabel">Click to upload or drag & drop .xlsx</span>
           </div>
           <button class="run-btn" id="runBtn" disabled onclick="processFile()">Run FIFO Engine</button>
+          <button onclick="syncSharePoint()" style="padding:0.55rem 1rem;background:#1a7f37;color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:0.5rem;font-family:var(--font)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Sync from SharePoint</button>
           <div style="display:flex;align-items:center;gap:0.5rem;border-left:1px solid var(--border);padding-left:0.75rem;margin-left:0.25rem">
             <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">LPA Markup</span>
             <span style="font-size:0.72rem;color:var(--muted)">$</span>
@@ -1354,6 +1355,34 @@ async function loadMarkupSetting() {
     const inp = document.getElementById('markupInput');
     if (inp && d.markup_usd != null) inp.value = d.markup_usd;
   } catch(e) { console.error('loadMarkupSetting:', e); }
+}
+
+// ── SharePoint Sync ───────────────────────────────────────────────────────────
+async function syncSharePoint() {
+  const lbl = document.getElementById('fileLabel');
+  const orig = lbl ? lbl.textContent : '';
+  if (lbl) lbl.textContent = '⏳ Syncing from SharePoint…';
+  try {
+    const res  = await fetch('/sync_sharepoint', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      if (lbl) lbl.textContent = '❌ ' + (data.error || 'Sync failed');
+      setTimeout(() => { if (lbl) lbl.textContent = orig; }, 5000);
+      return;
+    }
+    // Download output file
+    const bytes = atob(data.file_b64);
+    const arr   = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+    const blob  = new Blob([arr], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const a     = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: data.filename});
+    a.click(); URL.revokeObjectURL(a.href);
+    if (lbl) lbl.textContent = '✅ Synced — refreshing dashboard…';
+    setTimeout(() => { if (lbl) lbl.textContent = orig; loadData(); }, 2000);
+  } catch(e) {
+    if (lbl) lbl.textContent = '❌ Network error';
+    setTimeout(() => { if (lbl) lbl.textContent = orig; }, 3000);
+  }
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────
