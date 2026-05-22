@@ -449,14 +449,20 @@ def run_fifo(SRC, DST):
         dat(ws_f.cell(row=row_num, column=5), round(avg_cost, 6),
             num_fmt="#,##0.0000", fill=FILL_SUBHDR)
 
-    # ── Timestamp ─────────────────────────────────────────────────────────────
-    from datetime import datetime as _dt
-    ts_row = summary_data_start + len(inv_items) + 1
-    ws_f.cell(row=ts_row, column=1).value = "Last updated"
-    ws_f.cell(row=ts_row, column=1).font  = Font(italic=True, size=9, color="888888")
-    ts_cell = ws_f.cell(row=ts_row, column=2)
-    ts_cell.value = _dt.now().strftime("%d-%b-%Y  %H:%M")
-    ts_cell.font  = Font(italic=True, size=9, color="888888")
+    # ── Timestamp in Purchase to BOL-RTB col Q row 1 ─────────────────────────
+    from datetime import datetime as _dt, timezone, timedelta
+    try:
+        _utc   = _dt.now(timezone.utc)
+        _ct    = _utc + timedelta(hours=-5)   # US Central (CDT, UTC-5)
+        _cdmx  = _utc + timedelta(hours=-6)   # CDMX (UTC-6)
+        _ts_str = (f"Last updated: {_ct.strftime('%d-%b-%Y %H:%M')} CT  |  "
+                   f"{_cdmx.strftime('%H:%M')} CDMX")
+        ws_bol_ts = wb["Purchase to BOL-RTB"]
+        ts_cell = ws_bol_ts.cell(row=1, column=17)  # col Q
+        ts_cell.value = _ts_str
+        ts_cell.font  = Font(italic=True, size=9, color="888888")
+    except Exception:
+        pass
 
     # Overall Summary — skip gracefully if tab deleted
     try:
