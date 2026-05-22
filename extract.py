@@ -594,7 +594,7 @@ def _extract_bol(wb):
         col_gal      = _col('Gallons', 6)
         col_lit      = _col('Liters', 7)
         col_prod     = _col('Product', 8)
-        col_cost_gal = _col('Cost/Gal USD', 9)
+        col_cost_gal = _col('Total Cost /Gal', 16)  # total cost incl freight
         col_adder    = _col('Adder', 10)
         col_total_gal= _col('Cost/Gal + Adder', 11)
         col_mxnl     = _col('Supply Cost DashFuel', 12)
@@ -650,20 +650,11 @@ def _extract_bol(wb):
         # Open balance only for rows that have an invoice number
         open_balance      = sum(f2(r["balance"]) for r in result_rows if r.get("invoice_num") and f2(r.get("balance", 0)) > 0)
 
-        # Not invoiced yet: rows with no invoice number but have a BOL
-        # Read from BOL sheet header area (rows 2-5 before data)
-        total_not_invoiced = 0.0
-        try:
-            for row in ws.iter_rows(min_row=1, max_row=6, values_only=True):
-                for cell in row:
-                    if cell and "Total NOT Invoiced" in str(cell):
-                        # value is in next cell on same row
-                        row_vals = list(row)
-                        idx = row_vals.index(cell)
-                        if idx + 1 < len(row_vals) and isinstance(row_vals[idx+1], (int, float)):
-                            total_not_invoiced = float(row_vals[idx+1])
-        except Exception:
-            pass
+        # Not invoiced yet: BOL rows with no invoice number — compute directly
+        total_not_invoiced = sum(
+            f2(r["invoice_amt"]) for r in result_rows
+            if not r.get("invoice_num") and r.get("invoice_amt")
+        )
 
         # Add status to each row
         for r in result_rows:
