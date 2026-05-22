@@ -1,5 +1,10 @@
 from flask import Flask, request, Response, render_template_string, jsonify, session, redirect, url_for
 import os, json, shutil, tempfile, base64
+try:
+    import msal, requests as _requests
+    MSAL_AVAILABLE = True
+except ImportError:
+    MSAL_AVAILABLE = False
 from fifo_engine import run_fifo
 from extract import extract
 from db import init_db, save_data, load_data, get_setting, set_setting, init_settings
@@ -207,6 +212,98 @@ def get_settings():
     if 'user' not in session or session['role'] != 'admin':
         return jsonify(error='Unauthorized'), 403
     return jsonify(markup_usd=float(get_setting('markup_usd', '0.02')))
+
+# ── SharePoint Sync ────────────────────────────────────────────────────────────
+@app.route('/sync_sharepoint', methods=['POST'])
+def sync_sharepoint():
+    if session.get('role') != 'admin':
+        return jsonify(error='Unauthorized'), 403
+    if not MSAL_AVAILABLE:
+        return jsonify(error='msal not installed'), 500
+
+    tenant_id     = os.environ.get('MS_TENANT_ID', '')
+    client_id     = os.environ.get('MS_CLIENT_ID', '')
+    client_secret = os.environ.get('MS_CLIENT_SECRET', '')
+    sp_host       = os.environ.get('SP_HOST', 'diamondgasllc.sharepoint.com')
+    sp_site       = os.environ.get('SP_SITE', 'ETPMEX')
+    sp_file       = os.environ.get('SP_FILE', 'Shared Documents/Master.xlsx')
+
+    if not all([tenant_id, client_id, client_secret]):
+        return jsonify(error='SharePoint credentials not configured'), 500
+
+    try:
+        # Get token
+        authority = f"https://login.microsoftonline.com/{tenant_id}"
+        app_msal  = msal.ConfidentialClientApplication(
+            client_id, authority=authority, client_credential=client_secret
+        )
+        result = app_msal.acquire_token_for_client(
+            scopes=["https://graph.microsoft.com/.default"]
+        )
+        if "access_token" not in result:
+            return jsonify(error=f"Auth failed: {result.get('error_description', result.get('error'))}"), 500
+
+        token   = result["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Get site ID
+        site_resp = _requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{sp_host}:/sites/{sp_site}",
+            headers=headers, timeout=15
+        )
+        if not site_resp.ok:
+            return jsonify(error=f"Site not found: {site_resp.status_code} {site_resp.text[:200]}"), 500
+        site_id = site_resp.json()["id"]
+
+        # Get drive item by path
+        encoded_path = sp_file.replace(" ", "%20")
+        item_resp = _requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_id}/drive/root:/{encoded_path}",
+            headers=headers, timeout=15
+        )
+        if not item_resp.ok:
+            return jsonify(error=f"File not found: {item_resp.status_code} {item_resp.text[:200]}"), 500
+
+        item      = item_resp.json()
+        file_name = item["name"]
+        modified  = item.get("lastModifiedDateTime", "")
+
+        # Download file content
+        dl_resp = _requests.get(
+            item["@microsoft.graph.downloadUrl"],
+            timeout=60
+        )
+        if not dl_resp.ok:
+            return jsonify(error="Failed to download file"), 500
+
+        # Run FIFO engine + extract
+        tmp = tempfile.mkdtemp()
+        try:
+            src = os.path.join(tmp, 'input.xlsx')
+            dst = os.path.join(tmp, 'output.xlsx')
+            with open(src, 'wb') as f:
+                f.write(dl_resp.content)
+            run_fifo(src, dst)
+            result_data = extract(dst, src_path=src)
+            save_data(file_name, *result_data)
+
+            # Return output file for download
+            with open(dst, 'rb') as f:
+                out_bytes = f.read()
+            b64 = base64.b64encode(out_bytes).decode()
+            return jsonify(
+                ok=True,
+                filename=file_name.replace('.xlsx', '_FIFO.xlsx'),
+                file_b64=b64,
+                modified=modified
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    except Exception as e:
+        import traceback
+        return jsonify(error=str(e), trace=traceback.format_exc()), 500
+
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
