@@ -77,9 +77,14 @@ def _extract_overall_summary(wb, wb_fifo=None):
 
     # Pulled gallons: sum Gallons from Purchase to BOL-RTB for every row with a BOL number
     # (has a BOL = has been pulled from allocation). This is the source of truth.
-    pulled_gal  = defaultdict(float)
-    rem_inv_gal = defaultdict(float)
-    rem_inv_mxn = defaultdict(float)
+    # Remaining in allocation: rows with NO BOL = paid for but not yet pulled.
+    # Wtd. Avg Rate: weighted by no-BOL gallons × Cost/Gal+Adder from same sheet.
+    pulled_gal    = defaultdict(float)
+    rem_alloc_gal = defaultdict(float)
+    wtd_rate_num  = defaultdict(float)  # Σ(rate × rem_gal)
+    wtd_rate_den  = defaultdict(float)  # Σ(rem_gal)
+    rem_inv_gal   = defaultdict(float)
+    rem_inv_mxn   = defaultdict(float)
 
     # Also build bol_sup map (BOL → supplier) in the same pass
     bol_sup = {}
@@ -87,18 +92,28 @@ def _extract_overall_summary(wb, wb_fifo=None):
         ws_bol_pulled = wb["Purchase to BOL-RTB"]
         bp_rows = list(ws_bol_pulled.iter_rows(values_only=True))
         bp_hdr = {str(v).strip(): j for j, v in enumerate(bp_rows[6]) if v}
-        col_bp_bol = bp_hdr.get("BOL", 5)
-        col_bp_sup = bp_hdr.get("Supplier", 2)
-        col_bp_gal = bp_hdr.get("Gallons", 6)
+        col_bp_bol  = bp_hdr.get("BOL", 5)
+        col_bp_sup  = bp_hdr.get("Supplier", 2)
+        col_bp_gal  = bp_hdr.get("Gallons", 6)
+        col_bp_rate = bp_hdr.get("Cost/Gal + Adder", 11)  # Rate (usd/gal)
         for row in bp_rows[7:]:
             if not any(row): break
             bol_val = row[col_bp_bol]
             raw_s   = str(row[col_bp_sup] or "").strip()
             s       = _match(raw_s)
+            if not s: continue
+            gal  = f(row[col_bp_gal])
+            rate = f(row[col_bp_rate])
             if bol_val:
+                # Has BOL → pulled from allocation
                 bol_sup[str(bol_val)] = raw_s  # for FIFO remaining lookup
-                if s:
-                    pulled_gal[s] += f(row[col_bp_gal])
+                pulled_gal[s] += gal
+            else:
+                # No BOL → still in allocation (remaining)
+                rem_alloc_gal[s] += gal
+                if gal > 0 and rate > 0:
+                    wtd_rate_num[s] += rate * gal
+                    wtd_rate_den[s] += gal
     except Exception:
         pass
 
@@ -133,33 +148,7 @@ def _extract_overall_summary(wb, wb_fifo=None):
     except Exception:
         pass
 
-    # Col X (Remainder Gallons Paid and No BOL) = remaining in allocation per supplier
-    # Col L (Rate usd/gal) weighted by col X = weighted avg rate per supplier
-    rem_alloc_gal = defaultdict(float)
-    wtd_rate_num  = defaultdict(float)  # Σ(rate × rem_gal)
-    wtd_rate_den  = defaultdict(float)  # Σ(rem_gal)
-    try:
-        ws_si3 = wb["Supplier Invoices"]
-        si_rows3 = list(ws_si3.iter_rows(values_only=True))
-        si_hdr3 = next((i for i, r in enumerate(si_rows3) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
-        if si_hdr3 is not None:
-            sc3 = {str(v).strip(): j for j, v in enumerate(si_rows3[si_hdr3]) if v}
-            col_x    = sc3.get("Remainder Gallons Paid and No BOL", 23)
-            col_rate = sc3.get("Rate (usd/gal)", 11)  # Column L
-            for row in si_rows3[si_hdr3 + 1:]:
-                if not any(row): break
-                s = str(row[sc3.get("Supplier", 2)] or "").strip()
-                if not s or s == "Total": continue
-                rem_gal = f(row[col_x])
-                rate    = f(row[col_rate])
-                rem_alloc_gal[s] += rem_gal
-                if rem_gal > 0 and rate > 0:
-                    wtd_rate_num[s] += rate * rem_gal
-                    wtd_rate_den[s] += rem_gal
-    except Exception:
-        pass
-
-    # Per-supplier paid_back and balance from BOL sheet (convert MXN→USD using FX)
+    # Per-supplier paid_back and balance from BOL sheet
     sup_paid_back = defaultdict(float)
     sup_balance   = defaultdict(float)
     try:
