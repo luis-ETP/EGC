@@ -713,7 +713,7 @@ function renderFifo() {
     invByProd[key].remL += rem;
     if (cpl > 0) invByProd[key].costs.push([lit, cpl]);
     if (rem > 0) invByProd[key].remCosts.push([rem, cpl]);  // for avg cost
-    if (rem > 0) invByProd[key].nextCost = cpl;
+    if (rem > 0 && invByProd[key].nextCost === 0) invByProd[key].nextCost = cpl;  // first RTB with rem > 0
   });
 
   // Toggle UI
