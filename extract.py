@@ -72,42 +72,35 @@ def _extract_overall_summary(wb, wb_fifo=None):
     except Exception:
         pass
 
-    # Pulled gallons: use Supplier Invoices col W (Net RTB Gallons) — already computed there
-    # Remaining inventory: use FIFO Remaining L (BOL) per supplier
+    si_names = {s.upper(): s for s in sup_data}
+    def _match(raw): return si_names.get(raw.upper(), raw)
+
+    # Pulled gallons: sum Gallons from Purchase to BOL-RTB for every row with a BOL number
+    # (has a BOL = has been pulled from allocation). This is the source of truth.
     pulled_gal  = defaultdict(float)
     rem_inv_gal = defaultdict(float)
     rem_inv_mxn = defaultdict(float)
 
-    # Col W (Net RTB Gallons) from SI — gallons pulled from allocation per invoice row
-    try:
-        ws_si2 = wb["Supplier Invoices"]
-        si_rows2 = list(ws_si2.iter_rows(values_only=True))
-        si_hdr2 = next((i for i, r in enumerate(si_rows2) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
-        if si_hdr2 is not None:
-            sc2 = {str(v).strip(): j for j, v in enumerate(si_rows2[si_hdr2]) if v}
-            col_w = sc2.get("Net RTB Gallons", 22)
-            for row in si_rows2[si_hdr2 + 1:]:
-                if not any(row): break
-                s = str(row[sc2.get("Supplier", 2)] or "").strip()
-                if not s or s == "Total": continue
-                pulled_gal[s] += f(row[col_w])
-    except Exception:
-        pass
-
-    # Remaining inventory from FIFO sheet (Remaining L per BOL, need BOL→supplier map)
+    # Also build bol_sup map (BOL → supplier) in the same pass
     bol_sup = {}
     try:
-        ws_bol_rtb = wb["Purchase to BOL-RTB"]
-        bol_rows = list(ws_bol_rtb.iter_rows(values_only=True))
-        bh = {str(v).strip(): j for j, v in enumerate(bol_rows[6]) if v}
-        for row in bol_rows[7:]:
-            if not row[bh.get("BOL", 5)]: continue
-            bol_sup[str(row[bh["BOL"]])] = str(row[bh.get("Supplier", 2)] or "").strip()
+        ws_bol_pulled = wb["Purchase to BOL-RTB"]
+        bp_rows = list(ws_bol_pulled.iter_rows(values_only=True))
+        bp_hdr = {str(v).strip(): j for j, v in enumerate(bp_rows[6]) if v}
+        col_bp_bol = bp_hdr.get("BOL", 5)
+        col_bp_sup = bp_hdr.get("Supplier", 2)
+        col_bp_gal = bp_hdr.get("Gallons", 6)
+        for row in bp_rows[7:]:
+            if not any(row): break
+            bol_val = row[col_bp_bol]
+            raw_s   = str(row[col_bp_sup] or "").strip()
+            s       = _match(raw_s)
+            if bol_val:
+                bol_sup[str(bol_val)] = raw_s  # for FIFO remaining lookup
+                if s:
+                    pulled_gal[s] += f(row[col_bp_gal])
     except Exception:
         pass
-
-    si_names = {s.upper(): s for s in sup_data}
-    def _match(raw): return si_names.get(raw.upper(), raw)
 
     _wb_f = wb_fifo if wb_fifo is not None else wb
     try:
