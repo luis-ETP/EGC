@@ -1038,6 +1038,7 @@ function renderBol() {
     </div>
     <div class="table-wrap"><table>
       <thead><tr>
+        <th>Supplier</th>
         <th>Product</th>
         <th>BOL</th>
         <th style="text-align:right">Gallons</th>
@@ -1062,6 +1063,7 @@ function renderBol() {
                    :                               'transparent';
 
     html += `<tr>
+      <td style="font-size:0.78rem;color:var(--muted2)">${r.supplier || '—'}</td>
       <td>${r.product}</td>
       <td style="font-weight:500">${r.bol}</td>
       <td style="text-align:right">${fn(r.gallons)}</td>
