@@ -141,19 +141,28 @@ def _extract_overall_summary(wb, wb_fifo=None):
         pass
 
     # Col X (Remainder Gallons Paid and No BOL) = remaining in allocation per supplier
+    # Col L (Rate usd/gal) weighted by col X = weighted avg rate per supplier
     rem_alloc_gal = defaultdict(float)
+    wtd_rate_num  = defaultdict(float)  # Σ(rate × rem_gal)
+    wtd_rate_den  = defaultdict(float)  # Σ(rem_gal)
     try:
         ws_si3 = wb["Supplier Invoices"]
         si_rows3 = list(ws_si3.iter_rows(values_only=True))
         si_hdr3 = next((i for i, r in enumerate(si_rows3) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
         if si_hdr3 is not None:
             sc3 = {str(v).strip(): j for j, v in enumerate(si_rows3[si_hdr3]) if v}
-            col_x = sc3.get("Remainder Gallons Paid and No BOL", 23)
+            col_x    = sc3.get("Remainder Gallons Paid and No BOL", 23)
+            col_rate = sc3.get("Rate (usd/gal)", 11)  # Column L
             for row in si_rows3[si_hdr3 + 1:]:
                 if not any(row): break
                 s = str(row[sc3.get("Supplier", 2)] or "").strip()
                 if not s or s == "Total": continue
-                rem_alloc_gal[s] += f(row[col_x])
+                rem_gal = f(row[col_x])
+                rate    = f(row[col_rate])
+                rem_alloc_gal[s] += rem_gal
+                if rem_gal > 0 and rate > 0:
+                    wtd_rate_num[s] += rate * rem_gal
+                    wtd_rate_den[s] += rem_gal
     except Exception:
         pass
 
@@ -187,6 +196,7 @@ def _extract_overall_summary(wb, wb_fifo=None):
         rem_alloc = rem_alloc_gal.get(s, 0.0)
         inv_mxn  = rem_inv_mxn.get(s, 0.0)
         avg_cost = (inv_mxn / (rem_inv * 3.7854)) if rem_inv > 0 else 0.0
+        wtd_rate = (wtd_rate_num.get(s, 0.0) / wtd_rate_den[s]) if wtd_rate_den.get(s, 0.0) > 0 else 0.0
         result.append({
             "Row Labels": s,
             "_wired": d["wired"], "_paid_gal": d["paid_gal"],
@@ -194,6 +204,7 @@ def _extract_overall_summary(wb, wb_fifo=None):
             "_rem_inv": rem_inv, "_avg_cost": avg_cost,
             "_paid_back": sup_paid_back.get(s, 0.0),
             "_balance":   sup_balance.get(s, 0.0),
+            "_wtd_rate":  wtd_rate,
         })
 
     total_wired     = sum(d["wired"]    for d in sup_data.values())
@@ -205,6 +216,9 @@ def _extract_overall_summary(wb, wb_fifo=None):
     total_rem_alloc = sum(rem_alloc_gal.values())
     total_paid_back = sum(sup_paid_back.values())
     total_balance   = sum(sup_balance.values())
+    total_wtd_num   = sum(wtd_rate_num.values())
+    total_wtd_den   = sum(wtd_rate_den.values())
+    total_wtd_rate  = (total_wtd_num / total_wtd_den) if total_wtd_den > 0 else 0.0
 
     result.append({
         "Row Labels": "Total",
@@ -212,6 +226,7 @@ def _extract_overall_summary(wb, wb_fifo=None):
         "_pulled": total_pulled, "_rem_alloc": total_rem_alloc,
         "_rem_inv": total_rem_inv, "_avg_cost": total_avg_cost,
         "_paid_back": total_paid_back, "_balance": total_balance,
+        "_wtd_rate": total_wtd_rate,
     })
     return result
 
