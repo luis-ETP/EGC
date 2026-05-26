@@ -752,7 +752,7 @@ function renderFifo() {
 
   // Table
   const allHeaders = Object.keys(rows[0]);
-  const headers = ['Type', ...allHeaders.filter(h => h !== 'Type' && !h.toLowerCase().includes('total cost'))];
+  const headers = ['Type', 'Supplier', ...allHeaders.filter(h => h !== 'Type' && h !== 'Supplier' && !h.toLowerCase().includes('total cost'))];
   html += '<div class="table-card"><div class="table-header"><div class="table-title">FIFO Allocation Log</div>';
   html += '<div style="font-size:0.72rem;color:var(--muted)">' + rows.length + ' entries</div></div>';
   html += '<div class="table-wrap"><table class="fifo-table"><thead><tr>';
@@ -1038,7 +1038,10 @@ function renderBol() {
     </div>
     <div class="table-wrap"><table>
       <thead><tr>
+        <th>Date</th>
         <th>Supplier</th>
+        <th>Supplier Invoice</th>
+        <th>Batch</th>
         <th>Product</th>
         <th>BOL</th>
         <th style="text-align:right">Gallons</th>
@@ -1063,7 +1066,10 @@ function renderBol() {
                    :                               'transparent';
 
     html += `<tr>
+      <td style="font-size:0.78rem;color:var(--muted2)">${r.date || '—'}</td>
       <td style="font-size:0.78rem;color:var(--muted2)">${r.supplier || '—'}</td>
+      <td style="font-size:0.78rem;color:var(--muted2)">${r.inv_num || '—'}</td>
+      <td style="font-size:0.78rem;color:var(--muted2)">${r.batch || '—'}</td>
       <td>${r.product}</td>
       <td style="font-weight:500">${r.bol}</td>
       <td style="text-align:right">${fn(r.gallons)}</td>
