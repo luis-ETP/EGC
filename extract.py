@@ -384,7 +384,30 @@ def _extract_fifo(wb):
     rows = list(ws.iter_rows(values_only=True))
     headers = [str(v).strip() if v else f"col{j}" for j, v in enumerate(rows[0])]
 
+    # Build BOL → supplier map from Purchase to BOL-RTB
+    bol_to_sup = {}
+    try:
+        ws_bol = wb["Purchase to BOL-RTB"]
+        bp_rows = list(ws_bol.iter_rows(values_only=True))
+        bp_hdr_idx = next((i for i, r in enumerate(bp_rows) if r[0] and 'DashFuel' in str(r[0])), 6)
+        bp_h = bp_rows[bp_hdr_idx]
+        def _bc(name, default=None):
+            for j, h in enumerate(bp_h):
+                if h and name.lower() in str(h).lower(): return j
+            return default
+        col_b = _bc('BOL', 5)
+        col_s = _bc('Supplier', 2)
+        for row in bp_rows[bp_hdr_idx + 1:]:
+            if not any(row): break
+            bol_val = row[col_b] if col_b is not None else None
+            sup_val = str(row[col_s] or '').strip() if col_s is not None else ''
+            if bol_val and sup_val:
+                bol_to_sup[str(bol_val)] = sup_val
+    except Exception:
+        pass
+
     result = []
+    bol_idx = headers.index('BOL') if 'BOL' in headers else None
     for row in rows[1:]:
         if not row[0]: break
         entry = {}
@@ -395,6 +418,9 @@ def _extract_fifo(wb):
             elif isinstance(v, float):
                 v = round(v, 4)
             entry[h] = v
+        # Inject supplier from BOL lookup
+        bol_val = str(row[bol_idx]) if bol_idx is not None and row[bol_idx] is not None else ''
+        entry['Supplier'] = bol_to_sup.get(bol_val, '')
         result.append(entry)
     return result
 
@@ -658,6 +684,7 @@ def _extract_bol(wb, wb_src=None):
         col_supplier = _col('Supplier', 2)
         col_inv      = _col('Supplier Invoice', 3)
         col_batch    = _col('Batch', 4)
+        col_date     = _col('Date', 1)
         col_gal      = _col('Gallons', 6)
         col_lit      = _col('Liters', 7)
         col_prod     = _col('Product', 8)
@@ -712,6 +739,7 @@ def _extract_bol(wb, wb_src=None):
             balance      = (invoice_amt - received) if inv_num else invoice_amt
 
             r = {
+                "date":         row[col_date].strftime("%d/%m/%Y") if col_date is not None and hasattr(row[col_date], 'strftime') else (str(row[col_date]) if col_date is not None and row[col_date] else ''),
                 "bol":          str(row[col_bol] or '')      if col_bol      is not None else '',
                 "supplier":     str(row[col_supplier] or '') if col_supplier is not None else '',
                 "inv_num":      str(row[col_inv] or '')      if col_inv      is not None else '',
