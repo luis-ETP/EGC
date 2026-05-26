@@ -75,89 +75,106 @@ def _extract_overall_summary(wb, wb_fifo=None):
     si_names = {s.upper(): s for s in sup_data}
     def _match(raw): return si_names.get(raw.upper(), raw)
 
-    # Build (supplier, invoice) → rate map from Supplier Invoices col L
-    inv_rate = {}  # (supplier_upper, invoice_upper) → rate (usd/gal)
-    try:
-        ws_si_rate = wb["Supplier Invoices"]
-        si_rate_rows = list(ws_si_rate.iter_rows(values_only=True))
-        si_rate_hdr  = next((i for i, r in enumerate(si_rate_rows) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
-        if si_rate_hdr is not None:
-            sr = {str(v).strip(): j for j, v in enumerate(si_rate_rows[si_rate_hdr]) if v}
-            col_sr_sup = sr.get("Supplier", 2)
-            # Invoice column: try exact then partial match
-            col_sr_inv = sr.get("Supplier Invoice", sr.get("Invoice #", sr.get("Invoice", 1)))
-            col_sr_rat = sr.get("Rate (usd/gal)", 11)
-            for row in si_rate_rows[si_rate_hdr + 1:]:
-                if not any(row): break
-                s_raw = str(row[col_sr_sup] or "").strip()
-                inv_raw = str(row[col_sr_inv] or "").strip()
-                rate = f(row[col_sr_rat])
-                if s_raw and inv_raw and rate > 0:
-                    inv_rate[(s_raw.upper(), inv_raw.upper())] = rate
-    except Exception:
-        pass
-
-    # Single pass through Purchase to BOL-RTB:
-    # - rows WITH BOL  → pulled from allocation
-    # - rows WITHOUT BOL → still in allocation (remaining); look up rate from Supplier Invoices
-    pulled_gal    = defaultdict(float)
-    rem_alloc_gal = defaultdict(float)
-    wtd_rate_num  = defaultdict(float)  # Σ(rate × rem_gal)
-    wtd_rate_den  = defaultdict(float)  # Σ(rem_gal)
-    rem_inv_gal   = defaultdict(float)
-    rem_inv_mxn   = defaultdict(float)
+    # Pulled gallons: sum Gallons from Purchase to BOL-RTB for every row with a BOL.
+    # This is the source of truth — replaces Supplier Invoices col W (Net RTB Gallons).
+    pulled_gal  = defaultdict(float)
+    rem_inv_gal = defaultdict(float)
+    rem_inv_mxn = defaultdict(float)
     bol_sup = {}  # BOL → raw supplier name (for FIFO remaining lookup)
 
+    # Load Purchase to BOL-RTB once — reused for both pulled_gal and rem_alloc blocks
+    bp_rows = []
+    bp_hdr_idx = 6
+    col_bp_bol = col_bp_sup = col_bp_gal = col_bp_inv = None
     try:
         ws_bol_pulled = wb["Purchase to BOL-RTB"]
         bp_rows = list(ws_bol_pulled.iter_rows(values_only=True))
-
-        # Find header row the same way _extract_bol does
-        bp_hdr_idx = None
         for i, row in enumerate(bp_rows):
             if row[0] and 'DashFuel' in str(row[0]):
                 bp_hdr_idx = i
                 break
-        if bp_hdr_idx is None:
+        else:
             for i, row in enumerate(bp_rows):
                 if any('DashFuel' in str(v) for v in row if v):
                     bp_hdr_idx = i
                     break
-        if bp_hdr_idx is None:
-            bp_hdr_idx = 6  # fallback
-
-        # Partial-match column finder (same as _extract_bol)
         bp_headers = bp_rows[bp_hdr_idx]
         def _bpcol(name, default=None):
             for j, h in enumerate(bp_headers):
                 if h and name.lower() in str(h).lower():
                     return j
             return default
-
         col_bp_bol = _bpcol('BOL', 5)
         col_bp_sup = _bpcol('Supplier', 2)
         col_bp_gal = _bpcol('Gallons', 6)
-        col_bp_inv = _bpcol('Supplier Invoice', 3)  # to look up rate
+        col_bp_inv = _bpcol('Supplier Invoice', 3)
+    except Exception:
+        pass
 
+    try:
         for row in bp_rows[bp_hdr_idx + 1:]:
             if not any(row): break
             bol_val = row[col_bp_bol] if col_bp_bol is not None else None
-            raw_s   = str(row[col_bp_sup] or "").strip() if col_bp_sup is not None else ""
-            s       = _match(raw_s)
+            if not bol_val: continue  # only rows with a BOL = pulled
+            raw_s = str(row[col_bp_sup] or "").strip() if col_bp_sup is not None else ""
+            s     = _match(raw_s)
             if not s: continue
-            gal = f(row[col_bp_gal]) if col_bp_gal is not None else 0.0
-            if bol_val:
-                # Has BOL → pulled from allocation
-                bol_sup[str(bol_val)] = raw_s
-                pulled_gal[s] += gal
-            else:
-                # No BOL → remaining in allocation
-                rem_alloc_gal[s] += gal
-                inv_val = str(row[col_bp_inv] or "").strip() if col_bp_inv is not None else ""
-                rate = inv_rate.get((raw_s.upper(), inv_val.upper()), 0.0)
-                if gal > 0 and rate > 0:
-                    wtd_rate_num[s] += rate * gal
-                    wtd_rate_den[s] += gal
+            bol_sup[str(bol_val)] = raw_s
+            pulled_gal[s] += f(row[col_bp_gal]) if col_bp_gal is not None else 0.0
+    except Exception:
+        pass
+
+    # Remaining in allocation = paid (SI) - pulled (BOL-RTB) per supplier
+    # Wtd Avg Rate = Rate (usd/gal) from SI, weighted by remaining gallons per invoice
+    # For split-invoice BOLs, assign gallons to the LAST invoice in the split.
+    rem_alloc_gal = defaultdict(float)
+    wtd_rate_num  = defaultdict(float)
+    wtd_rate_den  = defaultdict(float)
+    try:
+        ws_si3 = wb["Supplier Invoices"]
+        si_rows3 = list(ws_si3.iter_rows(values_only=True))
+        si_hdr3 = next((i for i, r in enumerate(si_rows3) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
+        if si_hdr3 is not None:
+            sc3 = {str(v).strip(): j for j, v in enumerate(si_rows3[si_hdr3]) if v}
+            col_sup3  = sc3.get("Supplier", 2)
+            col_inv3  = sc3.get("Invoice #", 3)
+            col_paid3 = sc3.get("Paid for Gallons", 6)
+            col_rate3 = sc3.get("Rate (usd/gal)", 11)
+
+            # paid and rate per (sup_upper, inv_upper)
+            inv_paid3 = {}
+            inv_rate3 = {}
+            for row in si_rows3[si_hdr3 + 1:]:
+                if not any(row): break
+                s   = str(row[col_sup3] or "").strip()
+                inv = str(row[col_inv3] or "").strip()
+                if not s or s == "Total": continue
+                inv_paid3[(s.upper(), inv.upper())] = f(row[col_paid3])
+                inv_rate3[(s.upper(), inv.upper())] = f(row[col_rate3])
+
+            # pulled per (sup_upper, inv_upper) from BOL-RTB
+            # split-invoice BOLs: assign all gallons to the LAST invoice in the split
+            pulled_inv3 = defaultdict(float)
+            for row in bp_rows[bp_hdr_idx + 1:]:
+                if not any(row): break
+                bol_val = row[col_bp_bol] if col_bp_bol is not None else None
+                if not bol_val: continue
+                s   = str(row[col_bp_sup] or "").strip().upper() if col_bp_sup is not None else ""
+                inv = str(row[col_bp_inv] or "").strip() if col_bp_inv is not None else ""
+                gal = f(row[col_bp_gal]) if col_bp_gal is not None else 0.0
+                parts = [p.strip().upper() for p in inv.split("|")]
+                pulled_inv3[(s, parts[-1])] += gal
+
+            # remaining per invoice → rem_alloc and wtd_rate per supplier
+            for (s_up, inv_up), paid in inv_paid3.items():
+                pulled = pulled_inv3.get((s_up, inv_up), 0.0)
+                rem  = max(0.0, paid - pulled)
+                rate = inv_rate3.get((s_up, inv_up), 0.0)
+                s_canonical = _match(s_up)
+                rem_alloc_gal[s_canonical] += rem
+                if rem > 0 and rate > 0:
+                    wtd_rate_num[s_canonical] += rate * rem
+                    wtd_rate_den[s_canonical] += rem
     except Exception:
         pass
 
