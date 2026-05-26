@@ -520,7 +520,6 @@ function renderOverview() {
   // Detect column names (handle both old and new naming)
   const colPaidGal   = suppliers[0]?.['Paid for Gallons (Allocation)'] !== undefined ? 'Paid for Gallons (Allocation)' : 'Paid for Gallons ';
   const colPulled    = suppliers[0]?.['Gallons Pulled from Allocation (RTB & RTC)'] !== undefined ? 'Gallons Pulled from Allocation (RTB & RTC)' : 'Gallons Pulled (RTB & RTC)';
-  const colPaidBack  = suppliers[0]?.['Amount Paid Back by Mexico'] !== undefined ? 'Amount Paid Back by Mexico' : 'Amount Paid Back by Mexico ';
 
   html += `<div class="table-card">
     <div class="table-header"><div class="table-title">Overall Summary</div></div>
@@ -531,10 +530,9 @@ function renderOverview() {
         <th>Paid for Gallons (Allocation)</th>
         <th>Gallons Pulled from Allocation (RTB &amp; RTC)</th>
         <th>Remaining Gallons in Allocation</th>
+        <th>Wtd. Avg Rate (USD/gal)</th>
         <th>Remaining Gallons in Inventory</th>
-        <th>Weighted Avg Cost in Inventory (MXN/L)</th>
-        <th>Amount Paid Back by Mexico (USD)</th>
-        <th>Mexico Balance (USD)</th>
+        <th>Wtd. Avg Cost in Inventory (MXN/L)</th>
       </tr></thead><tbody>`;
 
   rows.forEach(r => {
@@ -544,10 +542,9 @@ function renderOverview() {
       <td>${fmtNum(r['_paid_gal'])}</td>
       <td>${fmtNum(r['_pulled'])}</td>
       <td>${fmtNum(r['_rem_alloc'])}</td>
+      <td>${fmtDec(r['_wtd_rate'])}</td>
       <td>${fmtNum(r['_rem_inv'])}</td>
       <td>${fmtDec(r['_avg_cost'])}</td>
-      <td>${fmtUSD(r['_paid_back'])}</td>
-      <td>${fmtUSD(r['_balance'])}</td>
     </tr>`;
   });
 
