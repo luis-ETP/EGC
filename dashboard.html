@@ -1039,18 +1039,19 @@ function renderBol() {
     <div class="table-wrap"><table>
       <thead><tr>
         <th>Date</th>
+        <th>DashFuel #</th>
+        <th>Product</th>
+        <th>BOL</th>
+        <th>Gallons</th>
+        <th>Total Cost/Gal (USD)</th>
+        <th>FX Rate</th>
+        <th>Invoice #</th>
+        <th>Invoice Amount</th>
+        <th>Received Payments</th>
+        <th>Balance</th>
         <th>Supplier</th>
         <th>Supplier Invoice</th>
         <th>Batch</th>
-        <th>Product</th>
-        <th>BOL</th>
-        <th style="text-align:right">Gallons</th>
-        <th style="text-align:right">Total Cost/Gal (USD)</th>
-        <th style="text-align:right">FX Rate</th>
-        <th>Invoice #</th>
-        <th style="text-align:right">Invoice Amount</th>
-        <th style="text-align:right">Received Payments</th>
-        <th style="text-align:right">Balance</th>
       </tr></thead><tbody>`;
 
   bol.rows.forEach(r => {
@@ -1067,18 +1068,19 @@ function renderBol() {
 
     html += `<tr>
       <td style="font-size:0.78rem;color:var(--muted2)">${r.date || '—'}</td>
+      <td style="font-size:0.78rem;color:var(--muted2)">${r.dashfuel_num || '—'}</td>
+      <td>${r.product || '—'}</td>
+      <td style="font-weight:500">${r.bol || '—'}</td>
+      <td style="text-align:right">${fn(r.gallons)}</td>
+      <td style="text-align:right">${r.cost_gal_usd > 0 ? '$'+fd(r.cost_gal_usd) : '—'}</td>
+      <td style="text-align:right">${r.fx_rate > 0 ? fd(r.fx_rate, 4) : '—'}</td>
+      <td style="color:var(--muted2);font-size:0.72rem">${r.invoice_num || '—'}</td>
+      <td style="text-align:right">${r.invoice_amt != null ? fu(r.invoice_amt) : '—'}</td>
+      <td style="text-align:right">${r.received != null ? fu(r.received) : '—'}</td>
+      <td style="text-align:right;font-weight:600;color:${balColor};background:${balBg};border-radius:4px;padding:0.3rem 0.6rem">${r.status==='not_invoiced' ? '<span style="font-weight:400;font-size:0.7rem">Not invoiced</span>' : fu(r.balance)}</td>
       <td style="font-size:0.78rem;color:var(--muted2)">${r.supplier || '—'}</td>
       <td style="font-size:0.78rem;color:var(--muted2)">${r.inv_num || '—'}</td>
       <td style="font-size:0.78rem;color:var(--muted2)">${r.batch || '—'}</td>
-      <td>${r.product}</td>
-      <td style="font-weight:500">${r.bol}</td>
-      <td style="text-align:right">${fn(r.gallons)}</td>
-      <td style="text-align:right">${r.cost_gal_usd>0 ? '$'+fd(r.cost_gal_usd) : '—'}</td>
-      <td style="text-align:right">${r.fx_payment>0 ? fd(r.fx_payment,4) : '—'}</td>
-      <td style="color:var(--muted2);font-size:0.72rem">${r.invoice_num || '—'}</td>
-      <td style="text-align:right">${r.invoice_amt>0 ? fu(r.invoice_amt) : '—'}</td>
-      <td style="text-align:right">${r.received>0 ? fu(r.received) : '—'}</td>
-      <td style="text-align:right;font-weight:600;color:${balColor};background:${balBg};border-radius:4px;padding:0.3rem 0.6rem">${r.status==='not_invoiced' ? '<span style="font-weight:400;font-size:0.7rem">Not invoiced</span>' : fu(r.balance)}</td>
     </tr>`;
   });
 
