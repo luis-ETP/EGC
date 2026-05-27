@@ -680,36 +680,31 @@ def _extract_bol(wb, wb_src=None):
                     return j
             return default
 
-        col_bol      = _col('BOL', 5)
-        col_supplier = _col('Supplier', 2)
-        col_inv      = _col('Supplier Invoice', 3)
-        col_batch    = _col('Batch', 4)
-        col_date     = _col('Date', 1)
-        col_gal      = _col('Gallons', 6)
-        col_lit      = _col('Liters', 7)
-        col_prod     = _col('Product', 8)
-        col_cost_gal = _col('Total Cost /Gal', 16)  # total cost incl freight
-        col_adder    = _col('Adder', 10)
-        col_total_gal= _col('Cost/Gal + Adder', 11)
-        col_mxnl     = _col('Supply Cost DashFuel', 12)
-        col_carrier  = _col('Carrier', 13)
-        col_freight  = _col('Freight/Load', 14)
-        col_inv_num  = _col('Invoice #', 17)
-        col_inv_amt  = _col('Invoice Amount', 18)
-        col_customer = _col('MX Customer', 19)
-        col_received = _col('Received Payments', 20)
-        col_balance  = _col('Balance', 21)
-        col_fx       = None
-        for j, h in enumerate(headers):
-            if h and 'FX' in str(h).upper() and 'PAYMENT' in str(h).upper():
-                col_fx = j
-                break
+        col_bol          = _col('BOL', 5)
+        col_dashfuel     = _col('DashFuel Number', 0)
+        col_supplier     = _col('Supplier', 2)
+        col_inv          = _col('Supplier Invoice', 3)
+        col_batch        = _col('Batch', 4)
+        col_date         = _col('Date', 1)
+        col_gal          = _col('Gallons', 6)
+        col_lit          = _col('Liters', 7)
+        col_prod         = _col('Product', 8)
+        col_cost_gal     = _col('Total Cost /Gal', 16)
+        col_adder        = _col('Adder', 10)
+        col_total_gal    = _col('Cost/Gal + Adder', 11)
+        col_mxnl         = _col('Supply Cost DashFuel', 12)
+        col_carrier      = _col('Carrier', 13)
+        col_freight      = _col('Freight/Load', 14)
+        col_freight_gal  = _col('Freight/Gal', 15)
+        col_inv_num      = _col('Invoice #', 17)
+        col_inv_amt      = _col('Invoice Amount', 18)
+        col_customer     = _col('MX Customer', 19)
+        col_received     = _col('Received Payments', 20)
+        col_balance      = _col('Balance', 21)
+        col_fx_rate      = _col('FX Payment', 25)
 
-        fv = lambda v: float(v) if isinstance(v, (int, float)) else None
+        fv = lambda v: round(float(v), 4) if isinstance(v, (int, float)) else None
         f  = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
-
-        # Col indices for raw (non-formula) fields
-        col_freight_gal = _col('Freight/Gal', 15)
 
         result_rows = []
         for row_idx, row in enumerate(rows[header_row + 1:]):
@@ -718,47 +713,47 @@ def _extract_bol(wb, wb_src=None):
                     break
                 continue
 
-            # Use source row as fallback for freight/cost values the engine may not write
-            src_row = src_rows[header_row + 1 + row_idx] if src_rows and header_row + 1 + row_idx < len(src_rows) else None
+            gallons = f(row[col_gal]) if col_gal is not None else 0.0
+            liters  = gallons * 3.785411784
 
-            gallons    = f(row[col_gal])        if col_gal        is not None else 0.0
-            cost_adder = f(row[col_total_gal])  if col_total_gal  is not None else 0.0
+            # Read all financial columns directly from the sheet — never recompute
+            inv_num     = str(row[col_inv_num]  or '') if col_inv_num  is not None else ''
+            invoice_amt = fv(row[col_inv_amt])         if col_inv_amt  is not None else None
+            received    = fv(row[col_received])        if col_received is not None else None
+            balance     = fv(row[col_balance])         if col_balance  is not None else None
 
-            # Freight/gal: prefer output, fall back to source
-            freight_gal = f(row[col_freight_gal]) if col_freight_gal is not None else 0.0
-            if freight_gal == 0 and src_row is not None and col_freight_gal is not None:
-                freight_gal = f(src_row[col_freight_gal])
-
-            received = f(row[col_received]) if col_received is not None else 0.0
-            inv_num  = str(row[col_inv_num] or '') if col_inv_num is not None else ''
-
-            # Compute formula columns from raw values
-            liters       = gallons * 3.78541178
-            total_cost_g = cost_adder + freight_gal
-            invoice_amt  = total_cost_g * gallons
-            balance      = (invoice_amt - received) if inv_num else invoice_amt
+            # Date in English format mm/dd/YYYY
+            raw_date = row[col_date] if col_date is not None else None
+            if hasattr(raw_date, 'strftime'):
+                date_str = raw_date.strftime("%m/%d/%Y")
+            elif raw_date:
+                date_str = str(raw_date)
+            else:
+                date_str = ''
 
             r = {
-                "date":         row[col_date].strftime("%d/%m/%Y") if col_date is not None and hasattr(row[col_date], 'strftime') else (str(row[col_date]) if col_date is not None and row[col_date] else ''),
+                "date":         date_str,
+                "dashfuel_num": str(row[col_dashfuel] or '') if col_dashfuel is not None else '',
+                "product":      str(row[col_prod] or '')     if col_prod     is not None else '',
                 "bol":          str(row[col_bol] or '')      if col_bol      is not None else '',
+                "gallons":      gallons    if gallons else None,
+                "liters":       liters     if gallons else None,
+                "cost_gal_usd": fv(row[col_cost_gal])       if col_cost_gal is not None else None,
+                "fx_rate":      fv(row[col_fx_rate])         if col_fx_rate  is not None else None,
+                "invoice_num":  inv_num,
+                "invoice_amt":  invoice_amt,
+                "received":     received,
+                "balance":      balance,
                 "supplier":     str(row[col_supplier] or '') if col_supplier is not None else '',
                 "inv_num":      str(row[col_inv] or '')      if col_inv      is not None else '',
                 "batch":        str(row[col_batch] or '')    if col_batch    is not None else '',
-                "gallons":      gallons if gallons else None,
-                "liters":       liters  if gallons else None,
-                "product":      str(row[col_prod] or '')     if col_prod     is not None else '',
-                "cost_gal_usd": total_cost_g if total_cost_g else None,
+                # retained for other uses
                 "adder":        fv(row[col_adder])           if col_adder    is not None else None,
-                "total_gal":    cost_adder if cost_adder else None,
+                "total_gal":    fv(row[col_total_gal])       if col_total_gal is not None else None,
                 "mxn_l":        fv(row[col_mxnl])            if col_mxnl     is not None else None,
                 "carrier":      str(row[col_carrier] or '')  if col_carrier  is not None else '',
-                "freight":      fv(row[col_freight])          if col_freight  is not None else None,
-                "invoice_num":  inv_num,
-                "invoice_amt":  invoice_amt if invoice_amt else None,
+                "freight":      fv(row[col_freight])         if col_freight  is not None else None,
                 "customer":     str(row[col_customer] or '') if col_customer is not None else '',
-                "received":     received if received else None,
-                "balance":      balance,
-                "fx_payment":   fv(row[col_fx])              if col_fx       is not None else None,
             }
             if r["bol"] or r["supplier"]:
                 result_rows.append(r)
