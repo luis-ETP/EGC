@@ -706,6 +706,24 @@ def _extract_bol(wb, wb_src=None):
         fv = lambda v: round(float(v), 4) if isinstance(v, (int, float)) else None
         f  = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
 
+        # Load source rows for formula columns that are None in the FIFO output:
+        # col0 (DashFuel#), col16 (Total Cost/Gal), col18 (Invoice Amount), col21 (Balance)
+        src_rows = None
+        if wb_src is not None:
+            try:
+                src_rows = list(wb_src["Purchase to BOL-RTB"].iter_rows(values_only=True))
+            except Exception:
+                pass
+
+        def _src(row_idx, col):
+            """Read a column from the source row as fallback for formula columns."""
+            if src_rows is None or col is None:
+                return None
+            src_idx = header_row + 1 + row_idx
+            if src_idx >= len(src_rows):
+                return None
+            return src_rows[src_idx][col]
+
         result_rows = []
         for row_idx, row in enumerate(rows[header_row + 1:]):
             if not row[0] and not (col_supplier and row[col_supplier]):
@@ -716,11 +734,13 @@ def _extract_bol(wb, wb_src=None):
             gallons = f(row[col_gal]) if col_gal is not None else 0.0
             liters  = gallons * 3.785411784
 
-            # Read all financial columns directly from the sheet — never recompute
-            inv_num     = str(row[col_inv_num]  or '') if col_inv_num  is not None else ''
-            invoice_amt = fv(row[col_inv_amt])         if col_inv_amt  is not None else None
-            received    = fv(row[col_received])        if col_received is not None else None
-            balance     = fv(row[col_balance])         if col_balance  is not None else None
+            # For formula columns, fall back to source if FIFO output has None
+            inv_num     = str(row[col_inv_num] or '') if col_inv_num is not None else ''
+            invoice_amt = fv(row[col_inv_amt]  if (col_inv_amt  is not None and row[col_inv_amt]  is not None) else _src(row_idx, col_inv_amt))
+            received    = fv(row[col_received]) if col_received is not None else None
+            balance     = fv(row[col_balance]   if (col_balance  is not None and row[col_balance]  is not None) else _src(row_idx, col_balance))
+            cost_gal    = fv(row[col_cost_gal]  if (col_cost_gal is not None and row[col_cost_gal] is not None) else _src(row_idx, col_cost_gal))
+            dashfuel    = str(row[col_dashfuel] or _src(row_idx, col_dashfuel) or '') if col_dashfuel is not None else ''
 
             # Date in English format mm/dd/YYYY
             raw_date = row[col_date] if col_date is not None else None
@@ -733,12 +753,12 @@ def _extract_bol(wb, wb_src=None):
 
             r = {
                 "date":         date_str,
-                "dashfuel_num": str(row[col_dashfuel] or '') if col_dashfuel is not None else '',
+                "dashfuel_num": dashfuel,
                 "product":      str(row[col_prod] or '')     if col_prod     is not None else '',
                 "bol":          str(row[col_bol] or '')      if col_bol      is not None else '',
                 "gallons":      gallons    if gallons else None,
                 "liters":       liters     if gallons else None,
-                "cost_gal_usd": fv(row[col_cost_gal])       if col_cost_gal is not None else None,
+                "cost_gal_usd": cost_gal,
                 "fx_rate":      fv(row[col_fx_rate])         if col_fx_rate  is not None else None,
                 "invoice_num":  inv_num,
                 "invoice_amt":  invoice_amt,
@@ -747,7 +767,6 @@ def _extract_bol(wb, wb_src=None):
                 "supplier":     str(row[col_supplier] or '') if col_supplier is not None else '',
                 "inv_num":      str(row[col_inv] or '')      if col_inv      is not None else '',
                 "batch":        str(row[col_batch] or '')    if col_batch    is not None else '',
-                # retained for other uses
                 "adder":        fv(row[col_adder])           if col_adder    is not None else None,
                 "total_gal":    fv(row[col_total_gal])       if col_total_gal is not None else None,
                 "mxn_l":        fv(row[col_mxnl])            if col_mxnl     is not None else None,
