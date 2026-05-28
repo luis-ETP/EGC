@@ -1022,7 +1022,7 @@ function renderInvestor() {
   </div>`;
 
   // Store donut params for rendering after innerHTML is set
-  window._pendingDonut = { id: donutId, vals: [${allocV}, ${invV}, ${pendV}] };
+  window._pendingDonut = { id: donutId, vals: [allocV, invV, pendV] };
 
   // ── Cycle metrics ──
   const cycleStr = inv.avg_cycle_days != null ? inv.avg_cycle_days+' days' : 'N/A';
