@@ -1022,10 +1022,10 @@ function renderInvestor() {
     'How the capital works', 'Capital cycle', '', true);
 
   const CYCLE_STEPS = [
-    { num:'1', icon:'💵', title:'Allocation', desc:'Investment is wired to U.S. suppliers. Funds become allocated gallons — product you own, secured at the terminal, not yet shipped to Mexico.' },
-    { num:'2', icon:'🚛', title:'RTB — Rack to Bulk', desc:'Fuel moves from the U.S. terminal to EGC\'s bulk storage plant in Mexico (VBP). Capital is now physical inventory in the tank.' },
-    { num:'3', icon:'🏭', title:'BTC — Bulk to Customer', desc:'Product ships from the bulk plant to the end customer in Mexico. Revenue is generated; capital stays active until Mexico pays.' },
-    { num:'4', icon:'✅', title:'Recovered', desc:'Mexico pays. Capital is fully recovered along with the gross margin earned on the trade — and redeployed into the next cycle.' },
+    { num:'1', icon:'💵', title:'Allocation', desc:'Investment capital is used to purchase fuel directly from suppliers at the rack. All costs including logistics are funded from deployed capital. Product is secured but not yet physically moved.' },
+    { num:'2', icon:'🚛', title:'RTB — Rack to Bulk', desc:'EGC dispatches the allocation from the supplier\'s rack to a bulk storage facility (VBP), where product is held as inventory until sold. Capital remains active throughout this stage.' },
+    { num:'3', icon:'🏭', title:'BTC / RTC — Pending Collection', desc:'Product moves to the customer via BTC (bulk plant → customer) or RTC (rack → customer directly, bypassing the bulk plant). Capital remains active until the customer pays.' },
+    { num:'4', icon:'✅', title:'Recovered', desc:'Once the customer pays, capital is recovered along with the earned margin and becomes available for redeployment into the next purchase cycle, compounding returns over time.' },
   ];
 
   html += `<div class="cycle-steps">`;
@@ -1064,9 +1064,9 @@ function renderInvestor() {
 
   // Glossary
   html += `<div class="glossary-grid">
-    <div class="glossary-card"><div class="glossary-term">RTB — Rack to Bulk</div><div class="glossary-def">Product moves from the U.S. supplier rack to EGC's bulk storage plant in Mexico. This is the inventory-building step.</div></div>
-    <div class="glossary-card"><div class="glossary-term">BTC — Bulk to Customer</div><div class="glossary-def">Product dispatched from the bulk plant to the end customer. Revenue is generated and capital recovery begins.</div></div>
-    <div class="glossary-card"><div class="glossary-term">RTC — Rack to Customer</div><div class="glossary-def">Product goes directly from the U.S. rack to the Mexican customer — faster cycle with no inventory holding period.</div></div>
+    <div class="glossary-card"><div class="glossary-term">RTB — Rack to Bulk</div><div class="glossary-def">Product dispatched from the supplier's rack to EGC's bulk storage facility (VBP). This converts allocation into inventory.</div></div>
+    <div class="glossary-card"><div class="glossary-term">BTC — Bulk to Customer</div><div class="glossary-def">Product dispatched from the bulk storage facility directly to the end customer. Generates revenue and initiates capital recovery.</div></div>
+    <div class="glossary-card"><div class="glossary-term">RTC — Rack to Customer</div><div class="glossary-def">Product dispatched directly from the supplier's rack to the end customer, bypassing the bulk plant. Also generates revenue and initiates capital recovery.</div></div>
   </div>`;
   html += secFtr;
 
