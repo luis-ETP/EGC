@@ -996,9 +996,9 @@ function renderInvestor() {
     <div class="inv-bar-seg" style="width:${(pendPct*100).toFixed(1)}%;background:#f0883e"></div>
   </div>
   <div class="inv-legend">
-    <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#3fb950"></div>Allocation — $${fm(ad.alloc_mxn)} (${(allocPct*100).toFixed(0)}%)</div>
-    <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#4a7cdc"></div>Bulk plant inventory — $${fm(ad.inv_mxn)} (${(invPct*100).toFixed(0)}%)</div>
-    <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#f0883e"></div>Pending collection — $${fm(ad.btc_pend_mxn+ad.rtc_pend_mxn)} (${(pendPct*100).toFixed(0)}%)</div>
+    <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#3fb950"></div>Allocation: $${fm(ad.alloc_mxn)} (${(allocPct*100).toFixed(0)}%)</div>
+    <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#4a7cdc"></div>Bulk plant inventory: $${fm(ad.inv_mxn)} (${(invPct*100).toFixed(0)}%)</div>
+    <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#f0883e"></div>Pending collection: $${fm(ad.btc_pend_mxn+ad.rtc_pend_mxn)} (${(pendPct*100).toFixed(0)}%)</div>
   </div>`;
 
   // ── Cycle metrics ──
@@ -1076,7 +1076,7 @@ function renderInvestor() {
     if (compression !== null) {
       html += `<div class="warning-strip">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span>Margin compression alert: first 3 paid loads averaged $${fm(prj.first3_avg_margin)} MXN — last 3 averaged $${fm(prj.last3_avg_margin)} MXN (${compression}% change). If this trend continues, projected returns may be significantly lower than the historical average shown above.</span>
+        <span>Margin compression alert: first 3 paid loads averaged $${fm(prj.first3_avg_margin)} MXN, last 3 averaged $${fm(prj.last3_avg_margin)} MXN (${compression}% change). If this trend continues, projected returns may be significantly lower than the historical average shown above.</span>
       </div>`;
     }
     html += secFtr;
@@ -1128,7 +1128,7 @@ function renderInvestor() {
   // Narrative steps
   const STEPS = [
     { num:'1', title:'Allocation', desc:'The investment capital is used to purchase fuel directly from suppliers at the rack (terminal). All costs, including logistics, are funded from the deployed capital. The fuel is purchased and the allocation is secured, but has not yet been physically moved.' },
-    { num:'2', title:'Inventory (Rack to Bulk)', desc:'EGC dispatches the allocation from the supplier\'s rack to a bulk storage facility (VBP), where the product is held as inventory until sold. Capital remains active throughout this stage.' },
+    { num:'2', title:'Inventory (Rack to Bulk)', desc:'EGC dispatches the allocation from the supplier\'s rack to a bulk storage facility, where the product is held as inventory until sold. Capital remains active throughout this stage.' },
     { num:'3', title:'Pending Collection', desc:'Product moves toward the customer in one of two ways. In a Bulk to Customer (BTC) load, fuel is dispatched from the bulk plant directly to the end customer. In a Rack to Customer (RTC) load, it goes directly from the supplier\'s rack to the customer, bypassing the bulk plant entirely. In both cases, capital remains active and awaiting customer payment.' },
     { num:'4', title:'Recovered', desc:'Once the customer pays, capital is recovered along with the earned margin and becomes available for redeployment into the next purchase cycle, compounding returns over time.' },
   ];
@@ -1145,7 +1145,7 @@ function renderInvestor() {
   // Glossary
   html += `<div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin-bottom:0.5rem">Glossary</div>`;
   html += `<div class="glossary-grid">
-    <div class="glossary-card"><div class="glossary-term">RTB (Rack to Bulk)</div><div class="glossary-def">Product dispatched from the supplier's rack to EGC's bulk storage facility (VBP). This converts allocation into inventory.</div></div>
+    <div class="glossary-card"><div class="glossary-term">RTB (Rack to Bulk)</div><div class="glossary-def">Product dispatched from the supplier's rack to EGC's bulk storage facility. This converts allocation into inventory.</div></div>
     <div class="glossary-card"><div class="glossary-term">BTC (Bulk to Customer)</div><div class="glossary-def">Product dispatched from the bulk storage facility directly to the end customer. Generates revenue and initiates capital recovery.</div></div>
     <div class="glossary-card"><div class="glossary-term">RTC (Rack to Customer)</div><div class="glossary-def">Product dispatched directly from the supplier's rack to the end customer, bypassing the bulk plant. Also generates revenue and initiates capital recovery.</div></div>
   </div>`;
