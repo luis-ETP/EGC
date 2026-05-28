@@ -192,6 +192,24 @@ def process():
 
 
 
+@app.route('/api/rounds', methods=['GET'])
+def get_rounds():
+    try:
+        val = get_setting('investment_rounds', '[]')
+        return jsonify(rounds=json.loads(val))
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+
+@app.route('/api/rounds', methods=['POST'])
+def save_rounds():
+    try:
+        data = request.get_json()
+        rounds = data.get('rounds', [])
+        set_setting('investment_rounds', json.dumps(rounds))
+        return jsonify(ok=True)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+
 @app.route('/api/settings', methods=['POST'])
 def save_settings():
     if 'user' not in session or session['role'] != 'admin':
