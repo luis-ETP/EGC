@@ -503,6 +503,16 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     except Exception:
         pass
 
+    def _parse_date(v):
+        if hasattr(v, 'date'): return v
+        if isinstance(v, str):
+            for fmt in ('%d/%m/%Y','%m/%d/%Y','%Y-%m-%d'):
+                try:
+                    from datetime import datetime as _dt
+                    return _dt.strptime(v.strip(), fmt)
+                except: pass
+        return None
+
     # ── 3. Load Tracking — replicate Table6 formulas ──────────────────────────
     ws_lt = wb["Load Tracking"]
     lt_rows = list(ws_lt.iter_rows(values_only=True))
@@ -519,6 +529,22 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     rtc_pend_mxn = rtc_pend_lit = 0.0
     rec_btc_tc = rec_btc_sale = rec_btc_margin = rec_btc_lit = 0.0
     rec_rtc_tc = rec_rtc_sale = rec_rtc_margin = rec_rtc_lit = 0.0
+
+    # Build RTB pickup dates by BOL for cash conversion cycle
+    rtb_dates_map = {}
+    for row in lt_rows[1:]:
+        if not row[0]: continue
+        if str(row[lt_h.get('Customer Groups',10)] or '').strip() != 'RTB': continue
+        bol = str(row[lt_h.get('BOL Number',30)] or '').strip()
+        pickup = _parse_date(row[lt_h.get('Pickup Date',3)])
+        if bol and pickup:
+            rtb_dates_map[bol] = pickup
+
+    col_payment_date = lt_h.get('Payment Date', 61)
+    col_bol_source   = lt_h.get('BOL Source', 59)
+
+    btc_loads = []   # per-load detail for load performance table
+    cycle_days_list = []
 
     for row in lt_rows[1:]:
         if not row[0]: continue
@@ -552,13 +578,47 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             rtb_total_lit  += liters
         elif typ == 'BTC':
             btc_total_lit  += liters
+            pickup         = _parse_date(row[lt_h.get('Pickup Date',3)])
+            payment_date   = _parse_date(row[col_payment_date]) if col_payment_date is not None else None
+            bol_source_str = str(row[col_bol_source] or '') if col_bol_source is not None else ''
+            load_id        = str(row[0] or '')
+            customer       = str(row[lt_h.get('Customer',8)] or '')
+            pickup_str     = pickup.strftime('%m/%d/%Y') if pickup else ''
+            payment_str    = payment_date.strftime('%m/%d/%Y') if payment_date else ''
+
+            # Cash conversion cycle: earliest source RTB date → payment date
+            cycle = None
+            if payment_date and bol_source_str:
+                src_bols = [b.strip() for b in bol_source_str.split('|')]
+                src_dates = [rtb_dates_map[b] for b in src_bols if b in rtb_dates_map]
+                if src_dates:
+                    cycle = (payment_date - min(src_dates)).days
+                    if 0 <= cycle <= 90:   # sanity filter
+                        cycle_days_list.append(cycle)
+
+            btc_loads.append({
+                'load':        load_id,
+                'customer':    customer,
+                'date':        pickup_str,
+                'payment_date': payment_str,
+                'liters':      liters,
+                'price_l':     round(total_sale / liters, 4) if liters else 0,
+                'cost_l':      round(total_cost_l, 4),
+                'margin_l':    round((total_sale - total_cost) / liters, 4) if liters else 0,
+                'margin_pct':  round((total_sale - total_cost) / total_sale, 6) if total_sale else 0,
+                'total_margin': round(total_sale - total_cost, 2),
+                'total_sale':  round(total_sale, 2),
+                'total_cost':  round(total_cost, 2),
+                'status':      str(row[lt_h.get('Invoice Status',56)] or ''),
+                'cycle_days':  cycle,
+            })
+
             if status == 'PAID':
                 rec_btc_tc     += total_cost
                 rec_btc_sale   += total_sale
-                rec_btc_margin += total_margin
+                rec_btc_margin += total_sale - total_cost
                 rec_btc_lit    += liters
             else:
-                # Pending: use total_sale (what will be recovered), not total_cost
                 btc_pend_mxn   += total_sale
                 btc_pend_lit   += liters
         elif typ == 'RTC':
@@ -571,7 +631,8 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
                 rtc_pend_mxn   += total_sale
                 rtc_pend_lit   += liters
 
-    # Inventory: liters = RTB - BTC (net remaining); cost from FIFO remaining slots
+    avg_cycle_days = round(sum(cycle_days_list) / len(cycle_days_list), 1) if cycle_days_list else None
+
     # Use FIFO sheet remaining_l × cost_per_l for accurate FIFO-weighted cost
     inv_lit = inv_mxn = 0.0
     try:
@@ -592,11 +653,28 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     # ── 4. KPIs ───────────────────────────────────────────────────────────────
     active_capital = alloc_mxn + inv_mxn + btc_pend_mxn + rtc_pend_mxn
     available      = total_committed_mxn - active_capital
-    # Recovered = full sale proceeds from PAID loads (capital + profit flows back together)
     recovered_mxn  = rec_btc_sale + rec_rtc_sale
     revolved       = recovered_mxn / total_committed_mxn if total_committed_mxn else 0.0
     total_margin   = rec_btc_margin + rec_rtc_margin
     investor_share = total_margin * inv_share_pct
+
+    # ── 5. Projections (needs inv_lit from above) ─────────────────────────────
+    avg_cycle_days = round(sum(cycle_days_list) / len(cycle_days_list), 1) if cycle_days_list else None
+    paid_loads     = [l for l in btc_loads if l['status'].upper() == 'PAID']
+    avg_margin_per_load = (sum(l['total_margin'] for l in paid_loads) / len(paid_loads)) if paid_loads else 0
+    avg_liters_per_load = (sum(l['liters'] for l in paid_loads) / len(paid_loads)) if paid_loads else 0
+    loads_remaining     = round(inv_lit / avg_liters_per_load, 1) if avg_liters_per_load else 0
+    btc_pickup_dates    = sorted([_parse_date(l['date']) for l in btc_loads if l['date']])
+    avg_days_between_loads = 0
+    if len(btc_pickup_dates) > 1:
+        gaps = [(btc_pickup_dates[i]-btc_pickup_dates[i-1]).days for i in range(1,len(btc_pickup_dates))]
+        avg_days_between_loads = round(sum(gaps)/len(gaps), 1)
+    proj_profit          = round(loads_remaining * avg_margin_per_load, 2)
+    proj_total_profit    = round(total_margin + proj_profit, 2)
+    proj_investor_return = round(proj_total_profit * inv_share_pct, 2)
+    paid_margins = [l['total_margin'] for l in paid_loads]
+    first3_avg   = round(sum(paid_margins[:3])/3, 2) if len(paid_margins) >= 3 else None
+    last3_avg    = round(sum(paid_margins[-3:])/3, 2) if len(paid_margins) >= 3 else None
 
     def _rec(tc, sale, margin, liters):
         roi   = margin / tc     if tc     > 0 else 0.0
@@ -639,6 +717,19 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             "btc":   btc_rec,
             "rtc":   rtc_rec,
             "total": tot_rec,
+        },
+        "avg_cycle_days":          avg_cycle_days,
+        "avg_days_between_loads":  avg_days_between_loads,
+        "btc_loads":               btc_loads,
+        "projections": {
+            "loads_remaining":      loads_remaining,
+            "avg_margin_per_load":  round(avg_margin_per_load, 2),
+            "proj_profit":          proj_profit,
+            "proj_total_profit":    proj_total_profit,
+            "proj_investor_return": proj_investor_return,
+            "first3_avg_margin":    first3_avg,
+            "last3_avg_margin":     last3_avg,
+            "inv_liters":           round(inv_lit, 0),
         },
     }
 
