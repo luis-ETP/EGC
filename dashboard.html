@@ -781,233 +781,440 @@ function renderFifo() {
 function renderInvestor() {
   const rawInv = dashData.investment || {};
   const el = document.getElementById('investor-content');
-  if (!rawInv || !rawInv.commits || !rawInv.commits.length) {
+  if (!rawInv || !rawInv.total_committed_mxn) {
     el.innerHTML = '<div class="empty-state">No investment data yet — upload a file to populate this section.</div>';
     return;
   }
 
-  // ── Markup: +$0.10/gal applied only for partner_investor role ────────────────
-  const MARKUP       = dashData.markup === true;
-  const MARKUP_USD   = dashData.markup_usd || 0.02;          // USD per gallon
-  const L_PER_GAL    = 3.7854;
+  const MARKUP     = dashData.markup === true;
+  const MARKUP_USD = dashData.markup_usd || 0.02;
+  const L_PER_GAL  = 3.7854;
+  const IS_ADMIN   = ROLE === 'admin';
 
   function getAvgFx() {
     const rows = (dashData.bol_tab || {}).rows || [];
-    const vals = rows.map(r => r.fx_payment).filter(v => v > 0);
+    const vals = rows.map(r => r.fx_rate).filter(v => v > 0);
     return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 17.30;
   }
 
   function applyMarkup(src) {
     if (!MARKUP) return src;
     const avgFx = getAvgFx();
-    const mu = MARKUP_USD * avgFx / L_PER_GAL;   // MXN/L adder at delivery
-    const d = JSON.parse(JSON.stringify(src));     // deep clone
-    const ad = d.active_detail || {};
+    const mu = MARKUP_USD * avgFx / L_PER_GAL;
+    const d  = JSON.parse(JSON.stringify(src));
     const rd = d.recovered_detail || {};
-
-    // Fee only affects recovered loads (already collected) — active capital unchanged
-    d.active_capital = ad.total_mxn;
-    d.available      = d.total_committed_mxn - d.active_capital;
-
-    // Recovered loads: delivery fee reduces margin only — tc (sale price) unchanged
     function mu_load(ld) {
       if (!ld || !ld.liters) return ld;
       const extra = mu * ld.liters;
       ld.margin -= extra;
-      ld.roi     = ld.tc     > 0 ? ld.margin / ld.tc     : 0;
-      ld.mxnl    = ld.liters > 0 ? ld.margin / ld.liters : 0;
-      ld.usdgal  = ld.liters > 0 ? ld.margin / ld.liters * L_PER_GAL / avgFx : 0;
+      ld.roi    = ld.tc     > 0 ? ld.margin / ld.tc     : 0;
+      ld.mxnl   = ld.liters > 0 ? ld.margin / ld.liters : 0;
+      ld.usdgal = ld.liters > 0 ? ld.margin / ld.liters * L_PER_GAL / avgFx : 0;
       return ld;
     }
-    rd.btc = mu_load(rd.btc);
-    rd.rtc = mu_load(rd.rtc);
-
+    rd.btc = mu_load(rd.btc); rd.rtc = mu_load(rd.rtc);
     const tot = rd.total || {};
     const tl  = (rd.btc.liters||0) + (rd.rtc.liters||0);
-    tot.tc     = (rd.btc.tc||0)     + (rd.rtc.tc||0);
     tot.margin = (rd.btc.margin||0) + (rd.rtc.margin||0);
-    tot.roi    = tot.tc > 0 ? tot.margin / tot.tc        : 0;
-    tot.mxnl   = tl   > 0 ? tot.margin / tl             : 0;
-    tot.usdgal = tl   > 0 ? tot.margin / tl * L_PER_GAL / avgFx : 0;
+    tot.roi    = tot.tc > 0 ? tot.margin / tot.tc : 0;
+    tot.mxnl   = tl > 0 ? tot.margin / tl : 0;
+    tot.usdgal = tl > 0 ? tot.margin / tl * L_PER_GAL / avgFx : 0;
     rd.total   = tot;
-
     d.total_margin   = tot.margin;
     d.investor_share = tot.margin * (d.inv_share_pct || 0.40);
-    d.active_detail    = ad;
     d.recovered_detail = rd;
     return d;
   }
 
   const inv = applyMarkup(rawInv);
+  const ad  = inv.active_detail || {};
+  const rd  = inv.recovered_detail || {};
+  const prj = inv.projections || {};
 
-  // ── Formatters ───────────────────────────────────────────────────────────────
-  const fmxn = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—';
-  const fpct = v => v != null ? (Number(v)*100).toFixed(2)+'%' : '—';
-  const fnum = (v,d=2) => v != null ? Number(v).toFixed(d) : '—';
-  const date = inv.as_of || '—';
+  // Formatters
+  const fm  = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—';
+  const fp  = v => v != null ? (Number(v)*100).toFixed(2)+'%' : '—';
+  const fd4 = v => v != null ? Number(v).toFixed(4) : '—';
+  const fd2 = v => v != null ? Number(v).toFixed(2) : '—';
+  const fcol= v => v > 0 ? 'var(--green)' : v < 0 ? 'var(--red)' : 'var(--muted)';
 
+  // Section toggle helper
+  function secHdr(id, icon, title, subtitle, badge='', startOpen=true) {
+    return `<div class="inv-section" id="sec-${id}">
+      <div class="inv-sec-hdr" onclick="invToggle('${id}')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted);flex-shrink:0">${icon}</svg>
+          <span style="font-size:0.82rem;font-weight:600;color:var(--text)">${title}</span>
+          ${badge ? `<span style="font-size:0.65rem;padding:2px 7px;border-radius:10px;background:rgba(248,81,73,0.15);color:var(--red);font-weight:600">${badge}</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:0.72rem;color:var(--muted)">${subtitle}</span>
+          <svg class="inv-chevron ${startOpen?'open':''}" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 6 8 10 12 6"/></svg>
+        </div>
+      </div>
+      <div class="inv-sec-body${startOpen?'':' hidden'}">`;
+  }
+  const secFtr = `</div></div>`;
+
+  // ── Rounds state (loaded from API) ────────────────────────────────────────────
+  let invRounds = [];
+
+  function renderRoundsTable() {
+    // Use rounds from API if admin loaded them, else fall back to extract commits
+    const rounds = invRounds.length ? invRounds : (inv.commits || []);
+    if (!rounds.length) return '<div style="color:var(--muted);font-size:0.78rem;padding:0.5rem 0">No rounds entered yet.</div>';
+    let total_usd = 0, total_mxn = 0;
+    let rows = rounds.map((c,i) => {
+      const usd = Number(c.usd||0); const fx = Number(c.fx||0);
+      const mxn = Number(c.mxn||0) || usd*fx;
+      total_usd += usd; total_mxn += mxn;
+      return `<tr>
+        <td><span style="font-size:0.7rem;padding:2px 8px;border-radius:4px;background:rgba(74,124,220,0.12);color:var(--accent);font-weight:600">Round ${i+1}</span></td>
+        <td style="text-align:right">$${Number(usd).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
+        <td style="text-align:right">$${Number(mxn).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
+        <td style="text-align:right;color:var(--muted)">${c.date||'—'}</td>
+        <td style="text-align:right;color:var(--muted)">${fx||'—'}</td>
+        ${IS_ADMIN ? `<td style="text-align:center"><button onclick="removeRound(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.75rem;padding:2px 6px;border-radius:4px" title="Remove">✕</button></td>` : ''}
+      </tr>`;
+    }).join('');
+    rows += `<tr style="font-weight:600;background:var(--surface2)">
+      <td>Total</td>
+      <td style="text-align:right">$${Number(total_usd).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
+      <td style="text-align:right">$${Number(total_mxn).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
+      <td colspan="${IS_ADMIN?3:2}"></td>
+    </tr>`;
+    return `<div class="table-wrap"><table>
+      <thead><tr>
+        <th>Round</th><th style="text-align:right">USD</th><th style="text-align:right">MXN</th>
+        <th style="text-align:right">Date</th><th style="text-align:right">FX Rate</th>
+        ${IS_ADMIN ? '<th style="text-align:center">Remove</th>' : ''}
+      </tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  // Build HTML
   let html = `
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+  <style>
+    .inv-section{border:1px solid var(--border);border-radius:10px;margin-bottom:0.85rem;overflow:hidden;background:var(--surface)}
+    .inv-sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.1rem;cursor:pointer;user-select:none;transition:background 0.15s}
+    .inv-sec-hdr:hover{background:var(--surface2)}
+    .inv-sec-body{border-top:1px solid var(--border);padding:1.1rem}
+    .inv-sec-body.hidden{display:none}
+    .inv-chevron{transition:transform 0.2s;color:var(--muted)}
+    .inv-chevron.open{transform:rotate(180deg)}
+    .inv-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+    .inv-kpi{background:var(--surface2);border-radius:8px;padding:0.75rem 0.85rem;text-align:center}
+    .inv-kpi-label{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:4px;line-height:1.3}
+    .inv-kpi-val{font-size:1rem;font-weight:700}
+    .inv-kpi-sub{font-size:0.6rem;color:var(--muted);margin-top:2px}
+    .inv-bar-track{height:8px;border-radius:4px;background:var(--surface3);display:flex;overflow:hidden;gap:2px;margin:0.6rem 0}
+    .inv-bar-seg{height:100%;border-radius:2px}
+    .inv-legend{display:flex;flex-wrap:wrap;gap:10px}
+    .inv-legend-item{display:flex;align-items:center;gap:5px;font-size:0.72rem;color:var(--muted)}
+    .inv-legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+    .cycle-steps{display:flex;align-items:stretch;gap:0;margin:0.75rem 0}
+    .cycle-step{flex:1;display:flex;flex-direction:column}
+    .cycle-box{border:1px solid var(--border);border-radius:8px;padding:0.65rem 0.5rem;margin:0 3px;flex:1;text-align:center}
+    .cycle-icon{font-size:1.1rem;margin-bottom:4px}
+    .cycle-num{font-size:0.65rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px}
+    .cycle-title{font-size:0.72rem;font-weight:600;color:var(--text);margin-bottom:4px}
+    .cycle-desc{font-size:0.68rem;color:var(--muted);line-height:1.55}
+    .cycle-arrow{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.85rem;flex-shrink:0;padding-top:1.5rem}
+    .inv-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:0.85rem}
+    .inv-stat{background:var(--surface2);border-radius:8px;padding:0.65rem 0.85rem;text-align:center}
+    .inv-stat-label{font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px}
+    .inv-stat-val{font-size:0.9rem;font-weight:600}
+    .glossary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;margin-top:0.85rem}
+    .glossary-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.75rem 0.9rem}
+    .glossary-term{font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:3px}
+    .glossary-def{font-size:0.68rem;color:var(--muted);line-height:1.6}
+    .fwd-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+    .fwd-card{background:var(--surface2);border-radius:8px;padding:0.85rem 1rem}
+    .fwd-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:5px}
+    .fwd-val{font-size:1.05rem;font-weight:600}
+    .fwd-note{font-size:0.65rem;color:var(--muted);margin-top:3px}
+    .warning-strip{display:flex;align-items:flex-start;gap:8px;background:rgba(248,140,62,0.1);border:1px solid rgba(248,140,62,0.25);border-radius:8px;padding:0.7rem 0.9rem;margin-top:0.85rem;font-size:0.73rem;color:var(--orange);line-height:1.5}
+    .load-pill{display:inline-block;font-size:0.65rem;padding:2px 7px;border-radius:8px;font-weight:600}
+    .pill-g{background:rgba(63,185,80,0.15);color:var(--green)}
+    .pill-a{background:rgba(240,136,62,0.15);color:var(--orange)}
+    .pill-r{background:rgba(248,81,73,0.15);color:var(--red)}
+    .pill-p{background:rgba(110,127,150,0.15);color:var(--muted)}
+    .round-form{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-top:0.85rem;padding-top:0.85rem;border-top:1px solid var(--border)}
+    .round-form input{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:0.4rem 0.6rem;color:var(--text);font-size:0.78rem;font-family:var(--font);width:100%}
+    .round-form input:focus{outline:none;border-color:var(--accent)}
+    .round-form label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:3px}
+    .round-add-btn{background:rgba(74,124,220,0.15);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:0.4rem 0.85rem;cursor:pointer;font-size:0.78rem;font-weight:600;white-space:nowrap;transition:background 0.15s}
+    .round-add-btn:hover{background:rgba(74,124,220,0.25)}
+  </style>`;
+
+  const date = inv.as_of || '—';
+  html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem">
     <div>
-      <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">EGC — Investor Performance Report</div>
-      <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;font-style:italic">All figures in MXN &amp; Liters</div>
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">EGC · Investor Performance Report</div>
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:2px;font-style:italic">All figures in MXN &amp; Liters · ${date}</div>
     </div>
-    <div style="text-align:right">
-      <div style="font-size:0.7rem;color:var(--muted)">As of ${date}</div>
-      <div style="font-size:0.68rem;color:var(--muted);margin-top:0.1rem">${dashData.filename||''}</div>
+    <div style="font-size:0.7rem;color:var(--muted)">${dashData.filename||''}</div>
+  </div>`;
+
+  // ── SECTION 1: Capital Snapshot ───────────────────────────────────────────
+  const totalActive = ad.total_mxn || 0;
+  const allocPct  = totalActive ? ad.alloc_mxn/totalActive : 0;
+  const invPct    = totalActive ? ad.inv_mxn/totalActive : 0;
+  const pendPct   = totalActive ? (ad.btc_pend_mxn+ad.rtc_pend_mxn)/totalActive : 0;
+
+  html += secHdr('snapshot',
+    '<circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/>',
+    'Capital snapshot', '6 metrics', '', true);
+
+  // KPI cards
+  const kpis = [
+    {label:'Capital deployed',  val:'$'+fm(inv.total_committed_usd)+' USD', sub:'committed capital', green:false},
+    {label:'Capital at work',   val:'$'+fm(totalActive)+' MXN',             sub:'active & deployed', green:false},
+    {label:'Capital recovered', val:'$'+fm(inv.recovered_mxn)+' MXN',       sub:'full proceeds',     green:true},
+    {label:'Revolved multiple', val:Number(inv.revolved||0).toFixed(2)+'×', sub:'since inception',   green:true},
+    {label:'Total profit',      val:'$'+fm(inv.total_margin)+' MXN',        sub:'gross generated',   green:true},
+    {label:'Investor share',    val:'$'+fm(inv.investor_share)+' MXN',      sub:Math.round((inv.inv_share_pct||0.4)*100)+'% of profit', green:true},
+  ];
+  html += `<div class="inv-kpi-grid">`;
+  kpis.forEach(k => {
+    html += `<div class="inv-kpi">
+      <div class="inv-kpi-label">${k.label}</div>
+      <div class="inv-kpi-val" style="color:${k.green?'var(--green)':'var(--text)'}">${k.val}</div>
+      <div class="inv-kpi-sub">${k.sub}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Capital bar
+  html += `<div style="margin-top:1.1rem">
+    <div style="font-size:0.68rem;color:var(--muted);margin-bottom:5px">Where the capital is right now</div>
+    <div class="inv-bar-track">
+      <div class="inv-bar-seg" style="width:${(allocPct*100).toFixed(1)}%;background:#3fb950"></div>
+      <div class="inv-bar-seg" style="width:${(invPct*100).toFixed(1)}%;background:#4a7cdc"></div>
+      <div class="inv-bar-seg" style="width:${(pendPct*100).toFixed(1)}%;background:#f0883e"></div>
+    </div>
+    <div class="inv-legend">
+      <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#3fb950"></div>Allocation — $${fm(ad.alloc_mxn)} (${(allocPct*100).toFixed(0)}%)</div>
+      <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#4a7cdc"></div>Bulk plant inventory — $${fm(ad.inv_mxn)} (${(invPct*100).toFixed(0)}%)</div>
+      <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#f0883e"></div>Pending collection — $${fm(ad.btc_pend_mxn+ad.rtc_pend_mxn)} (${(pendPct*100).toFixed(0)}%)</div>
     </div>
   </div>`;
 
-  // Committed Capital
-  html += `<div style="margin-bottom:2rem">
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Committed Capital</div>
-    <div class="table-wrap"><table>
-      <thead><tr>
-        <th>Round</th><th style="text-align:right">Committed (USD)</th><th style="text-align:right">Committed (MXN)</th><th style="text-align:right">Date</th><th style="text-align:right">FX Rate</th>
-      </tr></thead><tbody>`;
-  (inv.commits||[]).forEach(c => {
-    html += `<tr>
-      <td><span style="font-size:0.7rem;padding:2px 8px;border-radius:4px;background:rgba(74,124,220,0.12);color:var(--accent);font-weight:600">${c.round}</span></td>
-      <td style="text-align:right">$${Number(c.usd).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
-      <td style="text-align:right">$${Number(c.mxn).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
-      <td style="text-align:right;color:var(--muted)">${c.date}</td>
-      <td style="text-align:right;color:var(--muted)">${c.fx}</td>
-    </tr>`;
-  });
-  html += `<tr style="font-weight:600;background:var(--surface2)">
-    <td>Total Committed Capital</td>
-    <td style="text-align:right">$${Number(inv.total_committed_usd||0).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
-    <td style="text-align:right">$${Number(inv.total_committed_mxn||0).toLocaleString('en-US',{minimumFractionDigits:0})}</td>
-    <td colspan="2"></td>
-  </tr></tbody></table></div></div>`;
+  // Committed rounds table (always visible in snapshot)
+  html += `<div style="margin-top:1.1rem">
+    <div style="font-size:0.68rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted2);margin-bottom:0.5rem">Investment rounds</div>
+    <div id="rounds-table-container">${renderRoundsTable()}</div>`;
 
-  // KPIs
-  const kpis = [
-    {label:'Total Committed',  val:'$'+fmxn(inv.total_committed_mxn), sub:'MXN'},
-    {label:'Active Capital',   val:'$'+fmxn(inv.active_capital),       sub:'MXN deployed'},
-    {label:'Available Capital',val:'$'+fmxn(inv.available),            sub:'MXN uninvested'},
-    {label:'Recovered Capital',val:'$'+fmxn(inv.recovered_mxn),        sub:'MXN returned', green:true},
-    ...(MARKUP ? [] : [{label:'Revolved Multiple',val:Number(inv.revolved||0).toFixed(2)+'×', sub:'capital turns'}]),
-    {label:'Total Profit',     val:'$'+fmxn(inv.total_margin),         sub:'MXN gross', green:true},
-    {label:'Investor Share',   val:'$'+fmxn(inv.investor_share),       sub:Math.round((inv.inv_share_pct||0.4)*100)+'% of profit', green:true},
-  ];
-  const kpiCols = kpis.length;
-  html += `<div style="margin-bottom:2rem">
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Key Performance Indicators (MXN)</div>
-    <div style="display:grid;grid-template-columns:repeat(${kpiCols},1fr);gap:8px">`;
-  kpis.forEach(k => {
-    html += `<div style="background:var(--surface2);border-radius:8px;padding:0.7rem 0.6rem;text-align:center">
-      <div style="font-size:0.62rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:4px;line-height:1.3">${k.label}</div>
-      <div style="font-size:0.95rem;font-weight:700;color:${k.green?'var(--green)':'var(--text)'}">${k.val}</div>
-      <div style="font-size:0.62rem;color:var(--muted);margin-top:2px">${k.sub}</div>
+  if (IS_ADMIN) {
+    html += `<div class="round-form" id="round-form">
+      <div><label>Amount (USD)</label><input type="number" id="ri-usd" placeholder="200000"></div>
+      <div><label>Date</label><input type="text" id="ri-date" placeholder="13-Apr-26"></div>
+      <div><label>FX Rate</label><input type="number" step="0.01" id="ri-fx" placeholder="17.30"></div>
+      <div><label>MXN (auto)</label><input type="number" id="ri-mxn" placeholder="auto" readonly style="color:var(--muted)"></div>
+      <button class="round-add-btn" onclick="addRound()">+ Add round</button>
     </div>`;
+  }
+  html += `</div>`;
+  html += secFtr;
+
+  // ── SECTION 2: How the capital works ─────────────────────────────────────
+  html += secHdr('how',
+    '<path d="M2 12 C2 6.5 6.5 2 12 2 S22 6.5 22 12 17.5 22 12 22 2 17.5 2 12"/><polyline points="12 6 12 12 16 14"/>',
+    'How the capital works', 'Capital cycle', '', true);
+
+  const CYCLE_STEPS = [
+    { num:'1', icon:'💵', title:'Allocation', desc:'Investment is wired to U.S. suppliers. Funds become allocated gallons — product you own, secured at the terminal, not yet shipped to Mexico.' },
+    { num:'2', icon:'🚛', title:'RTB — Rack to Bulk', desc:'Fuel moves from the U.S. terminal to EGC\'s bulk storage plant in Mexico (VBP). Capital is now physical inventory in the tank.' },
+    { num:'3', icon:'🏭', title:'BTC — Bulk to Customer', desc:'Product ships from the bulk plant to the end customer in Mexico. Revenue is generated; capital stays active until Mexico pays.' },
+    { num:'4', icon:'✅', title:'Recovered', desc:'Mexico pays. Capital is fully recovered along with the gross margin earned on the trade — and redeployed into the next cycle.' },
+  ];
+
+  html += `<div class="cycle-steps">`;
+  CYCLE_STEPS.forEach((s,i) => {
+    if (i > 0) html += `<div class="cycle-arrow">→</div>`;
+    html += `<div class="cycle-step"><div class="cycle-box">
+      <div class="cycle-icon">${s.icon}</div>
+      <div class="cycle-num">${s.num}</div>
+      <div class="cycle-title">${s.title}</div>
+      <div class="cycle-desc">${s.desc}</div>
+    </div></div>`;
   });
-  html += `</div></div>`;
+  html += `</div>`;
 
-  // Active Capital
-  const ad = inv.active_detail || {};
-  html += `<div style="margin-bottom:2rem">
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Active Capital — investor capital funding loads not yet collected</div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Type</th><th style="text-align:right">Capital (MXN)</th><th style="text-align:right">Liters</th></tr></thead>
-      <tbody>
-        <tr><td style="color:var(--muted)">Allocation</td><td style="text-align:right">${ad.alloc_mxn>0?'$'+fmxn(ad.alloc_mxn):'—'}</td><td style="text-align:right;color:var(--muted)">${ad.alloc_liters>0?fmxn(ad.alloc_liters):'—'}</td></tr>
-        <tr><td style="color:var(--muted)">Bulk Plant Inventory</td><td style="text-align:right">${ad.inv_mxn>0?'$'+fmxn(ad.inv_mxn):'—'}</td><td style="text-align:right;color:var(--muted)">${ad.inv_liters>0?fmxn(ad.inv_liters):'—'}</td></tr>
-        <tr><td style="color:var(--muted)">RTC (payment pending)</td><td style="text-align:right">${ad.rtc_pend_mxn>0?'$'+fmxn(ad.rtc_pend_mxn):'—'}</td><td style="text-align:right;color:var(--muted)">${ad.rtc_pend_liters>0?fmxn(ad.rtc_pend_liters):'—'}</td></tr>
-        <tr><td style="color:var(--muted)">BTC (payment pending)</td><td style="text-align:right">${ad.btc_pend_mxn>0?'$'+fmxn(ad.btc_pend_mxn):'—'}</td><td style="text-align:right;color:var(--muted)">${ad.btc_pend_liters>0?fmxn(ad.btc_pend_liters):'—'}</td></tr>
-        <tr style="font-weight:600;background:var(--surface2)"><td>Total Active Capital</td><td style="text-align:right">$${fmxn(ad.total_mxn)}</td><td style="text-align:right;color:var(--muted)">${fmxn(ad.total_liters)}</td></tr>
-      </tbody>
-    </table></div></div>`;
+  // Stats row
+  const cycleStr  = inv.avg_cycle_days != null ? inv.avg_cycle_days+' days' : '~10 days';
+  const btwnStr   = inv.avg_days_between_loads ? inv.avg_days_between_loads+' days' : '—';
+  const roiStr    = rd.total ? fp(rd.total.roi) : '—';
+  html += `<div class="inv-stat-row">
+    <div class="inv-stat">
+      <div class="inv-stat-label">Avg cash conversion cycle</div>
+      <div class="inv-stat-val" style="color:var(--accent)">${cycleStr}</div>
+      <div style="font-size:0.62rem;color:var(--muted)">From wire to Mexico payment</div>
+    </div>
+    <div class="inv-stat">
+      <div class="inv-stat-label">Avg days between deliveries</div>
+      <div class="inv-stat-val">${btwnStr}</div>
+      <div style="font-size:0.62rem;color:var(--muted)">Delivery cadence</div>
+    </div>
+    <div class="inv-stat">
+      <div class="inv-stat-label">Return per cycle</div>
+      <div class="inv-stat-val" style="color:var(--green)">${roiStr}</div>
+      <div style="font-size:0.62rem;color:var(--muted)">On recovered capital</div>
+    </div>
+  </div>`;
 
-  // Recovered Capital
-  const rd = inv.recovered_detail || {};
-  const recRows = [['RTC', rd.rtc||{}], ['BTC', rd.btc||{}], ['Total Recovered', rd.total||{}, true]];
-  html += `<div style="margin-bottom:2rem">
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">Recovered Capital — cumulative from fully collected loads</div>
-    <div class="table-wrap"><table>
-      <thead><tr>
-        <th>Type</th>
-        <th style="text-align:right">Recovered (MXN)</th>
-        <th style="text-align:right">Liters</th>
-        <th style="text-align:right">Gross Profit (MXN)</th>
-        <th style="text-align:right">Avg ROI</th>
-        <th style="text-align:right">Avg Margin (MXN/L)</th>
-        <th style="text-align:right">Avg Margin (USD/Gal)</th>
-      </tr></thead><tbody>`;
-  recRows.forEach(([label, d, isTot]) => {
-    const style = isTot ? 'font-weight:600;background:var(--surface2)' : '';
-    const gc    = d.margin>0 ? 'color:var(--green)' : '';
-    html += `<tr style="${style}">
-      <td style="color:${isTot?'inherit':'var(--muted)'}">${label}</td>
-      <td style="text-align:right;${gc}">${d.tc>0?'$'+fmxn(d.tc):'—'}</td>
-      <td style="text-align:right;color:var(--muted)">${d.liters>0?fmxn(d.liters):'—'}</td>
-      <td style="text-align:right;${gc}">${d.margin>0?'$'+fmxn(d.margin):'—'}</td>
-      <td style="text-align:right;${gc}">${d.roi>0?fpct(d.roi):'—'}</td>
-      <td style="text-align:right">${d.mxnl>0?'$'+fnum(d.mxnl,4):'—'}</td>
-      <td style="text-align:right">${d.usdgal>0?'$'+fnum(d.usdgal,2):'—'}</td>
-    </tr>`;
-  });
-  html += `</tbody></table></div></div>`;
+  // Glossary
+  html += `<div class="glossary-grid">
+    <div class="glossary-card"><div class="glossary-term">RTB — Rack to Bulk</div><div class="glossary-def">Product moves from the U.S. supplier rack to EGC's bulk storage plant in Mexico. This is the inventory-building step.</div></div>
+    <div class="glossary-card"><div class="glossary-term">BTC — Bulk to Customer</div><div class="glossary-def">Product dispatched from the bulk plant to the end customer. Revenue is generated and capital recovery begins.</div></div>
+    <div class="glossary-card"><div class="glossary-term">RTC — Rack to Customer</div><div class="glossary-def">Product goes directly from the U.S. rack to the Mexican customer — faster cycle with no inventory holding period.</div></div>
+  </div>`;
+  html += secFtr;
 
-  // ── How Your Capital Works (hardcoded — no Excel dependency) ────────────────
-  const STEPS = [
-    {
-      title: "1 · Allocation",
-      body:  "Your investment dollars are used to purchase fuel directly from U.S. suppliers. Once wired, those funds become allocated gallons — product you own but that hasn't moved to Mexico yet."
-    },
-    {
-      title: "2 · Inventory (Rack-to-Bulk / RTB)",
-      body:  "EGC dispatches the allocated fuel from the supplier's rack to a bulk storage plant in Mexico. The capital is now deployed as physical inventory — product in the tank, waiting to be sold."
-    },
-    {
-      title: "3 · Pending Collection (BTC & RTC)",
-      body:  "Product moves toward the customer. In a Bulk-to-Customer (BTC) load, fuel ships from the bulk plant to the end buyer. In a Rack-to-Customer (RTC) load, it goes directly from the rack without touching the plant. In both cases, capital is active until Mexico pays."
-    },
-    {
-      title: "4 · Recovered",
-      body:  "Once the customer pays, capital is recovered along with the gross margin earned on the trade. Recovered capital can be redeployed into the next cycle, compounding returns over time."
+  // ── SECTION 3: Forward view (admin only) ──────────────────────────────────
+  if (IS_ADMIN) {
+    const stockoutDays = prj.loads_remaining * (inv.avg_days_between_loads || 3);
+    const stockoutDate = new Date(Date.now() + stockoutDays*86400000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const compression  = prj.first3_avg_margin != null && prj.last3_avg_margin != null
+      ? ((prj.last3_avg_margin - prj.first3_avg_margin)/Math.abs(prj.first3_avg_margin)*100).toFixed(0)
+      : null;
+
+    html += secHdr('forward',
+      '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+      'Forward view', 'Projections · Admin only', 'Admin only', true);
+
+    html += `<div class="fwd-grid">
+      <div class="fwd-card">
+        <div class="fwd-label">Loads remaining in inventory</div>
+        <div class="fwd-val">${prj.loads_remaining} loads</div>
+        <div class="fwd-note">${fm(prj.inv_liters)} L at bulk plant</div>
+      </div>
+      <div class="fwd-card">
+        <div class="fwd-label">Estimated stockout</div>
+        <div class="fwd-val">${stockoutDate}</div>
+        <div class="fwd-note">At current delivery pace</div>
+      </div>
+      <div class="fwd-card">
+        <div class="fwd-label">Projected add. profit</div>
+        <div class="fwd-val" style="color:${prj.proj_profit>=0?'var(--green)':'var(--red)'}">$${fm(prj.proj_profit)} MXN</div>
+        <div class="fwd-note">At avg historical margin $${fm(prj.avg_margin_per_load)}/load</div>
+      </div>
+      <div class="fwd-card">
+        <div class="fwd-label">Projected investor return</div>
+        <div class="fwd-val" style="color:var(--green)">$${fm(prj.proj_investor_return)} MXN</div>
+        <div class="fwd-note">Cumulative incl. already earned</div>
+      </div>
+    </div>`;
+
+    if (compression !== null) {
+      html += `<div class="warning-strip">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Margin compression alert: first 3 paid loads averaged $${fm(prj.first3_avg_margin)} MXN — last 3 averaged $${fm(prj.last3_avg_margin)} MXN (${compression}% change). If this trend continues, projected returns may be significantly lower than the historical average shown above.</span>
+      </div>`;
     }
-  ];
-  const GLOSSARY = [
-    {
-      term: "RTB — Rack to Bulk",
-      def:  "Product moves from the U.S. supplier rack to ETP's bulk storage plant in Mexico. This is the inventory-building step."
-    },
-    {
-      term: "BTC — Bulk to Customer",
-      def:  "Product is dispatched from the bulk plant to the end customer in Mexico. This is the revenue-generating step for inventory loads."
-    },
-    {
-      term: "RTC — Rack to Customer",
-      def:  "Product goes directly from the U.S. rack to the Mexican end customer, bypassing the bulk plant. Faster cycle, no inventory holding period."
-    }
-  ];
+    html += secFtr;
+  }
 
-  html += `<div style="margin-bottom:2rem;margin-top:0.5rem">
-    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:0.85rem;padding-bottom:0.55rem;border-bottom:2px solid var(--border2)">How Your Capital Works</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem">`;
-  STEPS.forEach(s => {
-    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem">
-      <div style="font-size:0.75rem;font-weight:600;color:var(--accent);margin-bottom:0.4rem">${s.title}</div>
-      <div style="font-size:0.78rem;color:var(--muted);line-height:1.7">${s.body}</div>
-    </div>`;
-  });
-  html += `</div>
-    <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted2);margin-bottom:0.6rem">Glossary</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem">`;
-  GLOSSARY.forEach(g => {
-    html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem">
-      <div style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.3rem">${g.term}</div>
-      <div style="font-size:0.73rem;color:var(--muted);line-height:1.65">${g.def}</div>
-    </div>`;
-  });
-  html += `</div></div>`;
+  // ── SECTION 4: Load performance (admin only) ──────────────────────────────
+  if (IS_ADMIN) {
+    const loads = inv.btc_loads || [];
+    html += secHdr('loads',
+      '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>',
+      'Load performance', loads.length+' loads · Admin only', 'Admin only', false);
 
-  html += `<div style="font-size:0.68rem;color:var(--muted);font-style:italic;padding-top:0.75rem;border-top:1px solid var(--border)">
+    html += `<div class="table-wrap"><table>
+      <thead><tr>
+        <th>Load</th><th>Customer</th><th>Delivery</th><th>Payment</th><th style="text-align:right">Liters</th>
+        <th style="text-align:right">Price/L</th><th style="text-align:right">Cost/L</th>
+        <th style="text-align:right">Margin/L</th><th style="text-align:right">Margin %</th>
+        <th style="text-align:right">Total margin</th><th>Status</th>
+      </tr></thead><tbody>`;
+
+    loads.forEach(l => {
+      const mp = l.margin_pct;
+      const mc = mp > 0.05 ? 'pill-g' : mp > 0.01 ? 'pill-a' : 'pill-r';
+      const sc = l.status.toUpperCase() === 'PAID' ? 'pill-g' : 'pill-p';
+      const tc = l.total_margin >= 0 ? '' : 'color:var(--red)';
+      html += `<tr>
+        <td style="font-weight:500">${l.load}</td>
+        <td style="color:var(--muted);font-size:0.78rem">${l.customer.replace('BTC - ','')}</td>
+        <td style="color:var(--muted);font-size:0.78rem">${l.date}</td>
+        <td style="color:var(--muted);font-size:0.78rem">${l.payment_date||'—'}</td>
+        <td style="text-align:right">${fm(l.liters)}</td>
+        <td style="text-align:right">${fd4(l.price_l)}</td>
+        <td style="text-align:right">${fd4(l.cost_l)}</td>
+        <td style="text-align:right;${tc}">${fd4(l.margin_l)}</td>
+        <td style="text-align:right"><span class="load-pill ${mc}">${(l.margin_pct*100).toFixed(2)}%</span></td>
+        <td style="text-align:right;${tc};font-weight:500">$${fm(l.total_margin)}</td>
+        <td><span class="load-pill ${sc}">${l.status}</span></td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+    html += secFtr;
+  }
+
+  html += `<div style="font-size:0.67rem;color:var(--muted);font-style:italic;padding-top:0.75rem;border-top:1px solid var(--border)">
     This document is prepared for informational purposes only. Past performance does not guarantee future results. All figures sourced from EGC operational records.
   </div>`;
 
   el.innerHTML = html;
+
+  // Load rounds from API and refresh table
+  fetch('/api/rounds').then(r=>r.json()).then(data => {
+    if (data.rounds && data.rounds.length) {
+      invRounds = data.rounds;
+      document.getElementById('rounds-table-container').innerHTML = renderRoundsTable();
+    }
+  }).catch(()=>{});
+
+  // Auto-calc MXN when USD/FX change
+  if (IS_ADMIN) {
+    ['ri-usd','ri-fx'].forEach(id => {
+      const el2 = document.getElementById(id);
+      if (el2) el2.addEventListener('input', () => {
+        const usd = parseFloat(document.getElementById('ri-usd').value)||0;
+        const fx  = parseFloat(document.getElementById('ri-fx').value)||0;
+        const mxnEl = document.getElementById('ri-mxn');
+        if (mxnEl) mxnEl.value = usd&&fx ? Math.round(usd*fx).toLocaleString() : '';
+      });
+    });
+  }
+}
+
+function invToggle(id) {
+  const body    = document.querySelector(`#sec-${id} .inv-sec-body`);
+  const chevron = document.querySelector(`#sec-${id} .inv-chevron`);
+  if (!body) return;
+  body.classList.toggle('hidden');
+  chevron.classList.toggle('open');
+}
+
+function addRound() {
+  const usd  = parseFloat(document.getElementById('ri-usd').value)||0;
+  const date = document.getElementById('ri-date').value.trim();
+  const fx   = parseFloat(document.getElementById('ri-fx').value)||0;
+  if (!usd || !fx) return alert('Please enter USD amount and FX rate.');
+  const mxn  = Math.round(usd * fx);
+
+  fetch('/api/rounds').then(r=>r.json()).then(data => {
+    const rounds = data.rounds || [];
+    rounds.push({ usd, date, fx, mxn });
+    return fetch('/api/rounds', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rounds})});
+  }).then(r=>r.json()).then(() => {
+    fetch('/api/rounds').then(r=>r.json()).then(data => {
+      if (window.invRounds !== undefined) window.invRounds = data.rounds;
+      const container = document.getElementById('rounds-table-container');
+      // Re-render via full investor refresh for simplicity
+      renderInvestor();
+    });
+  }).catch(e => alert('Error saving round: '+e));
+}
+
+function removeRound(idx) {
+  fetch('/api/rounds').then(r=>r.json()).then(data => {
+    const rounds = data.rounds || [];
+    rounds.splice(idx, 1);
+    return fetch('/api/rounds', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rounds})});
+  }).then(()=>renderInvestor()).catch(e=>alert('Error: '+e));
 }
 
 
