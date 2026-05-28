@@ -127,11 +127,12 @@ def _extract_overall_summary(wb, wb_fifo=None):
     # Remaining in allocation = paid (SI) - pulled (BOL-RTB) per supplier
     # Wtd Avg Rate = Rate (usd/gal) from SI, weighted by remaining gallons per invoice
     # For split-invoice BOLs, assign gallons to the LAST invoice in the split.
+    # NOTE: "Paid for Gallons" is a formula in the FIFO output — always read SI from wb (source).
     rem_alloc_gal = defaultdict(float)
     wtd_rate_num  = defaultdict(float)
     wtd_rate_den  = defaultdict(float)
     try:
-        ws_si3 = wb["Supplier Invoices"]
+        ws_si3 = wb["Supplier Invoices"]  # wb = source workbook in this function
         si_rows3 = list(ws_si3.iter_rows(values_only=True))
         si_hdr3 = next((i for i, r in enumerate(si_rows3) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
         if si_hdr3 is not None:
