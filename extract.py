@@ -18,7 +18,7 @@ def extract(path, src_path=None):
 
     bol_tab         = _extract_bol(wb, wb_src=wb_src)
     overview_exp    = _extract_overview(wb_src)
-    investment      = _extract_investment_summary(wb_src)
+    investment      = _extract_investment_summary(wb_src, wb_fifo=wb)
     return overall_summary, inventory, fifo_rows, meta, investment, bol_tab, overview_exp
 
 # ── Overall Summary ────────────────────────────────────────────────────────────
@@ -444,26 +444,12 @@ def _extract_meta(wb, wb_fifo=None):
     }
 
 # ── Investment Summary ─────────────────────────────────────────────────────────
-def _extract_investment_summary(wb, uploaded_at=None):
+def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     """
-    Compute Investment Summary replicating the exact Excel formulas from Table6
-    (Load Tracking) and Table7 (Supplier Invoices / allocation).
-    This avoids relying on Excel formula cache — works after a single FIFO run.
-
-    Key formulas replicated:
-      FreightCost/L  = Freight Cost / Delivered Net Liters
-      Comission/L    = COMISSION / Delivered Net Liters
-      Total Cost/L   = FreightCost/L + Supply Cost + Comission/L
-      Total Cost     = Total Cost/L * Delivered Net Liters
-      Price/L (BTC)  = (Fuel Cost / Liters) + FreightCost/L + Comission/L
-      Total Sale     = Price/L * Delivered Net Liters
-      Total Margin   = Total Sale - Total Cost
-
-      Inventory L    = SUM(RTB liters) - SUM(BTC liters)
-      Inventory MXN  = Inventory L * (SUM RTB cost / SUM RTB liters)
-      BTC/RTC Pending= SUMIFS(Total Cost, type, PENDING)
-      Recovered      = SUMIFS(Total Cost/Margin, type, PAID)
+    wb      = source workbook (original upload) — raw Load Tracking inputs
+    wb_fifo = FIFO output workbook — has engine-written columns (Status, Remainder Amount MXN, FIFO sheet)
     """
+    _wb_out = wb_fifo if wb_fifo is not None else wb  # for FIFO-written sheets
     f  = lambda v: float(v) if isinstance(v, (int, float)) else 0.0
 
     # ── 1. Committed Capital — user-entered, always cached ────────────────────
@@ -495,26 +481,26 @@ def _extract_investment_summary(wb, uploaded_at=None):
     avg_fx = total_committed_mxn / total_committed_usd if total_committed_usd else 17.31
     inv_share_pct = 0.40
 
-    # ── 2. Allocation from Supplier Invoices (Table7) ─────────────────────────
+    # ── 2. Allocation from Supplier Invoices — Status=ACTIVE rows ────────────
+    # Col AA (27) = Status, Col Y (25) = Remainder Amount MXN, Col V (22) = Remainder Liters
     alloc_mxn = alloc_lit = 0.0
     try:
-        ws_si = wb["Supplier Invoices"]
-        si_rows = list(ws_si.iter_rows(values_only=True))
-        # Find header row
-        si_h = {}
-        for i, row in enumerate(si_rows):
-            if any(v and 'Status' in str(v) for v in row):
-                si_h = {str(v).strip(): j for j, v in enumerate(row) if v}
-                si_data_start = i + 1
-                break
-        if si_h:
-            for row in si_rows[si_data_start:]:
+        ws_si_alloc = wb["Supplier Invoices"]  # source has cached Status/Remainder formulas
+        si_alloc_rows = list(ws_si_alloc.iter_rows(values_only=True))
+        si_hdr_idx = next((i for i, r in enumerate(si_alloc_rows)
+                           if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
+        if si_hdr_idx is not None:
+            sch = {str(v).strip(): j for j, v in enumerate(si_alloc_rows[si_hdr_idx]) if v}
+            col_status  = sch.get("Status", 26)
+            col_rem_mxn = sch.get("Remainder Amount MXN", 24)
+            col_rem_lit = sch.get("Remainder Liters Paid and No BOL", 21)
+            for row in si_alloc_rows[si_hdr_idx + 1:]:
                 if not any(row): break
-                status = str(row[si_h.get('Status', 0)] or '').strip().upper()
+                status = str(row[col_status] or '').strip().upper()
                 if status == 'ACTIVE':
-                    alloc_mxn += f(row[si_h.get('Remainder Amount MXN', 0)])
-                    alloc_lit += f(row[si_h.get('Remainder Liters Paid and No BOL', 0)])
-    except:
+                    alloc_mxn += f(row[col_rem_mxn])
+                    alloc_lit += f(row[col_rem_lit])
+    except Exception:
         pass
 
     # ── 3. Load Tracking — replicate Table6 formulas ──────────────────────────
@@ -527,7 +513,7 @@ def _extract_investment_summary(wb, uploaded_at=None):
         if idx is None: return default
         return f(row[idx])
 
-    rtb_total_cost = rtb_total_lit = 0.0
+    rtb_total_lit = 0.0
     btc_total_lit = 0.0
     btc_pend_mxn = btc_pend_lit = 0.0
     rtc_pend_mxn = rtc_pend_lit = 0.0
@@ -546,18 +532,15 @@ def _extract_investment_summary(wb, uploaded_at=None):
         freight       = _get(row, 'Freight Cost')
         commission    = _get(row, 'COMISSION')
         extra         = _get(row, 'EXTRA')
-        fuel_cost     = _get(row, 'Fuel Cost')   # Mexico payment MXN
+        fuel_cost     = _get(row, 'Fuel Cost')
 
-        # Replicate Excel formulas (Total Cost/L now includes Extra/L)
         freight_l    = freight / liters    if liters > 0 else 0.0
         comm_l       = commission / liters if liters > 0 else 0.0
         extra_l      = extra / liters      if liters > 0 else 0.0
         total_cost_l = supply_cost_l + freight_l + comm_l + extra_l
         total_cost   = total_cost_l * liters
 
-        if typ == 'BTC':
-            price_l    = (fuel_cost / liters) + freight_l + comm_l + extra_l if liters > 0 else 0.0
-        elif typ == 'RTC':
+        if typ in ('BTC', 'RTC'):
             price_l    = (fuel_cost / liters) + freight_l + comm_l + extra_l if liters > 0 else 0.0
         else:
             price_l    = 0.0
@@ -566,7 +549,6 @@ def _extract_investment_summary(wb, uploaded_at=None):
         total_margin = total_sale - total_cost
 
         if typ == 'RTB':
-            rtb_total_cost += total_cost
             rtb_total_lit  += liters
         elif typ == 'BTC':
             btc_total_lit  += liters
@@ -576,7 +558,8 @@ def _extract_investment_summary(wb, uploaded_at=None):
                 rec_btc_margin += total_margin
                 rec_btc_lit    += liters
             else:
-                btc_pend_mxn   += total_cost
+                # Pending: use total_sale (what will be recovered), not total_cost
+                btc_pend_mxn   += total_sale
                 btc_pend_lit   += liters
         elif typ == 'RTC':
             if status == 'PAID':
@@ -585,28 +568,41 @@ def _extract_investment_summary(wb, uploaded_at=None):
                 rec_rtc_margin += total_margin
                 rec_rtc_lit    += liters
             else:
-                rtc_pend_mxn   += total_cost
+                rtc_pend_mxn   += total_sale
                 rtc_pend_lit   += liters
 
-    # Inventory: D19 = RTB liters - BTC liters; C19 = D19 * avg_rtb_cost/L
-    inv_lit = max(0.0, rtb_total_lit - btc_total_lit)
-    avg_rtb_cost_l = rtb_total_cost / rtb_total_lit if rtb_total_lit > 0 else 0.0
-    inv_mxn = inv_lit * avg_rtb_cost_l
+    # Inventory: liters = RTB - BTC (net remaining); cost from FIFO remaining slots
+    # Use FIFO sheet remaining_l × cost_per_l for accurate FIFO-weighted cost
+    inv_lit = inv_mxn = 0.0
+    try:
+        ws_fifo_inv = _wb_out["FIFO"]
+        fifo_inv_rows = list(ws_fifo_inv.iter_rows(values_only=True))
+        fh = {str(v).strip(): j for j, v in enumerate(fifo_inv_rows[0]) if v}
+        for row in fifo_inv_rows[1:]:
+            if not row[0]: break
+            if str(row[fh.get('Type', 2)]).strip() != 'RTB': continue
+            rem_l  = f(row[fh.get('Remaining L (BOL)', 13)])
+            cost_l = f(row[fh.get('Cost / L (MXN)', 9)])
+            inv_lit += rem_l
+            inv_mxn += rem_l * cost_l
+    except Exception:
+        # Fallback: simple RTB - BTC with avg cost if FIFO sheet unavailable
+        inv_lit = max(0.0, rtb_total_lit - btc_total_lit)
 
     # ── 4. KPIs ───────────────────────────────────────────────────────────────
     active_capital = alloc_mxn + inv_mxn + btc_pend_mxn + rtc_pend_mxn
     available      = total_committed_mxn - active_capital
-    # Excel E14 = C30 = sum(Total Cost of PAID loads) — capital recovered
-    recovered_mxn  = (rec_btc_tc + rec_rtc_tc)
+    # Recovered = full sale proceeds from PAID loads (capital + profit flows back together)
+    recovered_mxn  = rec_btc_sale + rec_rtc_sale
     revolved       = recovered_mxn / total_committed_mxn if total_committed_mxn else 0.0
     total_margin   = rec_btc_margin + rec_rtc_margin
     investor_share = total_margin * inv_share_pct
 
     def _rec(tc, sale, margin, liters):
-        roi   = margin / tc    if tc     > 0 else 0.0
+        roi   = margin / tc     if tc     > 0 else 0.0
         mxnl  = margin / liters if liters > 0 else 0.0
         usdg  = mxnl * 3.7854 / avg_fx if avg_fx > 0 else 0.0
-        return {"tc": tc, "liters": liters, "margin": margin,
+        return {"tc": tc, "sale": sale, "liters": liters, "margin": margin,
                 "roi": roi, "mxnl": mxnl, "usdgal": usdg}
 
     btc_rec = _rec(rec_btc_tc, rec_btc_sale, rec_btc_margin, rec_btc_lit)
