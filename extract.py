@@ -142,16 +142,17 @@ def _extract_overall_summary(wb, wb_fifo=None):
             col_paid3 = sc3.get("Paid for Gallons", 6)
             col_rate3 = sc3.get("Rate (usd/gal)", 11)
 
-            # paid and rate per (sup_upper, inv_upper)
-            inv_paid3 = {}
+            # paid and rate per (sup_upper, inv_upper) — sum paid if same invoice appears multiple times
+            inv_paid3 = defaultdict(float)
             inv_rate3 = {}
             for row in si_rows3[si_hdr3 + 1:]:
                 if not any(row): break
                 s   = str(row[col_sup3] or "").strip()
                 inv = str(row[col_inv3] or "").strip()
                 if not s or s == "Total": continue
-                inv_paid3[(s.upper(), inv.upper())] = f(row[col_paid3])
-                inv_rate3[(s.upper(), inv.upper())] = f(row[col_rate3])
+                key = (s.upper(), inv.upper())
+                inv_paid3[key] += f(row[col_paid3])
+                inv_rate3[key]  = f(row[col_rate3])  # rate same across dupes
 
             # pulled per (sup_upper, inv_upper) from BOL-RTB
             # split-invoice BOLs: assign all gallons to the LAST invoice in the split
