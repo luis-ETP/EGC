@@ -682,7 +682,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
                 'price_l':     round(total_sale / liters, 4) if liters else 0,
                 'cost_l':      round(total_cost_l, 4),
                 'margin_l':    round((total_sale - total_cost) / liters, 4) if liters else 0,
-                'margin_pct':  round((total_sale - total_cost) / total_sale, 6) if total_sale else 0,
+                'margin_pct':  _get(row, 'Margin %'),
                 'total_margin': round(total_sale - total_cost, 2),
                 'total_sale':  round(total_sale, 2),
                 'total_cost':  round(total_cost, 2),
