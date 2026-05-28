@@ -1019,34 +1019,10 @@ function renderInvestor() {
         </div>
       </div>
     </div>
-  </div>
-  <script>
-  (function(){
-    const canvas = document.getElementById('${donutId}');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const vals = [${allocV}, ${invV}, ${pendV}];
-    const colors = ['#3fb950','#4a7cdc','#f0883e'];
-    const total = vals.reduce((a,b)=>a+b,0);
-    if (!total) return;
-    let start = -Math.PI/2;
-    const cx=70, cy=70, r=60, ri=38;
-    vals.forEach((v,i)=>{
-      const angle = (v/total)*Math.PI*2;
-      ctx.beginPath();
-      ctx.moveTo(cx,cy);
-      ctx.arc(cx,cy,r,start,start+angle);
-      ctx.closePath();
-      ctx.fillStyle=colors[i];
-      ctx.fill();
-      start+=angle;
-    });
-    ctx.beginPath();
-    ctx.arc(cx,cy,ri,0,Math.PI*2);
-    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--surface') || '#161c26';
-    ctx.fill();
-  })();
-  </script>`;
+  </div>`;
+
+  // Store donut params for rendering after innerHTML is set
+  window._pendingDonut = { id: donutId, vals: [${allocV}, ${invV}, ${pendV}] };
 
   // ── Cycle metrics ──
   const cycleStr = inv.avg_cycle_days != null ? inv.avg_cycle_days+' days' : 'N/A';
@@ -1209,6 +1185,36 @@ function renderInvestor() {
   </div>`;
 
   el.innerHTML = html;
+
+  // Draw donut chart now that canvas is in DOM
+  (function(){
+    const d = window._pendingDonut;
+    if (!d) return;
+    const canvas = document.getElementById(d.id);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const colors = ['#3fb950','#4a7cdc','#f0883e'];
+    const total = d.vals.reduce((a,b)=>a+b,0);
+    if (!total) return;
+    let start = -Math.PI/2;
+    const cx=70, cy=70, r=60, ri=42;
+    d.vals.forEach((v,i)=>{
+      if (!v) return;
+      const angle = (v/total)*Math.PI*2;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start,start+angle);
+      ctx.closePath();
+      ctx.fillStyle=colors[i];
+      ctx.fill();
+      start+=angle;
+    });
+    ctx.beginPath();
+    ctx.arc(cx,cy,ri,0,Math.PI*2);
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--surface').trim() || '#161c26';
+    ctx.fill();
+    window._pendingDonut = null;
+  })();
 
   // Load rounds from API and refresh table
   fetch('/api/rounds').then(r=>r.json()).then(data => {
