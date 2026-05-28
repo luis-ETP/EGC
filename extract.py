@@ -504,14 +504,79 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
         pass
 
     def _parse_date(v):
+        """Parse a single date value — datetime passthrough or string parse."""
         if hasattr(v, 'date'): return v
         if isinstance(v, str):
-            for fmt in ('%d/%m/%Y','%m/%d/%Y','%Y-%m-%d'):
-                try:
-                    from datetime import datetime as _dt
-                    return _dt.strptime(v.strip(), fmt)
+            from datetime import datetime as _dt
+            s = v.strip()
+            for fmt in ('%m/%d/%Y','%d/%m/%Y','%Y-%m-%d'):
+                try: return _dt.strptime(s, fmt)
                 except: pass
         return None
+
+    def _resolve_dates_contextual(raw_dates):
+        """
+        Given a list of raw date values (datetime | str | None) in load order,
+        resolve ambiguous MM/DD vs DD/MM strings using context from neighbors.
+        Rule: dates should be monotonically increasing (loads are in order).
+        If a string has day > 12 → must be DD/MM, flip to MM/DD interpretation.
+        If both interpretations valid → pick the one closer to neighbors.
+        """
+        from datetime import datetime as _dt
+
+        def _candidates(v):
+            """Return (mm_dd, dd_mm) candidate datetimes for a string, or (dt, dt) if unambiguous."""
+            if hasattr(v, 'date'): return (v, v)
+            if not isinstance(v, str): return (None, None)
+            s = v.strip()
+            parts = s.replace('-','/').split('/')
+            if len(parts) != 3: return (None, None)
+            try:
+                a, b, yr = int(parts[0]), int(parts[1]), int(parts[2])
+            except: return (None, None)
+            # Try MM/DD/YYYY and DD/MM/YYYY
+            mm_dd = dd_mm = None
+            try: mm_dd = _dt(yr, a, b)  # MM/DD
+            except: pass
+            try: dd_mm = _dt(yr, b, a)  # DD/MM
+            except: pass
+            # If day > 12, only DD/MM is valid
+            if a > 12: return (dd_mm, dd_mm)
+            if b > 12: return (mm_dd, mm_dd)
+            return (mm_dd, dd_mm)
+
+        # First pass: get unambiguous anchors
+        resolved = [None] * len(raw_dates)
+        candidates = [_candidates(v) for v in raw_dates]
+
+        # Mark unambiguous ones
+        for i, (mm, dd) in enumerate(candidates):
+            if mm == dd and mm is not None:
+                resolved[i] = mm
+
+        # Second pass: resolve ambiguous ones using nearest resolved neighbor
+        for i, (mm, dd) in enumerate(candidates):
+            if resolved[i] is not None: continue
+            if mm is None and dd is None: continue
+            if mm is None: resolved[i] = dd; continue
+            if dd is None: resolved[i] = mm; continue
+            # Both valid — find nearest resolved neighbor and pick closer interpretation
+            neighbor = None
+            for j in range(1, len(raw_dates)):
+                if i-j >= 0 and resolved[i-j] is not None:
+                    neighbor = resolved[i-j]; break
+                if i+j < len(raw_dates) and resolved[i+j] is not None:
+                    neighbor = resolved[i+j]; break
+            if neighbor is None:
+                # No context — default to MM/DD (US format)
+                resolved[i] = mm
+            else:
+                # Pick whichever is closer to neighbor and not wildly out of range
+                diff_mm = abs((mm - neighbor).days)
+                diff_dd = abs((dd - neighbor).days)
+                resolved[i] = mm if diff_mm <= diff_dd else dd
+
+        return resolved
 
     # ── 3. Load Tracking — replicate Table6 formulas ──────────────────────────
     ws_lt = wb["Load Tracking"]
@@ -530,21 +595,32 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     rec_btc_tc = rec_btc_sale = rec_btc_margin = rec_btc_lit = 0.0
     rec_rtc_tc = rec_rtc_sale = rec_rtc_margin = rec_rtc_lit = 0.0
 
-    # Build RTB pickup dates by BOL for cash conversion cycle
-    rtb_dates_map = {}
-    for row in lt_rows[1:]:
-        if not row[0]: continue
-        if str(row[lt_h.get('Customer Groups',10)] or '').strip() != 'RTB': continue
-        bol = str(row[lt_h.get('BOL Number',30)] or '').strip()
-        pickup = _parse_date(row[lt_h.get('Pickup Date',3)])
-        if bol and pickup:
-            rtb_dates_map[bol] = pickup
+    # Build RTB pickup dates by BOL using context-aware date resolution
+    rtb_date_rows = [(row, lt_h.get('BOL Number',30), lt_h.get('Pickup Date',3))
+                     for row in lt_rows[1:]
+                     if row[0] and str(row[lt_h.get('Customer Groups',10)] or '').strip() == 'RTB']
+    rtb_raw_dates   = [row[lt_h.get('Pickup Date',3)] for row, _, _ in rtb_date_rows]
+    rtb_resolved    = _resolve_dates_contextual(rtb_raw_dates)
+    rtb_dates_map   = {}
+    for (row, col_bol, _), resolved_dt in zip(rtb_date_rows, rtb_resolved):
+        bol = str(row[col_bol] or '').strip()
+        if bol and resolved_dt:
+            rtb_dates_map[bol] = resolved_dt
+
+    # Resolve BTC pickup dates contextually too
+    btc_date_rows = [row for row in lt_rows[1:]
+                     if row[0] and str(row[lt_h.get('Customer Groups',10)] or '').strip() == 'BTC']
+    btc_raw_pickups   = [row[lt_h.get('Pickup Date',3)] for row in btc_date_rows]
+    btc_resolved_pkup = _resolve_dates_contextual(btc_raw_pickups)
+    # keyed by sequential BTC index (0,1,2...)
+    btc_pickup_by_idx = {i: dt for i, dt in enumerate(btc_resolved_pkup)}
+
+    btc_loads = []
+    cycle_days_list = []
+    btc_row_counter = 0  # index into btc_pickup_map
 
     col_payment_date = lt_h.get('Payment Date', 61)
     col_bol_source   = lt_h.get('BOL Source', 59)
-
-    btc_loads = []   # per-load detail for load performance table
-    cycle_days_list = []
 
     for row in lt_rows[1:]:
         if not row[0]: continue
@@ -578,7 +654,8 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             rtb_total_lit  += liters
         elif typ == 'BTC':
             btc_total_lit  += liters
-            pickup         = _parse_date(row[lt_h.get('Pickup Date',3)])
+            pickup         = btc_pickup_by_idx.get(btc_row_counter)
+            btc_row_counter += 1
             payment_date   = _parse_date(row[col_payment_date]) if col_payment_date is not None else None
             bol_source_str = str(row[col_bol_source] or '') if col_bol_source is not None else ''
             load_id        = str(row[0] or '')
