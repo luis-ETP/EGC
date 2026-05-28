@@ -988,18 +988,65 @@ function renderInvestor() {
   });
   html += `</div>`;
 
-  // ── Capital distribution ──
+  // ── Capital distribution — donut chart ──
   html += subLabel('Where the capital is right now');
-  html += `<div class="inv-bar-track">
-    <div class="inv-bar-seg" style="width:${(allocPct*100).toFixed(1)}%;background:#3fb950"></div>
-    <div class="inv-bar-seg" style="width:${(invPct*100).toFixed(1)}%;background:#4a7cdc"></div>
-    <div class="inv-bar-seg" style="width:${(pendPct*100).toFixed(1)}%;background:#f0883e"></div>
+  const donutId = 'inv-donut-' + Date.now();
+  const allocV  = ad.alloc_mxn || 0;
+  const invV    = ad.inv_mxn || 0;
+  const pendV   = (ad.btc_pend_mxn||0) + (ad.rtc_pend_mxn||0);
+  html += `<div style="display:flex;align-items:center;gap:1.5rem">
+    <div style="flex-shrink:0;position:relative;width:140px;height:140px">
+      <canvas id="${donutId}" width="140" height="140"></canvas>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+        <div style="font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Active</div>
+        <div style="font-size:0.85rem;font-weight:600;color:var(--text)">$${fm(totalActive)}</div>
+        <div style="font-size:0.6rem;color:var(--muted)">MXN</div>
+      </div>
+    </div>
+    <div style="flex:1">
+      <div class="inv-legend" style="flex-direction:column;gap:8px">
+        <div class="inv-legend-item" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:6px"><div class="inv-legend-dot" style="background:#3fb950"></div><span>Allocation</span></div>
+          <span style="font-weight:500">$${fm(allocV)} <span style="color:var(--muted);font-weight:400">(${(allocPct*100).toFixed(0)}%)</span></span>
+        </div>
+        <div class="inv-legend-item" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:6px"><div class="inv-legend-dot" style="background:#4a7cdc"></div><span>Bulk plant inventory</span></div>
+          <span style="font-weight:500">$${fm(invV)} <span style="color:var(--muted);font-weight:400">(${(invPct*100).toFixed(0)}%)</span></span>
+        </div>
+        <div class="inv-legend-item" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:6px"><div class="inv-legend-dot" style="background:#f0883e"></div><span>Pending collection</span></div>
+          <span style="font-weight:500">$${fm(pendV)} <span style="color:var(--muted);font-weight:400">(${(pendPct*100).toFixed(0)}%)</span></span>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="inv-legend">
-    <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#3fb950"></div>Allocation: $${fm(ad.alloc_mxn)} (${(allocPct*100).toFixed(0)}%)</div>
-    <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#4a7cdc"></div>Bulk plant inventory: $${fm(ad.inv_mxn)} (${(invPct*100).toFixed(0)}%)</div>
-    <div class="inv-legend-item"><div class="inv-legend-dot" style="background:#f0883e"></div>Pending collection: $${fm(ad.btc_pend_mxn+ad.rtc_pend_mxn)} (${(pendPct*100).toFixed(0)}%)</div>
-  </div>`;
+  <script>
+  (function(){
+    const canvas = document.getElementById('${donutId}');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const vals = [${allocV}, ${invV}, ${pendV}];
+    const colors = ['#3fb950','#4a7cdc','#f0883e'];
+    const total = vals.reduce((a,b)=>a+b,0);
+    if (!total) return;
+    let start = -Math.PI/2;
+    const cx=70, cy=70, r=60, ri=38;
+    vals.forEach((v,i)=>{
+      const angle = (v/total)*Math.PI*2;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start,start+angle);
+      ctx.closePath();
+      ctx.fillStyle=colors[i];
+      ctx.fill();
+      start+=angle;
+    });
+    ctx.beginPath();
+    ctx.arc(cx,cy,ri,0,Math.PI*2);
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--surface') || '#161c26';
+    ctx.fill();
+  })();
+  </script>`;
 
   // ── Cycle metrics ──
   const cycleStr = inv.avg_cycle_days != null ? inv.avg_cycle_days+' days' : 'N/A';
@@ -1024,21 +1071,27 @@ function renderInvestor() {
     </div>
   </div>`;
 
-  // ── Investment rounds ──
+  // ── Investment rounds (collapsible, add round admin only) ──
   html += subLabel('Investment rounds');
-  html += `<div id="rounds-table-container">${renderRoundsTable()}</div>`;
-  if (IS_ADMIN) {
-    html += `<div class="round-form" id="round-form">
-      <div><label>Amount (USD)</label><input type="number" id="ri-usd" placeholder="e.g. 200000"></div>
-      <div><label>Date</label><input type="text" id="ri-date" placeholder="e.g. 13-Apr-26"></div>
-      <div><label>FX Rate</label><input type="number" step="0.01" id="ri-fx" placeholder="e.g. 17.30"></div>
-      <div><label>MXN (auto)</label><input type="number" id="ri-mxn" placeholder="auto" readonly style="color:var(--muted)"></div>
-      <button class="round-add-btn" onclick="addRound()">+ Add round</button>
-    </div>`;
-  }
+  html += `<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0.3rem 0" onclick="invToggleInner('rounds-body')">
+      <span style="font-size:0.78rem;color:var(--muted)">Show / hide rounds</span>
+      <svg id="rounds-chev" class="inv-chevron open" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 6 8 10 12 6"/></svg>
+    </div>
+    <div id="rounds-body">
+      <div id="rounds-table-container">${renderRoundsTable()}</div>
+      ${IS_ADMIN ? `<div class="round-form" id="round-form">
+        <div><label>Amount (USD)</label><input type="number" id="ri-usd" placeholder="e.g. 200000"></div>
+        <div><label>Date</label><input type="text" id="ri-date" placeholder="e.g. 13-Apr-26"></div>
+        <div><label>FX Rate</label><input type="number" step="0.01" id="ri-fx" placeholder="e.g. 17.30"></div>
+        <div><label>MXN (auto)</label><input type="number" id="ri-mxn" placeholder="auto" readonly style="color:var(--muted)"></div>
+        <button class="round-add-btn" onclick="addRound()">+ Add round</button>
+      </div>` : ''}
+    </div>
+  </div>`;
   html += secFtr;
 
-  // ── SECTION 3: Forward view (admin only) ──────────────────────────────────
+  // ── SECTION 2: Forward view (admin only) ──────────────────────────────────
   if (IS_ADMIN) {
     const stockoutDays = prj.loads_remaining * (inv.avg_days_between_loads || 3);
     const stockoutDate = new Date(Date.now() + stockoutDays*86400000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -1185,6 +1238,14 @@ function invToggle(id) {
   if (!body) return;
   body.classList.toggle('hidden');
   chevron.classList.toggle('open');
+}
+
+function invToggleInner(bodyId) {
+  const body = document.getElementById(bodyId);
+  const chev = document.getElementById('rounds-chev');
+  if (!body) return;
+  body.classList.toggle('hidden');
+  if (chev) chev.classList.toggle('open');
 }
 
 function addRound() {
