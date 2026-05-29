@@ -689,7 +689,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
                 'status':      str(row[lt_h.get('Invoice Status',56)] or ''),
                 'cycle_days':  cycle,
                 'bol_source':  bol_source_str,
-                'batch':       str(row[lt_h.get('Batch',57)] or '').strip(),
+                'batch':       str(row[lt_h.get('Batch Source', 60)] or '').strip(),
             })
 
             if status == 'PAID':
