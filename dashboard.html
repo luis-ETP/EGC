@@ -275,20 +275,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
           </div>
           <button class="run-btn" id="runBtn" disabled onclick="processFile()">Run FIFO Engine</button>
           <button onclick="syncSharePoint()" style="padding:0.55rem 1rem;background:#1a7f37;color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:600;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:0.5rem;font-family:var(--font)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Sync from SharePoint</button>
-          <div style="display:flex;align-items:center;gap:0.5rem;border-left:1px solid var(--border);padding-left:0.75rem;margin-left:0.25rem">
-            <span style="font-size:0.72rem;color:var(--muted);white-space:nowrap">LPA Markup</span>
-            <span style="font-size:0.72rem;color:var(--muted)">$</span>
-            <input id="markupInput" type="number" step="0.01" min="0" max="10" value="0.02"
-              style="width:70px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-                     padding:0.3rem 0.45rem;color:var(--text);font-size:0.78rem;font-family:var(--font)">
-            <span style="font-size:0.72rem;color:var(--muted)">USD/gal</span>
-            <button onclick="saveMarkup()"
-              style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-                     padding:0.3rem 0.65rem;color:var(--muted);font-size:0.72rem;font-family:var(--font);
-                     cursor:pointer;transition:all 0.15s"
-              onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
-              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Save</button>
-            <span id="markupStatus" style="font-size:0.7rem;color:var(--green);display:none">✓</span>
+          <div style="display:flex;align-items:center;gap:0.5rem;border-left:1px solid var(--border);padding-left:0.75rem;margin-left:0.25rem" style="display:none">
           </div>
         </div>
         <div class="upload-status" id="uploadStatus"></div>
@@ -980,9 +967,8 @@ function renderInvestor() {
   const isAdmin = ROLE === 'admin';
 
   // ── View toggle state (admin only) ───────────────────────────────────────
-  invViewMode   = 'admin';
-  invVisibility = {};
-  invMarkup     = dashData.markup_usd || 0.02;
+  // Only reset markup from data — preserve viewMode and visibility across re-renders
+  invMarkup = invMarkup || dashData.markup_usd || 0.02;
 
   // Load config from API
   if (isAdmin) {
