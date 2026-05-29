@@ -1036,9 +1036,9 @@ function renderInvestor() {
           <span class="inv-tooltip-text">Shows how the active capital ($${fm(totalActive)} MXN) is distributed across the three stages of the trade cycle at this moment.</span>
         </span>
       </div>
-      <div style="display:grid;grid-template-columns:160px 1fr;gap:1rem;align-items:center">
-        <div style="position:relative;width:160px;height:160px;flex-shrink:0">
-          <canvas id="${donutId}" width="160" height="160"></canvas>
+      <div style="display:grid;grid-template-columns:176px 1fr;gap:1rem;align-items:center">
+        <div style="position:relative;width:176px;height:176px;flex-shrink:0">
+          <canvas id="${donutId}" width="176" height="176"></canvas>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none">
             <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Active</div>
             <div style="font-size:0.9rem;font-weight:600;color:var(--text)">$${fm(totalActive)}</div>
@@ -1048,24 +1048,15 @@ function renderInvestor() {
         <div style="display:flex;flex-direction:column;gap:4px">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #3fb950;border-radius:0 5px 5px 0">
             <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
-            <div style="text-align:right">
-              <div style="font-size:0.9rem;font-weight:600;color:#3fb950">${Math.round(allocPct*100)}%</div>
-              <div style="font-size:0.62rem;color:var(--muted)">$${fm(allocV)}</div>
-            </div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">$${fm(allocV)}</div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
             <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Bulk inventory</div>
-            <div style="text-align:right">
-              <div style="font-size:0.9rem;font-weight:600;color:#4a7cdc">${Math.round(invPct*100)}%</div>
-              <div style="font-size:0.62rem;color:var(--muted)">$${fm(invV)}</div>
-            </div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">$${fm(invV)}</div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
             <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Awaiting payment</div>
-            <div style="text-align:right">
-              <div style="font-size:0.9rem;font-weight:600;color:#f0883e">${Math.round(pendPct*100)}%</div>
-              <div style="font-size:0.62rem;color:var(--muted)">$${fm(pendV)}</div>
-            </div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">$${fm(pendV)}</div>
           </div>
         </div>
       </div>
@@ -1078,9 +1069,9 @@ function renderInvestor() {
           <span class="inv-tooltip-text">Average days capital spends in each stage before completing the full cycle. Total turnover: ${Math.round(inv.avg_alloc_days||0)} + ${Math.round(inv.avg_inv_days||0)} + ${Math.round(inv.avg_pend_days||0)} = ${Math.round((inv.avg_alloc_days||0)+(inv.avg_inv_days||0)+(inv.avg_pend_days||0))} days avg.</span>
         </span>
       </div>
-      <div style="display:grid;grid-template-columns:160px 1fr;gap:1rem;align-items:center">
-        <div style="position:relative;width:160px;height:160px;flex-shrink:0">
-          <canvas id="${donutId2}" width="160" height="160"></canvas>
+      <div style="display:grid;grid-template-columns:176px 1fr;gap:1rem;align-items:center">
+        <div style="position:relative;width:176px;height:176px;flex-shrink:0">
+          <canvas id="${donutId2}" width="176" height="176"></canvas>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none">
             <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Turnover</div>
             <div style="font-size:0.9rem;font-weight:600;color:var(--text)">${Math.round((inv.avg_alloc_days||0)+(inv.avg_inv_days||0)+(inv.avg_pend_days||0))} days</div>
@@ -1093,30 +1084,21 @@ function renderInvestor() {
               <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
               <div style="font-size:0.6rem;color:var(--muted2)">Wire to RTB</div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:0.9rem;font-weight:600;color:#3fb950">${Math.round(inv.avg_alloc_days||0)}</div>
-              <div style="font-size:0.62rem;color:var(--muted)">days</div>
-            </div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">${Math.round(inv.avg_alloc_days||0)} days</div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
             <div>
               <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Inventory</div>
               <div style="font-size:0.6rem;color:var(--muted2)">RTB to delivery</div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:0.9rem;font-weight:600;color:#4a7cdc">${Math.round(inv.avg_inv_days||0)}</div>
-              <div style="font-size:0.62rem;color:var(--muted)">days</div>
-            </div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">${Math.round(inv.avg_inv_days||0)} days</div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
             <div>
               <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Payment</div>
               <div style="font-size:0.6rem;color:var(--muted2)">Delivery to collection</div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:0.9rem;font-weight:600;color:#f0883e">${Math.round(inv.avg_pend_days||0)}</div>
-              <div style="font-size:0.62rem;color:var(--muted)">days</div>
-            </div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">${Math.round(inv.avg_pend_days||0)} days</div>
           </div>
         </div>
       </div>
@@ -1280,7 +1262,7 @@ function renderInvestor() {
 
   // Draw donut charts now that canvas is in DOM
   (function(){
-    function drawDonut(d, cx, cy, r, ri) {
+    function drawDonut(d, cx, cy, r, ri, labelFn) {
       if (!d) return;
       var canvas = document.getElementById(d.id);
       if (!canvas) return;
@@ -1297,6 +1279,19 @@ function renderInvestor() {
         ctx.closePath();
         ctx.fillStyle = d.colors[i];
         ctx.fill();
+        // Draw % label in the middle of the segment
+        var midAngle = start + angle/2;
+        var labelR = (r + ri) / 2;
+        var lx = cx + Math.cos(midAngle) * labelR;
+        var ly = cy + Math.sin(midAngle) * labelR;
+        var label = labelFn ? labelFn(v, total, i) : '';
+        if (label && angle > 0.3) {
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 11px Inter,sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, lx, ly);
+        }
         start += angle;
       });
       ctx.beginPath();
@@ -1304,8 +1299,13 @@ function renderInvestor() {
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#161c26';
       ctx.fill();
     }
-    drawDonut(window._pendingDonut,  80, 80, 74, 46);
-    drawDonut(window._pendingDonut2, 80, 80, 74, 46);
+    var cx=88, cy=88, r=81, ri=51;
+    drawDonut(window._pendingDonut, cx, cy, r, ri, function(v, total) {
+      return Math.round(v/total*100) + '%';
+    });
+    drawDonut(window._pendingDonut2, cx, cy, r, ri, function(v, total) {
+      return Math.round(v/total*100) + '%';
+    });
     window._pendingDonut = null;
     window._pendingDonut2 = null;
   })();
