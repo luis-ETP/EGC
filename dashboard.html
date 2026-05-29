@@ -987,12 +987,15 @@ function renderInvestor() {
   // Load config from API
   if (isAdmin) {
     fetch('/api/investor-config').then(r=>r.json()).then(cfg => {
-      invVisibility = cfg.visibility || {};
+      // Defaults: forward view and load performance hidden from investor
+      invVisibility = Object.assign({'sec-forward': false, 'sec-loads': false}, cfg.visibility || {});
       invMarkup = cfg.markup_usd || 0.02;
       const adderInput = document.getElementById('inv-adder-input');
       if (adderInput) adderInput.value = invMarkup;
       applyInvVisibility();
-    }).catch(()=>{});
+    }).catch(()=>{
+      invVisibility = {'sec-forward': false, 'sec-loads': false};
+    });
   }
 
   html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;gap:1rem">
@@ -1448,25 +1451,38 @@ function applyInvVisibility() {
 }
 
 function invToggleVisibility(id) {
-  // Toggle: undefined/true = visible, false = hidden
-  const current = invVisibility[id];
-  invVisibility[id] = current === false ? true : false;
+  // false = hidden from investor, true/undefined = visible
+  // Toggle between hidden and visible
+  invVisibility[id] = (invVisibility[id] === false) ? true : false;
 
-  // Auto-save to API
+  const isHidden = invVisibility[id] === false;
+  const btn    = document.getElementById('eye-' + id);
+  const target = document.getElementById(id);
+
+  // Update eye icon immediately
+  if (btn) {
+    btn.classList.toggle('eye-hidden', isHidden);
+    btn.innerHTML = isHidden
+      ? '<svg width="11" height="11" fill="none" stroke="#f85149" stroke-width="2"><line x1="2" y1="2" x2="9" y2="9"/><path d="M1 5.5s1.5-2.5 4-3"/><path d="M10 5.5s-1.5 2.5-4 3"/></svg>'
+      : '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 5.5s1.5-3.5 4.5-3.5S10 5.5 10 5.5s-1.5 3.5-4.5 3.5S1 5.5 1 5.5z"/><circle cx="5.5" cy="5.5" r="1.2"/></svg>';
+    // Re-attach onclick since innerHTML replacement may affect it
+    btn.onclick = function(e) { e.stopPropagation(); invToggleVisibility(id); };
+  }
+
+  // Gray out or restore
+  if (target) target.classList.toggle('inv-grayed', isHidden);
+
+  // Auto-save
   fetch('/api/investor-config', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({visibility: invVisibility})
   }).then(() => {
-    // Brief flash confirmation on the eye button
-    const btn = document.getElementById('eye-' + id);
     if (btn) {
       btn.style.boxShadow = '0 0 0 2px var(--green)';
       setTimeout(() => { btn.style.boxShadow = ''; }, 800);
     }
   }).catch(()=>{});
-
-  applyInvVisibility();
 }
 
 function invSaveMarkup() {
