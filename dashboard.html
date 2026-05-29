@@ -966,9 +966,27 @@ function renderInvestor() {
   const invPct    = totalActive ? ad.inv_mxn/totalActive : 0;
   const pendPct   = totalActive ? (ad.btc_pend_mxn+ad.rtc_pend_mxn)/totalActive : 0;
 
-  html += secHdr('snapshot',
-    '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
-    'Capital snapshot', '', '', true);
+  // Get available batches from btc_loads
+  const batches = [...new Set((inv.btc_loads||[]).map(l=>l.batch).filter(Boolean))].sort();
+
+  html += `<div class="inv-section" id="sec-snapshot">
+    <div class="inv-sec-hdr" style="cursor:default">
+      <div style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1" onclick="invToggle('snapshot')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted);flex-shrink:0"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span style="font-size:0.82rem;font-weight:600;color:var(--text)">Capital snapshot</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <select id="inv-period-filter" onchange="invApplyFilter()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:0.72rem;padding:0.25rem 0.5rem;border-radius:6px;cursor:pointer;font-family:var(--font)">
+          <option value="all">All time</option>
+          <option value="30">Last 30 days</option>
+          <option value="60">Last 60 days</option>
+          <option value="90">Last 90 days</option>
+          ${batches.map(b=>`<option value="batch-${b}">Batch ${b}</option>`).join('')}
+        </select>
+        <svg class="inv-chevron open" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" onclick="invToggle('snapshot')" style="cursor:pointer"><polyline points="4 6 8 10 12 6"/></svg>
+      </div>
+    </div>
+    <div class="inv-sec-body">`;
 
   // Sub-label helper
   const subLabel = t => `<div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:1.1rem 0 0.5rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border)">${t}</div>`;
@@ -1261,6 +1279,76 @@ function invToggleInner(bodyId) {
   if (!body) return;
   body.classList.toggle('hidden');
   if (chev) chev.classList.toggle('open');
+}
+
+function invApplyFilter() {
+  const sel    = document.getElementById('inv-period-filter');
+  if (!sel || !dashData || !dashData.investment) return;
+  const period = sel.value;
+  const inv    = dashData.investment;
+  const loads  = inv.btc_loads || [];
+  const TODAY  = new Date();
+
+  function parseD(s) {
+    if (!s) return null;
+    const d = new Date(s);
+    return isNaN(d) ? null : d;
+  }
+
+  // Filter loads by period
+  let filtered = loads;
+  if (period === 'all') {
+    filtered = loads;
+  } else if (period.startsWith('batch-')) {
+    const b = period.replace('batch-','');
+    filtered = loads.filter(l => String(l.batch||'').trim() === b);
+  } else {
+    const days = parseInt(period);
+    const cutoff = new Date(TODAY - days*86400000);
+    filtered = loads.filter(l => {
+      const d = parseD(l.date);
+      return d && d >= cutoff;
+    });
+  }
+
+  const paid = filtered.filter(l => l.status.toUpperCase() === 'PAID');
+  const fm  = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '0';
+  const fp  = v => v != null ? (Number(v)*100).toFixed(2)+'%' : 'N/A';
+  const avgFx = inv.commits ? inv.commits.reduce((a,c)=>a+c.fx,0)/inv.commits.length : 17.31;
+
+  // Recalculate metrics from filtered loads
+  const totalSale   = paid.reduce((a,l)=>a+l.total_sale,0);
+  const totalCost   = paid.reduce((a,l)=>a+l.total_cost,0);
+  const totalMargin = paid.reduce((a,l)=>a+l.total_margin,0);
+  const totalLiters = paid.reduce((a,l)=>a+l.liters,0);
+  const roi         = totalCost > 0 ? totalMargin/totalCost : 0;
+  const invShare    = totalMargin * (inv.inv_share_pct||0.40);
+
+  // Update KPI cards that change with filter (leave committed fixed)
+  const updates = {
+    'Capital recovered': '$'+fm(totalSale)+' MXN',
+    'Total profit':      '$'+fm(totalMargin)+' MXN',
+    'Investor share':    '$'+fm(invShare)+' MXN',
+    'Return per cycle':  fp(roi),
+  };
+
+  // Revolved multiple: recovered / committed (committed stays fixed)
+  const committedMxn = inv.total_committed_mxn || 1;
+  updates['Revolved multiple'] = (totalSale/committedMxn).toFixed(2)+'×';
+
+  document.querySelectorAll('.inv-kpi').forEach(card => {
+    const label = card.querySelector('.inv-kpi-label')?.textContent?.trim();
+    if (updates[label]) {
+      card.querySelector('.inv-kpi-val').textContent = updates[label];
+    }
+  });
+
+  // Update period label
+  const periodLabel = document.getElementById('inv-period-label');
+  if (periodLabel) {
+    const labels = {'all':'All time','30':'Last 30 days','60':'Last 60 days','90':'Last 90 days'};
+    periodLabel.textContent = labels[period] || ('Batch '+period.replace('batch-',''));
+  }
 }
 
 function addRound() {
