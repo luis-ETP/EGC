@@ -1017,6 +1017,10 @@ function renderInvestor() {
   html += `</div>`;
 
   // ── Capital distribution — side by side layout ──
+  const donutId = 'inv-donut-' + Date.now();
+  const allocV  = ad.alloc_mxn || 0;
+  const invV    = ad.inv_mxn || 0;
+  const pendV   = (ad.btc_pend_mxn||0) + (ad.rtc_pend_mxn||0);
   html += `<div style="display:grid;grid-template-columns:1fr 1px 1fr;align-items:start;gap:0">
     <div style="padding-right:1.5rem">
       <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:0 0 0.6rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border)">Where the capital is right now</div>
