@@ -988,41 +988,44 @@ function renderInvestor() {
   });
   html += `</div>`;
 
-  // ── Capital distribution — donut chart ──
+  // ── Capital distribution — premium donut ──
   html += subLabel('Where the capital is right now');
   const donutId = 'inv-donut-' + Date.now();
   const allocV  = ad.alloc_mxn || 0;
   const invV    = ad.inv_mxn || 0;
   const pendV   = (ad.btc_pend_mxn||0) + (ad.rtc_pend_mxn||0);
-  html += `<div style="display:flex;align-items:center;gap:1.5rem">
-    <div style="flex-shrink:0;position:relative;width:140px;height:140px">
-      <canvas id="${donutId}" width="140" height="140"></canvas>
-      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
-        <div style="font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em">Active</div>
-        <div style="font-size:0.85rem;font-weight:600;color:var(--text)">$${fm(totalActive)}</div>
-        <div style="font-size:0.6rem;color:var(--muted)">MXN</div>
+  // Correct flow order: Allocation → Inventory → Pending Collection
+  const donutSegments = [
+    { val: allocV, color: '#3fb950', label: 'Allocation',          pct: allocPct },
+    { val: invV,   color: '#4a7cdc', label: 'Bulk plant inventory', pct: invPct  },
+    { val: pendV,  color: '#f0883e', label: 'Pending collection',   pct: pendPct },
+  ];
+
+  html += `<div style="display:grid;grid-template-columns:220px 1fr;gap:2rem;align-items:center;padding:0.5rem 0">
+    <div style="position:relative;width:220px;height:220px;flex-shrink:0">
+      <canvas id="${donutId}" width="220" height="220"></canvas>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;gap:2px">
+        <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Total active</div>
+        <div style="font-size:1.15rem;font-weight:700;color:var(--text);letter-spacing:-0.5px">$${fm(totalActive)}</div>
+        <div style="font-size:0.62rem;color:var(--muted)">MXN</div>
       </div>
     </div>
-    <div style="flex:1">
-      <div class="inv-legend" style="flex-direction:column;gap:8px">
-        <div class="inv-legend-item" style="justify-content:space-between">
-          <div style="display:flex;align-items:center;gap:6px"><div class="inv-legend-dot" style="background:#3fb950"></div><span>Allocation</span></div>
-          <span style="font-weight:500">$${fm(allocV)} <span style="color:var(--muted);font-weight:400">(${(allocPct*100).toFixed(0)}%)</span></span>
-        </div>
-        <div class="inv-legend-item" style="justify-content:space-between">
-          <div style="display:flex;align-items:center;gap:6px"><div class="inv-legend-dot" style="background:#4a7cdc"></div><span>Bulk plant inventory</span></div>
-          <span style="font-weight:500">$${fm(invV)} <span style="color:var(--muted);font-weight:400">(${(invPct*100).toFixed(0)}%)</span></span>
-        </div>
-        <div class="inv-legend-item" style="justify-content:space-between">
-          <div style="display:flex;align-items:center;gap:6px"><div class="inv-legend-dot" style="background:#f0883e"></div><span>Pending collection</span></div>
-          <span style="font-weight:500">$${fm(pendV)} <span style="color:var(--muted);font-weight:400">(${(pendPct*100).toFixed(0)}%)</span></span>
-        </div>
-      </div>
+    <div style="display:flex;flex-direction:column;gap:0.6rem">
+      ${donutSegments.map((s,i) => `
+        <div style="display:flex;align-items:center;gap:12px;padding:0.65rem 0.85rem;background:var(--surface2);border-radius:8px;border-left:3px solid ${s.color}">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.68rem;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.04em">${s.label}</div>
+            <div style="font-size:0.95rem;font-weight:600;color:var(--text)">$${fm(s.val)} <span style="font-size:0.72rem;font-weight:400;color:var(--muted)">MXN</span></div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:1rem;font-weight:700;color:${s.color}">${(s.pct*100).toFixed(1)}%</div>
+            <div style="font-size:0.6rem;color:var(--muted)">of active</div>
+          </div>
+        </div>`).join('')}
     </div>
   </div>`;
 
-  // Store donut params for rendering after innerHTML is set
-  window._pendingDonut = { id: donutId, vals: [allocV, invV, pendV] };
+  window._pendingDonut = { id: donutId, vals: donutSegments.map(s=>s.val), colors: donutSegments.map(s=>s.color) };
 
   // ── Cycle metrics ──
   const cycleStr = inv.avg_cycle_days != null ? inv.avg_cycle_days+' days' : 'N/A';
@@ -1052,9 +1055,9 @@ function renderInvestor() {
   html += `<div>
     <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0.3rem 0" onclick="invToggleInner('rounds-body')">
       <span style="font-size:0.78rem;color:var(--muted)">Show / hide rounds</span>
-      <svg id="rounds-chev" class="inv-chevron open" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 6 8 10 12 6"/></svg>
+      <svg id="rounds-chev" class="inv-chevron" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 6 8 10 12 6"/></svg>
     </div>
-    <div id="rounds-body">
+    <div id="rounds-body" class="hidden">
       <div id="rounds-table-container">${renderRoundsTable()}</div>
       ${IS_ADMIN ? `<div class="round-form" id="round-form">
         <div><label>Amount (USD)</label><input type="number" id="ri-usd" placeholder="e.g. 200000"></div>
@@ -1193,25 +1196,26 @@ function renderInvestor() {
     const canvas = document.getElementById(d.id);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const colors = ['#3fb950','#4a7cdc','#f0883e'];
     const total = d.vals.reduce((a,b)=>a+b,0);
     if (!total) return;
+    const cx=110, cy=110, r=98, ri=62, gap=0.025;
     let start = -Math.PI/2;
-    const cx=70, cy=70, r=60, ri=42;
     d.vals.forEach((v,i)=>{
       if (!v) return;
       const angle = (v/total)*Math.PI*2;
       ctx.beginPath();
       ctx.moveTo(cx,cy);
-      ctx.arc(cx,cy,r,start,start+angle);
+      ctx.arc(cx,cy,r,start+gap,start+angle-gap);
       ctx.closePath();
-      ctx.fillStyle=colors[i];
+      ctx.fillStyle=d.colors[i];
       ctx.fill();
       start+=angle;
     });
+    // Inner circle — match surface background
     ctx.beginPath();
     ctx.arc(cx,cy,ri,0,Math.PI*2);
-    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--surface').trim() || '#161c26';
+    const surfaceColor = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#161c26';
+    ctx.fillStyle = surfaceColor;
     ctx.fill();
     window._pendingDonut = null;
   })();
