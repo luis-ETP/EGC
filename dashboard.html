@@ -1325,6 +1325,9 @@ function invApplyFilter() {
 
   function parseD(s) {
     if (!s) return null;
+    // Expects MM/DD/YYYY
+    const parts = s.split('/');
+    if (parts.length === 3) return new Date(parts[2], parts[0]-1, parts[1]);
     const d = new Date(s);
     return isNaN(d) ? null : d;
   }
@@ -1334,55 +1337,51 @@ function invApplyFilter() {
   if (period === 'all') {
     filtered = loads;
   } else if (period.startsWith('batch-')) {
-    const b = period.replace('batch-','');
-    filtered = loads.filter(l => String(l.batch||'').trim() === b);
+    const b = period.replace('batch-','').trim();
+    // Batch Source can be "1", "2", "1 | 2" etc — check if it contains the batch
+    filtered = loads.filter(l => {
+      const batchParts = String(l.batch||'').split('|').map(x=>x.trim());
+      return batchParts.includes(b);
+    });
   } else {
     const days = parseInt(period);
     const cutoff = new Date(TODAY - days*86400000);
     filtered = loads.filter(l => {
-      const d = parseD(l.date);
+      const d = parseD(l.payment_date || l.date);
       return d && d >= cutoff;
     });
   }
 
-  const paid = filtered.filter(l => l.status.toUpperCase() === 'PAID');
+  const paid = filtered.filter(l => (l.status||'').toUpperCase() === 'PAID');
   const fm  = v => v != null ? Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}) : '0';
   const fp  = v => v != null ? (Number(v)*100).toFixed(2)+'%' : 'N/A';
-  const avgFx = inv.commits ? inv.commits.reduce((a,c)=>a+c.fx,0)/inv.commits.length : 17.31;
 
-  // Recalculate metrics from filtered loads
-  const totalSale   = paid.reduce((a,l)=>a+l.total_sale,0);
-  const totalCost   = paid.reduce((a,l)=>a+l.total_cost,0);
-  const totalMargin = paid.reduce((a,l)=>a+l.total_margin,0);
-  const totalLiters = paid.reduce((a,l)=>a+l.liters,0);
+  // Recalculate from filtered paid loads
+  const totalSale   = paid.reduce((a,l)=>a+(l.total_sale||0), 0);
+  const totalCost   = paid.reduce((a,l)=>a+(l.total_cost||0), 0);
+  const totalMargin = paid.reduce((a,l)=>a+(l.total_margin||0), 0);
   const roi         = totalCost > 0 ? totalMargin/totalCost : 0;
   const invShare    = totalMargin * (inv.inv_share_pct||0.40);
+  const committedMxn = inv.total_committed_mxn || 1;
 
-  // Update KPI cards that change with filter (leave committed fixed)
   const updates = {
     'Capital recovered': '$'+fm(totalSale)+' MXN',
     'Total profit':      '$'+fm(totalMargin)+' MXN',
     'Investor share':    '$'+fm(invShare)+' MXN',
     'Return per cycle':  fp(roi),
+    'Revolved multiple': (totalSale/committedMxn).toFixed(2)+'×',
   };
 
-  // Revolved multiple: recovered / committed (committed stays fixed)
-  const committedMxn = inv.total_committed_mxn || 1;
-  updates['Revolved multiple'] = (totalSale/committedMxn).toFixed(2)+'×';
-
   document.querySelectorAll('.inv-kpi').forEach(card => {
-    const label = card.querySelector('.inv-kpi-label')?.textContent?.trim();
-    if (updates[label]) {
-      card.querySelector('.inv-kpi-val').textContent = updates[label];
-    }
+    const label = card.querySelector('.inv-kpi-label');
+    if (!label) return;
+    const labelText = label.textContent.replace(/[^\w\s]/g,'').trim();
+    Object.keys(updates).forEach(k => {
+      if (labelText.toLowerCase() === k.toLowerCase()) {
+        card.querySelector('.inv-kpi-val').textContent = updates[k];
+      }
+    });
   });
-
-  // Update period label
-  const periodLabel = document.getElementById('inv-period-label');
-  if (periodLabel) {
-    const labels = {'all':'All time','30':'Last 30 days','60':'Last 60 days','90':'Last 90 days'};
-    periodLabel.textContent = labels[period] || ('Batch '+period.replace('batch-',''));
-  }
 }
 
 function addRound() {
