@@ -192,6 +192,27 @@ def process():
 
 
 
+@app.route('/api/investor-config', methods=['GET'])
+def get_investor_config():
+    try:
+        visibility = json.loads(get_setting('investor_visibility', '{}'))
+        markup_usd = float(get_setting('markup_usd', '0.02'))
+        return jsonify(visibility=visibility, markup_usd=markup_usd)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+
+@app.route('/api/investor-config', methods=['POST'])
+def save_investor_config():
+    try:
+        data = request.get_json()
+        if 'visibility' in data:
+            set_setting('investor_visibility', json.dumps(data['visibility']))
+        if 'markup_usd' in data:
+            set_setting('markup_usd', str(data['markup_usd']))
+        return jsonify(ok=True)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+
 @app.route('/api/rounds', methods=['GET'])
 def get_rounds():
     try:
