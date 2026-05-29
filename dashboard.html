@@ -999,7 +999,7 @@ function renderInvestor() {
   const donutSegments = [
     { val: allocV, color: '#3fb950', label: 'Allocation',          pct: allocPct, days: inv.avg_alloc_days },
     { val: invV,   color: '#4a7cdc', label: 'Bulk plant inventory', pct: invPct,   days: inv.avg_inv_days  },
-    { val: pendV,  color: '#f0883e', label: 'Pending collection',   pct: pendPct,  days: inv.avg_pend_days },
+    { val: pendV,  color: '#f0883e', label: 'Awaiting payment',     pct: pendPct,  days: inv.avg_pend_days },
   ];
 
   html += `<div style="display:grid;grid-template-columns:220px 1fr;gap:2rem;align-items:center;padding:0.5rem 0">
@@ -1043,7 +1043,7 @@ function renderInvestor() {
     <div class="inv-stat">
       <div class="inv-stat-label">Avg cash conversion cycle</div>
       <div class="inv-stat-val" style="color:var(--accent)">${cycleStr}</div>
-      <div style="font-size:0.62rem;color:var(--muted)">Allocation + inventory + pending</div>
+      <div style="font-size:0.62rem;color:var(--muted)">Allocation + inventory + payment</div>
     </div>
     <div class="inv-stat">
       <div class="inv-stat-label">Avg days between deliveries</div>
