@@ -778,6 +778,11 @@ function renderFifo() {
 
 
 // ── INVESTOR SUMMARY ──────────────────────────────────────────────────────────
+// ── Investor view state (global so toggle functions can access) ────────────────
+var invViewMode   = 'admin';
+var invVisibility = {};
+var invMarkup     = 0.02;
+
 function renderInvestor() {
   const rawInv = dashData.investment || {};
   const el = document.getElementById('investor-content');
@@ -975,9 +980,9 @@ function renderInvestor() {
   const isAdmin = ROLE === 'admin';
 
   // ── View toggle state (admin only) ───────────────────────────────────────
-  let invViewMode = 'admin';  // 'admin' or 'investor'
-  let invVisibility = {};     // key → true=visible, false=hidden
-  let invMarkup = inv.markup_usd || dashData.markup_usd || 0.02;
+  invViewMode   = 'admin';
+  invVisibility = {};
+  invMarkup     = dashData.markup_usd || 0.02;
 
   // Load config from API
   if (isAdmin) {
@@ -1486,6 +1491,7 @@ function invSaveMarkup() {
     dashData.markup_usd = val;
   }).catch(e => console.error('Save markup error:', e));
 }
+function invToggle(id) {
   const body    = document.querySelector(`#sec-${id} .inv-sec-body`);
   const chevron = document.querySelector(`#sec-${id} .inv-chevron`);
   if (!body) return;
