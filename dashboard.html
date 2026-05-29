@@ -1329,7 +1329,18 @@ function renderInvestor() {
 
   el.innerHTML = html;
 
-  // Inject batch options into dropdown now that DOM exists
+  // Apply current view state immediately after render
+  if (IS_ADMIN) {
+    const isInvestor = invViewMode === 'investor';
+    const adminBtn = document.getElementById('inv-btn-admin');
+    const investorBtn = document.getElementById('inv-btn-investor');
+    const adderEl = document.getElementById('inv-adder');
+    if (adminBtn) adminBtn.className = 'inv-view-btn ' + (isInvestor ? 'inactive' : 'active');
+    if (investorBtn) investorBtn.className = 'inv-view-btn ' + (isInvestor ? 'active' : 'inactive');
+    if (adderEl) adderEl.style.display = isInvestor ? 'flex' : 'none';
+    document.querySelectorAll('.inv-eye-btn').forEach(b => b.style.display = isInvestor ? 'flex' : 'none');
+    applyInvVisibility();
+  }
   const filterSel = document.getElementById('inv-period-filter');
   if (filterSel && batches.length) {
     batches.forEach(b => {
