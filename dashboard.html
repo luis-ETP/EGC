@@ -1002,17 +1002,17 @@ function renderInvestor() {
     : inv.avg_cycle_days != null ? inv.avg_cycle_days + ' days' : 'N/A';
   const roiStr   = rd.total ? fp(rd.total.roi) : 'N/A';
   const kpis = [
-    {label:'Capital deployed',  val:'$'+fm(inv.total_committed_usd)+' USD', sub:'committed capital', green:false},
-    {label:'Capital at work',   val:'$'+fm(totalActive)+' MXN',             sub:'active and deployed', green:false},
-    {label:'Capital recovered', val:'$'+fm(inv.recovered_mxn)+' MXN',       sub:'full proceeds collected', green:true},
-    {label:'Revolved multiple', val:Number(inv.revolved||0).toFixed(2)+'×', sub:'since inception',   green:true},
-    {label:'Total profit',      val:'$'+fm(inv.total_margin)+' MXN',        sub:'gross generated',   green:true},
-    {label:'Investor share',    val:'$'+fm(inv.investor_share)+' MXN',      sub:Math.round((inv.inv_share_pct||0.4)*100)+'% of profit', green:true},
-    {label:'Return per cycle',  val:roiStr,                                  sub:'on recovered capital', green:true},
+    {label:'Capital deployed',  val:'$'+fm(inv.total_committed_usd)+' USD', sub:'committed capital',                           green:false, key:'capital deployed'},
+    {label:'Capital at work',   val:'$'+fm(totalActive)+' MXN',             sub:'active and deployed',                          green:false, key:'capital at work'},
+    {label:'Capital recovered', val:'$'+fm(inv.recovered_mxn)+' MXN',       sub:'full proceeds collected',                      green:true,  key:'capital recovered'},
+    {label:'Revolved multiple', val:Number(inv.revolved||0).toFixed(2)+'×', sub:'since inception',                              green:true,  key:'revolved multiple'},
+    {label:'Total profit',      val:'$'+fm(inv.total_margin)+' MXN',        sub:'gross generated',                              green:true,  key:'total profit'},
+    {label:'Investor share',    val:'$'+fm(inv.investor_share)+' MXN',      sub:Math.round((inv.inv_share_pct||0.4)*100)+'% of profit', green:true, key:'investor share'},
+    {label:'Return per cycle',  val:roiStr,                                  sub:'on recovered capital',                         green:true,  key:'return per cycle'},
   ];
   html += `<div class="inv-kpi-grid">`;
   kpis.forEach(k => {
-    html += `<div class="inv-kpi">
+    html += `<div class="inv-kpi" data-key="${k.key}">
       <div class="inv-kpi-label">${k.label}</div>
       <div class="inv-kpi-val" style="color:${k.green?'var(--green)':'var(--text)'}">${k.val}</div>
       <div class="inv-kpi-sub">${k.sub}</div>
@@ -1027,7 +1027,7 @@ function renderInvestor() {
   const invV    = ad.inv_mxn || 0;
   const pendV   = (ad.btc_pend_mxn||0) + (ad.rtc_pend_mxn||0);
   html += `
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.25rem">
 
     <div>
       <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:0 0 0.5rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border)">Where the capital is right now
@@ -1406,12 +1406,14 @@ function invApplyFilter() {
   };
 
   document.querySelectorAll('.inv-kpi').forEach(card => {
-    const label = card.querySelector('.inv-kpi-label');
-    if (!label) return;
-    const labelText = label.textContent.replace(/[^\w\s]/g,'').trim();
+    const labelEl = card.querySelector('.inv-kpi-label');
+    if (!labelEl) return;
+    // Use data-key attribute if set, else clean textContent
+    const labelText = (card.dataset.key || labelEl.textContent || '').toLowerCase().trim().replace(/\s+/g,' ');
     Object.keys(updates).forEach(k => {
-      if (labelText.toLowerCase() === k.toLowerCase()) {
-        card.querySelector('.inv-kpi-val').textContent = updates[k];
+      if (labelText.includes(k.toLowerCase())) {
+        const valEl = card.querySelector('.inv-kpi-val');
+        if (valEl) valEl.textContent = updates[k];
       }
     });
   });
