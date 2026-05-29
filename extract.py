@@ -595,7 +595,18 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     rec_btc_tc = rec_btc_sale = rec_btc_margin = rec_btc_lit = 0.0
     rec_rtc_tc = rec_rtc_sale = rec_rtc_margin = rec_rtc_lit = 0.0
 
-    # Build RTB pickup dates by BOL using context-aware date resolution
+    # Build BOL → batch + liters from RTB rows for proportional batch splitting
+    bol_batch_map = {}  # bol → {batch, liters}
+    for row in lt_rows[1:]:
+        if not row[0]: continue
+        if str(row[lt_h.get('Customer Groups',10)] or '').strip() != 'RTB': continue
+        bol   = str(row[lt_h.get('BOL Number',30)] or '').strip()
+        batch = str(row[lt_h.get('Batch',57)] or '').strip()
+        liters_rtb = _get(row, 'Delivered Net Liters') or _get(row, 'Net Liters')
+        if bol and liters_rtb > 0:
+            bol_batch_map[bol] = {'batch': batch, 'liters': liters_rtb}
+
+    # Build RTB dates map using contextually resolved dates
     rtb_date_rows = [(row, lt_h.get('BOL Number',30), lt_h.get('Pickup Date',3))
                      for row in lt_rows[1:]
                      if row[0] and str(row[lt_h.get('Customer Groups',10)] or '').strip() == 'RTB']
@@ -614,6 +625,21 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     btc_resolved_pkup = _resolve_dates_contextual(btc_raw_pickups)
     # keyed by sequential BTC index (0,1,2...)
     btc_pickup_by_idx = {i: dt for i, dt in enumerate(btc_resolved_pkup)}
+
+    def _compute_batch_splits(bol_source_str, bol_batch_map):
+        """Returns {batch_num: fraction} for a BTC load based on liters from each batch."""
+        if not bol_source_str: return {}
+        src_bols = [b.strip() for b in bol_source_str.split('|')]
+        batch_liters = {}
+        for bol in src_bols:
+            if bol not in bol_batch_map: continue
+            info = bol_batch_map[bol]
+            # Normalize batch — take first part if "1 | 2" style
+            b = info['batch'].split('|')[0].strip()
+            batch_liters[b] = batch_liters.get(b, 0.0) + info['liters']
+        total = sum(batch_liters.values())
+        if not total: return {}
+        return {b: round(l/total, 6) for b, l in batch_liters.items()}
 
     btc_loads = []
     cycle_days_list = []
@@ -690,6 +716,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
                 'cycle_days':  cycle,
                 'bol_source':  bol_source_str,
                 'batch':       str(row[lt_h.get('Batch Source', 60)] or '').strip(),
+                'batch_splits': _compute_batch_splits(bol_source_str, bol_batch_map),
             })
 
             if status == 'PAID':
