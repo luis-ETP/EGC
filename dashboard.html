@@ -997,9 +997,9 @@ function renderInvestor() {
   const pendV   = (ad.btc_pend_mxn||0) + (ad.rtc_pend_mxn||0);
   // Correct flow order: Allocation → Inventory → Pending Collection
   const donutSegments = [
-    { val: allocV, color: '#3fb950', label: 'Allocation',          pct: allocPct },
-    { val: invV,   color: '#4a7cdc', label: 'Bulk plant inventory', pct: invPct  },
-    { val: pendV,  color: '#f0883e', label: 'Pending collection',   pct: pendPct },
+    { val: allocV, color: '#3fb950', label: 'Allocation',          pct: allocPct, days: inv.avg_alloc_days },
+    { val: invV,   color: '#4a7cdc', label: 'Bulk plant inventory', pct: invPct,   days: inv.avg_inv_days  },
+    { val: pendV,  color: '#f0883e', label: 'Pending collection',   pct: pendPct,  days: inv.avg_pend_days },
   ];
 
   html += `<div style="display:grid;grid-template-columns:220px 1fr;gap:2rem;align-items:center;padding:0.5rem 0">
@@ -1012,15 +1012,19 @@ function renderInvestor() {
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:0.6rem">
-      ${donutSegments.map((s,i) => `
-        <div style="display:flex;align-items:center;gap:12px;padding:0.65rem 0.85rem;background:var(--surface2);border-radius:8px;border-left:3px solid ${s.color}">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:0.68rem;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.04em">${s.label}</div>
-            <div style="font-size:0.95rem;font-weight:600;color:var(--text)">$${fm(s.val)} <span style="font-size:0.72rem;font-weight:400;color:var(--muted)">MXN</span></div>
+      ${donutSegments.map(s => `
+        <div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:1rem;padding:0.65rem 0.85rem;background:var(--surface2);border-radius:8px;border-left:3px solid ${s.color}">
+          <div>
+            <div style="font-size:0.65rem;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.04em">${s.label}</div>
+            <div style="font-size:0.9rem;font-weight:600;color:var(--text)">$${fm(s.val)} <span style="font-size:0.68rem;font-weight:400;color:var(--muted)">MXN</span></div>
           </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:1rem;font-weight:700;color:${s.color}">${(s.pct*100).toFixed(1)}%</div>
-            <div style="font-size:0.6rem;color:var(--muted)">of active</div>
+          <div style="text-align:center;padding:0 0.5rem;border-left:1px solid var(--border)">
+            <div style="font-size:0.95rem;font-weight:700;color:${s.color}">${(s.pct*100).toFixed(1)}%</div>
+            <div style="font-size:0.58rem;color:var(--muted)">of active</div>
+          </div>
+          <div style="text-align:center;padding:0 0.25rem;border-left:1px solid var(--border)">
+            <div style="font-size:0.95rem;font-weight:700;color:var(--muted2)">${s.days != null ? s.days : 'N/A'}</div>
+            <div style="font-size:0.58rem;color:var(--muted)">avg days</div>
           </div>
         </div>`).join('')}
     </div>
