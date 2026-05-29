@@ -945,6 +945,10 @@ function renderInvestor() {
     .round-form label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:3px}
     .round-add-btn{background:rgba(74,124,220,0.15);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:0.4rem 0.85rem;cursor:pointer;font-size:0.78rem;font-weight:600;white-space:nowrap;transition:background 0.15s}
     .round-add-btn:hover{background:rgba(74,124,220,0.25)}
+    .inv-tooltip-wrap{position:relative;display:inline-flex;align-items:center;margin-left:5px;vertical-align:middle}
+    .inv-tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);font-size:0.55rem;font-style:normal;cursor:default;font-weight:700;line-height:1}
+    .inv-tooltip-text{visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-size:0.68rem;font-weight:400;line-height:1.5;padding:0.5rem 0.75rem;border-radius:6px;width:240px;z-index:999;pointer-events:none;transition:opacity 0.15s;text-transform:none;letter-spacing:0}
+    .inv-tooltip-wrap:hover .inv-tooltip-text{visibility:visible;opacity:1}
   </style>`;
 
   const date = inv.as_of || '—';
@@ -1039,19 +1043,24 @@ function renderInvestor() {
   const btwnStr  = inv.avg_days_between_loads ? inv.avg_days_between_loads+' days' : 'N/A';
   const roiStr   = rd.total ? fp(rd.total.roi) : 'N/A';
   html += subLabel('Capital cycle metrics');
-  html += `<div class="inv-stat-row">
-    <div class="inv-stat">
-      <div class="inv-stat-label">Avg cash conversion cycle</div>
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div class="inv-stat" style="position:relative">
+      <div class="inv-stat-label">Capital turnover
+        <span class="inv-tooltip-wrap">
+          <span class="inv-tooltip-icon">i</span>
+          <span class="inv-tooltip-text">Total time from when capital is wired to a supplier to when it is collected back from the customer: ${inv.avg_alloc_days||'?'} days in allocation + ${inv.avg_inv_days||'?'} days in inventory + ${inv.avg_pend_days||'?'} days awaiting payment.</span>
+        </span>
+      </div>
       <div class="inv-stat-val" style="color:var(--accent)">${cycleStr}</div>
       <div style="font-size:0.62rem;color:var(--muted)">Allocation + inventory + payment</div>
     </div>
-    <div class="inv-stat">
-      <div class="inv-stat-label">Avg days between deliveries</div>
-      <div class="inv-stat-val">${btwnStr}</div>
-      <div style="font-size:0.62rem;color:var(--muted)">Delivery cadence</div>
-    </div>
-    <div class="inv-stat">
-      <div class="inv-stat-label">Return per cycle</div>
+    <div class="inv-stat" style="position:relative">
+      <div class="inv-stat-label">Return per cycle
+        <span class="inv-tooltip-wrap">
+          <span class="inv-tooltip-icon">i</span>
+          <span class="inv-tooltip-text">Gross margin as a percentage of capital deployed into completed and collected loads. For every $100 MXN that goes out and comes back, $${rd.total ? (rd.total.roi*100).toFixed(2) : '?'} MXN is profit before the investor split.</span>
+        </span>
+      </div>
       <div class="inv-stat-val" style="color:var(--green)">${roiStr}</div>
       <div style="font-size:0.62rem;color:var(--muted)">On recovered capital</div>
     </div>
