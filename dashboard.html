@@ -1016,62 +1016,96 @@ function renderInvestor() {
   });
   html += `</div>`;
 
-  // ── Capital distribution — premium donut ──
-  html += subLabel('Where the capital is right now');
-  const donutId = 'inv-donut-' + Date.now();
-  const allocV  = ad.alloc_mxn || 0;
-  const invV    = ad.inv_mxn || 0;
-  const pendV   = (ad.btc_pend_mxn||0) + (ad.rtc_pend_mxn||0);
-  // Correct flow order: Allocation → Inventory → Pending Collection
-  const donutSegments = [
-    { val: allocV, color: '#3fb950', label: 'Allocation',          pct: allocPct, days: inv.avg_alloc_days },
-    { val: invV,   color: '#4a7cdc', label: 'Bulk plant inventory', pct: invPct,   days: inv.avg_inv_days  },
-    { val: pendV,  color: '#f0883e', label: 'Awaiting payment',     pct: pendPct,  days: inv.avg_pend_days },
-  ];
-
-  html += `<div style="display:grid;grid-template-columns:220px 1fr;gap:2rem;align-items:center;padding:0.5rem 0">
-    <div style="position:relative;width:220px;height:220px;flex-shrink:0">
-      <canvas id="${donutId}" width="220" height="220"></canvas>
-      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;gap:2px">
-        <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Total active</div>
-        <div style="font-size:1.15rem;font-weight:700;color:var(--text);letter-spacing:-0.5px">$${fm(totalActive)}</div>
-        <div style="font-size:0.62rem;color:var(--muted)">MXN</div>
+  // ── Capital distribution — side by side layout ──
+  html += `<div style="display:grid;grid-template-columns:1fr 1px 1fr;align-items:start;gap:0">
+    <div style="padding-right:1.5rem">
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:0 0 0.6rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border)">Where the capital is right now</div>
+      <div style="padding:0.55rem 0.75rem;background:var(--surface2);border-radius:6px;margin-bottom:0.6rem">
+        <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">Total active capital</div>
+        <div style="font-size:1.1rem;font-weight:600;color:var(--text)">$${fm(totalActive)} <span style="font-size:0.68rem;font-weight:400;color:var(--muted)">MXN</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:120px 1fr;gap:0.85rem;align-items:center">
+        <div style="position:relative;width:120px;height:120px;flex-shrink:0">
+          <canvas id="${donutId}" width="120" height="120"></canvas>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #3fb950;border-radius:0 5px 5px 0">
+            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
+            <div style="text-align:right">
+              <div style="font-size:0.8rem;font-weight:600;color:#3fb950">${(allocPct*100).toFixed(1)}%</div>
+              <div style="font-size:0.65rem;color:var(--muted)">$${fm(allocV)}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
+            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Bulk inventory</div>
+            <div style="text-align:right">
+              <div style="font-size:0.8rem;font-weight:600;color:#4a7cdc">${(invPct*100).toFixed(1)}%</div>
+              <div style="font-size:0.65rem;color:var(--muted)">$${fm(invV)}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
+            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Awaiting payment</div>
+            <div style="text-align:right">
+              <div style="font-size:0.8rem;font-weight:600;color:#f0883e">${(pendPct*100).toFixed(1)}%</div>
+              <div style="font-size:0.65rem;color:var(--muted)">$${fm(pendV)}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:0.6rem">
-      ${donutSegments.map(s => `
-        <div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:1rem;padding:0.65rem 0.85rem;background:var(--surface2);border-radius:8px;border-left:3px solid ${s.color}">
+
+    <div style="background:var(--border);align-self:stretch"></div>
+
+    <div style="padding-left:1.5rem">
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:0 0 0.6rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border)">Capital cycle</div>
+      <div style="padding:0.55rem 0.75rem;background:var(--surface2);border-radius:6px;margin-bottom:0.6rem">
+        <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">Capital turnover
+          <span class="inv-tooltip-wrap">
+            <span class="inv-tooltip-icon">i</span>
+            <span class="inv-tooltip-text">Total time from when capital is wired to a supplier to when it is collected back from the customer: ${inv.avg_alloc_days||'?'} days in allocation + ${inv.avg_inv_days||'?'} days in inventory + ${inv.avg_pend_days||'?'} days awaiting payment.</span>
+          </span>
+        </div>
+        <div style="font-size:1.1rem;font-weight:600;color:var(--text)">${cycleStr} <span style="font-size:0.68rem;font-weight:400;color:var(--muted)">avg</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #3fb950;border-radius:0 5px 5px 0">
           <div>
-            <div style="font-size:0.65rem;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.04em">${s.label}</div>
-            <div style="font-size:0.9rem;font-weight:600;color:var(--text)">$${fm(s.val)} <span style="font-size:0.68rem;font-weight:400;color:var(--muted)">MXN</span></div>
+            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
+            <div style="font-size:0.6rem;color:var(--muted2)">Wire to RTB</div>
           </div>
-          <div style="text-align:center;padding:0 0.5rem;border-left:1px solid var(--border)">
-            <div style="font-size:0.95rem;font-weight:700;color:${s.color}">${(s.pct*100).toFixed(1)}%</div>
-            <div style="font-size:0.58rem;color:var(--muted)">of active</div>
+          <div style="text-align:right">
+            <div style="font-size:1.1rem;font-weight:600;color:#3fb950">${inv.avg_alloc_days||'N/A'}</div>
+            <div style="font-size:0.65rem;color:var(--muted)">days</div>
           </div>
-          <div style="text-align:center;padding:0 0.25rem;border-left:1px solid var(--border)">
-            <div style="font-size:0.95rem;font-weight:700;color:var(--muted2)">${s.days != null ? s.days : 'N/A'}</div>
-            <div style="font-size:0.58rem;color:var(--muted)">avg days</div>
+        </div>
+        <div style="height:0.5px;background:var(--border);margin:0 0 0 11px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
+          <div>
+            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Inventory</div>
+            <div style="font-size:0.6rem;color:var(--muted2)">RTB to delivery</div>
           </div>
-        </div>`).join('')}
+          <div style="text-align:right">
+            <div style="font-size:1.1rem;font-weight:600;color:#4a7cdc">${inv.avg_inv_days||'N/A'}</div>
+            <div style="font-size:0.65rem;color:var(--muted)">days</div>
+          </div>
+        </div>
+        <div style="height:0.5px;background:var(--border);margin:0 0 0 11px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
+          <div>
+            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Payment</div>
+            <div style="font-size:0.6rem;color:var(--muted2)">Delivery to collection</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:1.1rem;font-weight:600;color:#f0883e">${inv.avg_pend_days||'N/A'}</div>
+            <div style="font-size:0.65rem;color:var(--muted)">days</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>`;
-
-  window._pendingDonut = { id: donutId, vals: donutSegments.map(s=>s.val), colors: donutSegments.map(s=>s.color) };
 
   // ── Cycle metrics ──
-  // ── Capital cycle (single card) ──
-  html += subLabel('Capital cycle');
-  html += `<div class="inv-stat" style="position:relative;max-width:340px">
-    <div class="inv-stat-label">Capital turnover
-      <span class="inv-tooltip-wrap">
-        <span class="inv-tooltip-icon">i</span>
-        <span class="inv-tooltip-text">Total time from when capital is wired to a supplier to when it is collected back from the customer: ${inv.avg_alloc_days||'?'} days in allocation + ${inv.avg_inv_days||'?'} days in inventory + ${inv.avg_pend_days||'?'} days awaiting payment.</span>
-      </span>
-    </div>
-    <div class="inv-stat-val" style="color:var(--accent)">${cycleStr}</div>
-    <div style="font-size:0.62rem;color:var(--muted)">Allocation + inventory + payment</div>
-  </div>`;
+  window._pendingDonut = { id: donutId, vals: [allocV, invV, pendV], colors: ['#3fb950','#4a7cdc','#f0883e'] };
 
   // ── Investment rounds (collapsible, add round admin only) ──
   html += subLabel('Investment rounds');
@@ -1221,7 +1255,7 @@ function renderInvestor() {
     const ctx = canvas.getContext('2d');
     const total = d.vals.reduce((a,b)=>a+b,0);
     if (!total) return;
-    const cx=110, cy=110, r=98, ri=62, gap=0.025;
+    const cx=60, cy=60, r=54, ri=34, gap=0.03;
     let start = -Math.PI/2;
     d.vals.forEach((v,i)=>{
       if (!v) return;
