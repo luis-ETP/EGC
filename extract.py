@@ -688,6 +688,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
                 'total_cost':  round(total_cost, 2),
                 'status':      str(row[lt_h.get('Invoice Status',56)] or ''),
                 'cycle_days':  cycle,
+                'bol_source':  bol_source_str,
             })
 
             if status == 'PAID':
@@ -735,7 +736,114 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     total_margin   = rec_btc_margin + rec_rtc_margin
     investor_share = total_margin * inv_share_pct
 
-    # ── 5. Projections (needs inv_lit from above) ─────────────────────────────
+    # ── Stage days computation ─────────────────────────────────────────────────
+    # Uses Purchase to BOL-RTB for RTB dates, SI for wire dates, LT for BTC/payment dates
+    # All stages: use today for open-ended (still in allocation/inventory/pending)
+    from datetime import datetime as _dt_now
+    _TODAY = _dt_now.now()
+
+    # Wire dates per invoice from SI
+    wire_date_by_inv = {}
+    try:
+        ws_si_wd = wb["Supplier Invoices"]
+        si_wd_rows = list(ws_si_wd.iter_rows(values_only=True))
+        si_wd_hdr  = next((i for i,r in enumerate(si_wd_rows) if r[0]=='Batch' and r[2]=='Supplier'), None)
+        if si_wd_hdr is not None:
+            sc_wd = {str(v).strip():j for j,v in enumerate(si_wd_rows[si_wd_hdr]) if v}
+            for row in si_wd_rows[si_wd_hdr+1:]:
+                if not any(row): break
+                inv_k = str(row[sc_wd.get('Invoice #',3)] or '').strip()
+                dt_w  = _parse_date(row[sc_wd.get('Date',1)])
+                if inv_k and dt_w:
+                    wire_date_by_inv[inv_k] = dt_w
+    except Exception: pass
+
+    # RTB dates and gallons per BOL from Purchase to BOL-RTB
+    bol_rtb_info = {}  # bol → {rtb_date, gallons, invoice}
+    try:
+        ws_bol_sd = wb["Purchase to BOL-RTB"] if wb_fifo is None else (wb_fifo or wb)["Purchase to BOL-RTB"]
+        # Use source wb for raw dates
+        ws_bol_sd = wb["Purchase to BOL-RTB"]
+        bp_sd_rows = list(ws_bol_sd.iter_rows(values_only=True))
+        bp_sd_hdr  = next((i for i,r in enumerate(bp_sd_rows) if r[0] and 'DashFuel' in str(r[0])), 6)
+        bh_sd = {str(v).strip():j for j,v in enumerate(bp_sd_rows[bp_sd_hdr]) if v}
+        for row in bp_sd_rows[bp_sd_hdr+1:]:
+            if not any(row): break
+            bol_k = str(row[bh_sd.get('BOL',5)] or '').strip()
+            inv_k = str(row[bh_sd.get('Supplier Invoice',3)] or '').strip()
+            gal_k = f(row[bh_sd.get('Gallons',6)])
+            dt_k  = _parse_date(row[bh_sd.get('Date',1)])
+            if bol_k:
+                bol_rtb_info[bol_k] = {'rtb_date': dt_k, 'gallons': gal_k, 'invoice': inv_k}
+    except Exception: pass
+
+    # ── 1. Allocation days: wire_date → rtb_date (or today if still in alloc) ──
+    alloc_num = alloc_den = 0.0
+    for bol, info in bol_rtb_info.items():
+        rtb_dt = info['rtb_date']
+        gal    = info['gallons']
+        inv_s  = info['invoice']
+        end_dt = rtb_dt if rtb_dt else _TODAY
+        # Find wire date — use first matching part of split invoice
+        wire_dt = None
+        for part in [p.strip() for p in inv_s.split('|')]:
+            if part in wire_date_by_inv:
+                wire_dt = wire_date_by_inv[part]
+                break
+        if wire_dt and gal > 0:
+            days = max(0, (end_dt - wire_dt).days)
+            alloc_num += gal * days
+            alloc_den += gal
+
+    # ── 2. Inventory days: rtb_date → btc_pickup_date (or today if still in inv) ──
+    inv_sd_num = inv_sd_den = 0.0
+    # From BTCs: each source BOL contributed gallons, rtb→btc_pickup
+    for load in btc_loads:
+        pickup_dt = _parse_date(load['date']) if load['date'] else None
+        if not pickup_dt: continue
+        gals_load = load['liters'] / 3.785411784 if load['liters'] else 0
+        bol_src_str = load.get('bol_source', '')
+        src_bols = [b.strip() for b in bol_src_str.split('|') if b.strip()] if bol_src_str else []
+        if src_bols:
+            gal_per = gals_load / len(src_bols)
+            for b in src_bols:
+                if b in bol_rtb_info and bol_rtb_info[b]['rtb_date']:
+                    days = max(0, (pickup_dt - bol_rtb_info[b]['rtb_date']).days)
+                    inv_sd_num += gal_per * days
+                    inv_sd_den += gal_per
+    # Still in inventory: use today
+    try:
+        ws_fifo_sd = _wb_out["FIFO"]
+        fifo_sd_rows = list(ws_fifo_sd.iter_rows(values_only=True))
+        fh_sd = {str(v).strip():j for j,v in enumerate(fifo_sd_rows[0]) if v}
+        for row in fifo_sd_rows[1:]:
+            if not row[0]: break
+            if str(row[fh_sd.get('Type',2)]).strip() != 'RTB': continue
+            rem_l = f(row[fh_sd.get('Remaining L (BOL)',13)])
+            if rem_l <= 0: continue
+            bol_k = str(row[fh_sd.get('BOL',7)] or '').strip()
+            rem_gal = rem_l / 3.785411784
+            if bol_k in bol_rtb_info and bol_rtb_info[bol_k]['rtb_date']:
+                days = max(0, (_TODAY - bol_rtb_info[bol_k]['rtb_date']).days)
+                inv_sd_num += rem_gal * days
+                inv_sd_den += rem_gal
+    except Exception: pass
+
+    # ── 3. Pending collection days: btc_pickup → payment (or today) ──
+    pend_sd_num = pend_sd_den = 0.0
+    for load in btc_loads:
+        pickup_dt  = _parse_date(load['date']) if load['date'] else None
+        payment_dt = _parse_date(load['payment_date']) if load['payment_date'] else None
+        gals_load  = load['liters'] / 3.785411784 if load['liters'] else 0
+        if pickup_dt and gals_load > 0:
+            end_dt = payment_dt if payment_dt else _TODAY
+            days = max(0, (end_dt - pickup_dt).days)
+            pend_sd_num += gals_load * days
+            pend_sd_den += gals_load
+
+    avg_alloc_days = round(alloc_num / alloc_den, 1) if alloc_den > 0 else None
+    avg_inv_days   = round(inv_sd_num / inv_sd_den, 1) if inv_sd_den > 0 else None
+    avg_pend_days  = round(pend_sd_num / pend_sd_den, 1) if pend_sd_den > 0 else None
     avg_cycle_days = round(sum(cycle_days_list) / len(cycle_days_list), 1) if cycle_days_list else None
     paid_loads     = [l for l in btc_loads if l['status'].upper() == 'PAID']
     avg_margin_per_load = (sum(l['total_margin'] for l in paid_loads) / len(paid_loads)) if paid_loads else 0
@@ -797,6 +905,9 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
         },
         "avg_cycle_days":          avg_cycle_days,
         "avg_days_between_loads":  avg_days_between_loads,
+        "avg_alloc_days":          avg_alloc_days,
+        "avg_inv_days":            avg_inv_days,
+        "avg_pend_days":           avg_pend_days,
         "btc_loads":               btc_loads,
         "projections": {
             "loads_remaining":      loads_remaining,
