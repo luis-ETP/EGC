@@ -975,6 +975,10 @@ function renderInvestor() {
 
   // ── Performance KPIs ──
   html += subLabel('Performance');
+  const cycleStr = (inv.avg_alloc_days != null && inv.avg_inv_days != null && inv.avg_pend_days != null)
+    ? (inv.avg_alloc_days + inv.avg_inv_days + inv.avg_pend_days).toFixed(1) + ' days'
+    : inv.avg_cycle_days != null ? inv.avg_cycle_days + ' days' : 'N/A';
+  const roiStr   = rd.total ? fp(rd.total.roi) : 'N/A';
   const kpis = [
     {label:'Capital deployed',  val:'$'+fm(inv.total_committed_usd)+' USD', sub:'committed capital', green:false},
     {label:'Capital at work',   val:'$'+fm(totalActive)+' MXN',             sub:'active and deployed', green:false},
@@ -982,6 +986,7 @@ function renderInvestor() {
     {label:'Revolved multiple', val:Number(inv.revolved||0).toFixed(2)+'×', sub:'since inception',   green:true},
     {label:'Total profit',      val:'$'+fm(inv.total_margin)+' MXN',        sub:'gross generated',   green:true},
     {label:'Investor share',    val:'$'+fm(inv.investor_share)+' MXN',      sub:Math.round((inv.inv_share_pct||0.4)*100)+'% of profit', green:true},
+    {label:'Return per cycle',  val:roiStr,                                  sub:'on recovered capital', green:true},
   ];
   html += `<div class="inv-kpi-grid">`;
   kpis.forEach(k => {
@@ -1037,33 +1042,17 @@ function renderInvestor() {
   window._pendingDonut = { id: donutId, vals: donutSegments.map(s=>s.val), colors: donutSegments.map(s=>s.color) };
 
   // ── Cycle metrics ──
-  const cycleStr = (inv.avg_alloc_days != null && inv.avg_inv_days != null && inv.avg_pend_days != null)
-    ? (inv.avg_alloc_days + inv.avg_inv_days + inv.avg_pend_days).toFixed(1) + ' days'
-    : inv.avg_cycle_days != null ? inv.avg_cycle_days + ' days' : 'N/A';
-  const btwnStr  = inv.avg_days_between_loads ? inv.avg_days_between_loads+' days' : 'N/A';
-  const roiStr   = rd.total ? fp(rd.total.roi) : 'N/A';
-  html += subLabel('Capital cycle metrics');
-  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-    <div class="inv-stat" style="position:relative">
-      <div class="inv-stat-label">Capital turnover
-        <span class="inv-tooltip-wrap">
-          <span class="inv-tooltip-icon">i</span>
-          <span class="inv-tooltip-text">Total time from when capital is wired to a supplier to when it is collected back from the customer: ${inv.avg_alloc_days||'?'} days in allocation + ${inv.avg_inv_days||'?'} days in inventory + ${inv.avg_pend_days||'?'} days awaiting payment.</span>
-        </span>
-      </div>
-      <div class="inv-stat-val" style="color:var(--accent)">${cycleStr}</div>
-      <div style="font-size:0.62rem;color:var(--muted)">Allocation + inventory + payment</div>
+  // ── Capital cycle (single card) ──
+  html += subLabel('Capital cycle');
+  html += `<div class="inv-stat" style="position:relative;max-width:340px">
+    <div class="inv-stat-label">Capital turnover
+      <span class="inv-tooltip-wrap">
+        <span class="inv-tooltip-icon">i</span>
+        <span class="inv-tooltip-text">Total time from when capital is wired to a supplier to when it is collected back from the customer: ${inv.avg_alloc_days||'?'} days in allocation + ${inv.avg_inv_days||'?'} days in inventory + ${inv.avg_pend_days||'?'} days awaiting payment.</span>
+      </span>
     </div>
-    <div class="inv-stat" style="position:relative">
-      <div class="inv-stat-label">Return per cycle
-        <span class="inv-tooltip-wrap">
-          <span class="inv-tooltip-icon">i</span>
-          <span class="inv-tooltip-text">Gross margin as a percentage of capital deployed into completed and collected loads. For every $100 MXN that goes out and comes back, $${rd.total ? (rd.total.roi*100).toFixed(2) : '?'} MXN is profit before the investor split.</span>
-        </span>
-      </div>
-      <div class="inv-stat-val" style="color:var(--green)">${roiStr}</div>
-      <div style="font-size:0.62rem;color:var(--muted)">On recovered capital</div>
-    </div>
+    <div class="inv-stat-val" style="color:var(--accent)">${cycleStr}</div>
+    <div style="font-size:0.62rem;color:var(--muted)">Allocation + inventory + payment</div>
   </div>`;
 
   // ── Investment rounds (collapsible, add round admin only) ──
