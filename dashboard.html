@@ -791,8 +791,8 @@ function renderInvestor() {
     return;
   }
 
-  const MARKUP     = dashData.markup === true;
-  const MARKUP_USD = dashData.markup_usd || 0.02;
+  const MARKUP     = dashData.markup === true || invViewMode === 'investor';
+  const MARKUP_USD = invViewMode === 'investor' ? invMarkup : (dashData.markup_usd || 0.02);
   const L_PER_GAL  = 3.7854;
   const IS_ADMIN   = ROLE === 'admin';
 
@@ -1234,7 +1234,7 @@ function renderInvestor() {
 
     html += secHdr('forward',
       '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
-      'Forward view', 'Projections · Admin only', 'Admin only', true);
+      'Forward view', 'Projections', '', true);
 
     html += `<div class="fwd-grid">
       <div class="fwd-card">
@@ -1273,7 +1273,7 @@ function renderInvestor() {
     const loads = inv.btc_loads || [];
     html += secHdr('loads',
       '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>',
-      'Load performance', loads.length+' loads · Admin only', 'Admin only', false);
+      'Load performance', loads.length+' loads', '', false);
 
     html += `<div class="table-wrap"><table>
       <thead><tr>
@@ -1410,19 +1410,8 @@ function renderInvestor() {
 
 function invSetView(mode) {
   invViewMode = mode;
-  const isInvestor = mode === 'investor';
-  document.getElementById('inv-btn-admin').className    = 'inv-view-btn ' + (isInvestor ? 'inactive' : 'active');
-  document.getElementById('inv-btn-investor').className = 'inv-view-btn ' + (isInvestor ? 'active' : 'inactive');
-  const adder = document.getElementById('inv-adder');
-  if (adder) adder.style.display = isInvestor ? 'flex' : 'none';
-
-  // Show/hide all eye buttons
-  document.querySelectorAll('.inv-eye-btn').forEach(btn => {
-    btn.style.display = isInvestor ? 'flex' : 'none';
-  });
-
-  // Apply or remove grayed states
-  applyInvVisibility();
+  // Re-render so markup applies/removes correctly
+  renderInvestor();
 }
 
 function applyInvVisibility() {
@@ -1499,12 +1488,12 @@ function invSaveMarkup() {
   }).then(r => r.json()).then(() => {
     btn.textContent = '✓ Saved';
     btn.classList.add('saved');
+    invMarkup = val;
     setTimeout(() => {
       btn.textContent = 'Save';
       btn.classList.remove('saved');
-    }, 2000);
-    // Update dashData so filter recalculates
-    dashData.markup_usd = val;
+      renderInvestor(); // re-render with new markup
+    }, 1000);
   }).catch(e => console.error('Save markup error:', e));
 }
 function invToggle(id) {
