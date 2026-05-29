@@ -1036,8 +1036,8 @@ function renderInvestor() {
           <span class="inv-tooltip-text">Shows how the active capital ($${fm(totalActive)} MXN) is distributed across the three stages of the trade cycle at this moment.</span>
         </span>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:0.75rem">
-        <div style="position:relative;width:160px;height:160px">
+      <div style="display:grid;grid-template-columns:160px 1fr;gap:1rem;align-items:center">
+        <div style="position:relative;width:160px;height:160px;flex-shrink:0">
           <canvas id="${donutId}" width="160" height="160"></canvas>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none">
             <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Active</div>
@@ -1045,27 +1045,27 @@ function renderInvestor() {
             <div style="font-size:0.58rem;color:var(--muted)">MXN</div>
           </div>
         </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.6rem;background:var(--surface2);border-left:3px solid #3fb950;border-radius:0 5px 5px 0">
-          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
-          <div style="text-align:right">
-            <div style="font-size:0.85rem;font-weight:600;color:#3fb950">${(allocPct*100).toFixed(1)}%</div>
-            <div style="font-size:0.62rem;color:var(--muted)">$${fm(allocV)}</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #3fb950;border-radius:0 5px 5px 0">
+            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
+            <div style="text-align:right">
+              <div style="font-size:0.9rem;font-weight:600;color:#3fb950">${Math.round(allocPct*100)}%</div>
+              <div style="font-size:0.62rem;color:var(--muted)">$${fm(allocV)}</div>
+            </div>
           </div>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.6rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
-          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Bulk inventory</div>
-          <div style="text-align:right">
-            <div style="font-size:0.85rem;font-weight:600;color:#4a7cdc">${(invPct*100).toFixed(1)}%</div>
-            <div style="font-size:0.62rem;color:var(--muted)">$${fm(invV)}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
+            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Bulk inventory</div>
+            <div style="text-align:right">
+              <div style="font-size:0.9rem;font-weight:600;color:#4a7cdc">${Math.round(invPct*100)}%</div>
+              <div style="font-size:0.62rem;color:var(--muted)">$${fm(invV)}</div>
+            </div>
           </div>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.6rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
-          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Awaiting payment</div>
-          <div style="text-align:right">
-            <div style="font-size:0.85rem;font-weight:600;color:#f0883e">${(pendPct*100).toFixed(1)}%</div>
-            <div style="font-size:0.62rem;color:var(--muted)">$${fm(pendV)}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
+            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Awaiting payment</div>
+            <div style="text-align:right">
+              <div style="font-size:0.9rem;font-weight:600;color:#f0883e">${Math.round(pendPct*100)}%</div>
+              <div style="font-size:0.62rem;color:var(--muted)">$${fm(pendV)}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1075,48 +1075,48 @@ function renderInvestor() {
       <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:0 0 0.5rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border)">Capital cycle
         <span class="inv-tooltip-wrap">
           <span class="inv-tooltip-icon">i</span>
-          <span class="inv-tooltip-text">Average days capital spends in each stage before completing the full cycle. Total turnover: ${inv.avg_alloc_days||'?'} + ${inv.avg_inv_days||'?'} + ${inv.avg_pend_days||'?'} = ${cycleStr}.</span>
+          <span class="inv-tooltip-text">Average days capital spends in each stage before completing the full cycle. Total turnover: ${Math.round(inv.avg_alloc_days||0)} + ${Math.round(inv.avg_inv_days||0)} + ${Math.round(inv.avg_pend_days||0)} = ${Math.round((inv.avg_alloc_days||0)+(inv.avg_inv_days||0)+(inv.avg_pend_days||0))} days avg.</span>
         </span>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:0.75rem">
-        <div style="position:relative;width:160px;height:160px">
+      <div style="display:grid;grid-template-columns:160px 1fr;gap:1rem;align-items:center">
+        <div style="position:relative;width:160px;height:160px;flex-shrink:0">
           <canvas id="${donutId2}" width="160" height="160"></canvas>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none">
             <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Turnover</div>
-            <div style="font-size:0.9rem;font-weight:600;color:var(--text)">${cycleStr}</div>
+            <div style="font-size:0.9rem;font-weight:600;color:var(--text)">${Math.round((inv.avg_alloc_days||0)+(inv.avg_inv_days||0)+(inv.avg_pend_days||0))} days</div>
             <div style="font-size:0.58rem;color:var(--muted)">avg</div>
           </div>
         </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:4px">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.6rem;background:var(--surface2);border-left:3px solid #3fb950;border-radius:0 5px 5px 0">
-          <div>
-            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
-            <div style="font-size:0.6rem;color:var(--muted2)">Wire to RTB</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #3fb950;border-radius:0 5px 5px 0">
+            <div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
+              <div style="font-size:0.6rem;color:var(--muted2)">Wire to RTB</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:0.9rem;font-weight:600;color:#3fb950">${Math.round(inv.avg_alloc_days||0)}</div>
+              <div style="font-size:0.62rem;color:var(--muted)">days</div>
+            </div>
           </div>
-          <div style="text-align:right">
-            <div style="font-size:0.85rem;font-weight:600;color:#3fb950">${inv.avg_alloc_days||'N/A'}</div>
-            <div style="font-size:0.62rem;color:var(--muted)">days</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
+            <div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Inventory</div>
+              <div style="font-size:0.6rem;color:var(--muted2)">RTB to delivery</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:0.9rem;font-weight:600;color:#4a7cdc">${Math.round(inv.avg_inv_days||0)}</div>
+              <div style="font-size:0.62rem;color:var(--muted)">days</div>
+            </div>
           </div>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.6rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
-          <div>
-            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Inventory</div>
-            <div style="font-size:0.6rem;color:var(--muted2)">RTB to delivery</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:0.85rem;font-weight:600;color:#4a7cdc">${inv.avg_inv_days||'N/A'}</div>
-            <div style="font-size:0.62rem;color:var(--muted)">days</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.45rem 0.6rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
-          <div>
-            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Payment</div>
-            <div style="font-size:0.6rem;color:var(--muted2)">Delivery to collection</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:0.85rem;font-weight:600;color:#f0883e">${inv.avg_pend_days||'N/A'}</div>
-            <div style="font-size:0.62rem;color:var(--muted)">days</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
+            <div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Payment</div>
+              <div style="font-size:0.6rem;color:var(--muted2)">Delivery to collection</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:0.9rem;font-weight:600;color:#f0883e">${Math.round(inv.avg_pend_days||0)}</div>
+              <div style="font-size:0.62rem;color:var(--muted)">days</div>
+            </div>
           </div>
         </div>
       </div>
