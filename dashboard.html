@@ -1033,7 +1033,9 @@ function renderInvestor() {
   window._pendingDonut = { id: donutId, vals: donutSegments.map(s=>s.val), colors: donutSegments.map(s=>s.color) };
 
   // ── Cycle metrics ──
-  const cycleStr = inv.avg_cycle_days != null ? inv.avg_cycle_days+' days' : 'N/A';
+  const cycleStr = (inv.avg_alloc_days != null && inv.avg_inv_days != null && inv.avg_pend_days != null)
+    ? (inv.avg_alloc_days + inv.avg_inv_days + inv.avg_pend_days).toFixed(1) + ' days'
+    : inv.avg_cycle_days != null ? inv.avg_cycle_days + ' days' : 'N/A';
   const btwnStr  = inv.avg_days_between_loads ? inv.avg_days_between_loads+' days' : 'N/A';
   const roiStr   = rd.total ? fp(rd.total.roi) : 'N/A';
   html += subLabel('Capital cycle metrics');
@@ -1041,7 +1043,7 @@ function renderInvestor() {
     <div class="inv-stat">
       <div class="inv-stat-label">Avg cash conversion cycle</div>
       <div class="inv-stat-val" style="color:var(--accent)">${cycleStr}</div>
-      <div style="font-size:0.62rem;color:var(--muted)">From wire to customer payment</div>
+      <div style="font-size:0.62rem;color:var(--muted)">Allocation + inventory + pending</div>
     </div>
     <div class="inv-stat">
       <div class="inv-stat-label">Avg days between deliveries</div>
