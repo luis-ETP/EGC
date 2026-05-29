@@ -966,8 +966,13 @@ function renderInvestor() {
   const invPct    = totalActive ? ad.inv_mxn/totalActive : 0;
   const pendPct   = totalActive ? (ad.btc_pend_mxn+ad.rtc_pend_mxn)/totalActive : 0;
 
-  // Get available batches from btc_loads
-  const batches = [...new Set((inv.btc_loads||[]).map(l=>l.batch).filter(Boolean))].sort();
+  // Get available batches from btc_loads — split "1 | 2" style values
+  const batchSet = new Set();
+  (inv.btc_loads||[]).forEach(l => {
+    if (l.batch) l.batch.split('|').forEach(b => { const t=b.trim(); if(t) batchSet.add(t); });
+  });
+  const batches = [...batchSet].sort();
+  const batchOptions = batches.map(b=>'<option value="batch-'+b+'">Batch '+b+'</option>').join('');
 
   html += `<div class="inv-section" id="sec-snapshot">
     <div class="inv-sec-hdr" style="cursor:default">
@@ -981,7 +986,6 @@ function renderInvestor() {
           <option value="30">Last 30 days</option>
           <option value="60">Last 60 days</option>
           <option value="90">Last 90 days</option>
-          ${batches.map(b=>`<option value="batch-${b}">Batch ${b}</option>`).join('')}
         </select>
         <svg class="inv-chevron open" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" onclick="invToggle('snapshot')" style="cursor:pointer"><polyline points="4 6 8 10 12 6"/></svg>
       </div>
@@ -1021,38 +1025,39 @@ function renderInvestor() {
   const allocV  = ad.alloc_mxn || 0;
   const invV    = ad.inv_mxn || 0;
   const pendV   = (ad.btc_pend_mxn||0) + (ad.rtc_pend_mxn||0);
-  html += `<div style="display:grid;grid-template-columns:1fr 1px 1fr;align-items:start;gap:0">
+  html += `
+  <div style="display:flex;justify-content:center;margin-bottom:1rem">
+    <div style="position:relative;width:120px;height:120px">
+      <canvas id="${donutId}" width="120" height="120"></canvas>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1px 1fr;align-items:start;gap:0">
     <div style="padding-right:1.5rem">
-      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:0 0 0.6rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border)">Where the capital is right now</div>
-      <div style="padding:0.55rem 0.75rem;background:var(--surface2);border-radius:6px;margin-bottom:0.6rem">
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:0 0 0.5rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border)">Where the capital is right now</div>
+      <div style="padding:0.55rem 0.75rem;background:var(--surface2);border-radius:6px;margin-bottom:0.5rem">
         <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">Total active capital</div>
         <div style="font-size:1.1rem;font-weight:600;color:var(--text)">$${fm(totalActive)} <span style="font-size:0.68rem;font-weight:400;color:var(--muted)">MXN</span></div>
       </div>
-      <div style="display:grid;grid-template-columns:120px 1fr;gap:0.85rem;align-items:center">
-        <div style="position:relative;width:120px;height:120px;flex-shrink:0">
-          <canvas id="${donutId}" width="120" height="120"></canvas>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #3fb950;border-radius:0 5px 5px 0">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
+          <div style="text-align:right">
+            <div style="font-size:0.9rem;font-weight:600;color:#3fb950">${(allocPct*100).toFixed(1)}%</div>
+            <div style="font-size:0.65rem;color:var(--muted)">$${fm(allocV)}</div>
+          </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #3fb950;border-radius:0 5px 5px 0">
-            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
-            <div style="text-align:right">
-              <div style="font-size:0.8rem;font-weight:600;color:#3fb950">${(allocPct*100).toFixed(1)}%</div>
-              <div style="font-size:0.65rem;color:var(--muted)">$${fm(allocV)}</div>
-            </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Bulk inventory</div>
+          <div style="text-align:right">
+            <div style="font-size:0.9rem;font-weight:600;color:#4a7cdc">${(invPct*100).toFixed(1)}%</div>
+            <div style="font-size:0.65rem;color:var(--muted)">$${fm(invV)}</div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
-            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Bulk inventory</div>
-            <div style="text-align:right">
-              <div style="font-size:0.8rem;font-weight:600;color:#4a7cdc">${(invPct*100).toFixed(1)}%</div>
-              <div style="font-size:0.65rem;color:var(--muted)">$${fm(invV)}</div>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
-            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Awaiting payment</div>
-            <div style="text-align:right">
-              <div style="font-size:0.8rem;font-weight:600;color:#f0883e">${(pendPct*100).toFixed(1)}%</div>
-              <div style="font-size:0.65rem;color:var(--muted)">$${fm(pendV)}</div>
-            </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Awaiting payment</div>
+          <div style="text-align:right">
+            <div style="font-size:0.9rem;font-weight:600;color:#f0883e">${(pendPct*100).toFixed(1)}%</div>
+            <div style="font-size:0.65rem;color:var(--muted)">$${fm(pendV)}</div>
           </div>
         </div>
       </div>
@@ -1061,8 +1066,8 @@ function renderInvestor() {
     <div style="background:var(--border);align-self:stretch"></div>
 
     <div style="padding-left:1.5rem">
-      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:0 0 0.6rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border)">Capital cycle</div>
-      <div style="padding:0.55rem 0.75rem;background:var(--surface2);border-radius:6px;margin-bottom:0.6rem">
+      <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:0 0 0.5rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border)">Capital cycle</div>
+      <div style="padding:0.55rem 0.75rem;background:var(--surface2);border-radius:6px;margin-bottom:0.5rem">
         <div style="font-size:0.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">Capital turnover
           <span class="inv-tooltip-wrap">
             <span class="inv-tooltip-icon">i</span>
@@ -1078,29 +1083,27 @@ function renderInvestor() {
             <div style="font-size:0.6rem;color:var(--muted2)">Wire to RTB</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:1.1rem;font-weight:600;color:#3fb950">${inv.avg_alloc_days||'N/A'}</div>
+            <div style="font-size:0.9rem;font-weight:600;color:#3fb950">${inv.avg_alloc_days||'N/A'}</div>
             <div style="font-size:0.65rem;color:var(--muted)">days</div>
           </div>
         </div>
-        <div style="height:0.5px;background:var(--border);margin:0 0 0 11px"></div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4a7cdc;border-radius:0 5px 5px 0">
           <div>
             <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Inventory</div>
             <div style="font-size:0.6rem;color:var(--muted2)">RTB to delivery</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:1.1rem;font-weight:600;color:#4a7cdc">${inv.avg_inv_days||'N/A'}</div>
+            <div style="font-size:0.9rem;font-weight:600;color:#4a7cdc">${inv.avg_inv_days||'N/A'}</div>
             <div style="font-size:0.65rem;color:var(--muted)">days</div>
           </div>
         </div>
-        <div style="height:0.5px;background:var(--border);margin:0 0 0 11px"></div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #f0883e;border-radius:0 5px 5px 0">
           <div>
             <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Payment</div>
             <div style="font-size:0.6rem;color:var(--muted2)">Delivery to collection</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:1.1rem;font-weight:600;color:#f0883e">${inv.avg_pend_days||'N/A'}</div>
+            <div style="font-size:0.9rem;font-weight:600;color:#f0883e">${inv.avg_pend_days||'N/A'}</div>
             <div style="font-size:0.65rem;color:var(--muted)">days</div>
           </div>
         </div>
@@ -1249,6 +1252,17 @@ function renderInvestor() {
   </div>`;
 
   el.innerHTML = html;
+
+  // Inject batch options into dropdown now that DOM exists
+  const filterSel = document.getElementById('inv-period-filter');
+  if (filterSel && batches.length) {
+    batches.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = 'batch-' + b;
+      opt.textContent = 'Batch ' + b;
+      filterSel.appendChild(opt);
+    });
+  }
 
   // Draw donut chart now that canvas is in DOM
   (function(){
