@@ -1407,8 +1407,65 @@ function renderInvestor() {
 
 function invSetView(mode) {
   invViewMode = mode;
-  // Re-render so markup applies/removes correctly
-  renderInvestor();
+  const isInvestor = mode === 'investor';
+
+  // Update button states
+  const adminBtn = document.getElementById('inv-btn-admin');
+  const investorBtn = document.getElementById('inv-btn-investor');
+  if (adminBtn) adminBtn.className = 'inv-view-btn ' + (isInvestor ? 'inactive' : 'active');
+  if (investorBtn) investorBtn.className = 'inv-view-btn ' + (isInvestor ? 'active' : 'inactive');
+
+  // Show/hide adder
+  const adderEl = document.getElementById('inv-adder');
+  if (adderEl) adderEl.style.display = isInvestor ? 'flex' : 'none';
+
+  // Show/hide eye buttons
+  document.querySelectorAll('.inv-eye-btn').forEach(b => b.style.display = isInvestor ? 'flex' : 'none');
+
+  // Apply markup changes — need to re-render numbers if switching
+  if (isInvestor) {
+    // Apply markup to KPI vals
+    const rawInv = dashData.investment || {};
+    const avgFx = (() => { const rows=(dashData.bol_tab||{}).rows||[]; const v=rows.map(r=>r.fx_rate).filter(x=>x>0); return v.length?v.reduce((a,b)=>a+b,0)/v.length:17.30; })();
+    const mu = invMarkup * avgFx / 3.7854;
+    const rd = rawInv.recovered_detail || {};
+    const btcLit = (rd.btc||{}).liters || 0;
+    const rtcLit = (rd.rtc||{}).liters || 0;
+    const totLit = btcLit + rtcLit;
+    const muTotal = mu * totLit;
+    const origMargin = rawInv.total_margin || 0;
+    const adjMargin = origMargin - muTotal;
+    const adjShare = adjMargin * (rawInv.inv_share_pct || 0.40);
+    const origRecov = rawInv.recovered_mxn || 0;
+    const roi = origRecov > 0 ? adjMargin / origRecov : 0;
+    const fm = v => Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+    const updates = {
+      'total profit': '$'+fm(adjMargin)+' MXN',
+      'investor share': '$'+fm(adjShare)+' MXN',
+      'return per cycle': (roi*100).toFixed(2)+'%',
+    };
+    document.querySelectorAll('.inv-kpi').forEach(card => {
+      const key = (card.dataset.key||'').toLowerCase();
+      if (updates[key]) card.querySelector('.inv-kpi-val').textContent = updates[key];
+    });
+  } else {
+    // Restore real numbers
+    const rawInv = dashData.investment || {};
+    const fm = v => Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+    const rd = (rawInv.recovered_detail||{}).total||{};
+    const updates = {
+      'total profit': '$'+fm(rawInv.total_margin||0)+' MXN',
+      'investor share': '$'+fm(rawInv.investor_share||0)+' MXN',
+      'return per cycle': rd.roi ? (rd.roi*100).toFixed(2)+'%' : 'N/A',
+    };
+    document.querySelectorAll('.inv-kpi').forEach(card => {
+      const key = (card.dataset.key||'').toLowerCase();
+      if (updates[key]) card.querySelector('.inv-kpi-val').textContent = updates[key];
+    });
+  }
+
+  // Apply/remove graying
+  applyInvVisibility();
 }
 
 function applyInvVisibility() {
