@@ -1668,7 +1668,6 @@ function invApplyFilter() {
   document.querySelectorAll('.inv-kpi').forEach(card => {
     const labelEl = card.querySelector('.inv-kpi-label');
     if (!labelEl) return;
-    // Use data-key attribute if set, else clean textContent
     const labelText = (card.dataset.key || labelEl.textContent || '').toLowerCase().trim().replace(/\s+/g,' ');
     Object.keys(updates).forEach(k => {
       if (labelText.includes(k.toLowerCase())) {
@@ -1677,6 +1676,133 @@ function invApplyFilter() {
       }
     });
   });
+
+  // ── Update capital cycle donut + rows ──────────────────────────────────
+  // Avg days from filtered loads (all, not just paid — includes pending)
+  function wavg(loads, daysKey) {
+    const valid = loads.filter(l => l[daysKey] != null && l.liters > 0);
+    const totL = valid.reduce((a,l)=>a+l.liters,0);
+    if (!totL) return null;
+    return valid.reduce((a,l)=>a+l[daysKey]*l.liters,0)/totL;
+  }
+  const avgAlloc = wavg(filtered, 'avg_alloc_days') ?? wavg(loads, 'avg_alloc_days');
+  const avgInv   = wavg(filtered, 'avg_inv_days')   ?? wavg(loads, 'avg_inv_days');
+  const avgPend  = wavg(filtered, 'avg_pend_days')  ?? wavg(loads, 'avg_pend_days');
+
+  // Update cycle rows
+  const cycleRows = document.querySelectorAll('#inv-card-cycle .inv-kpi-val, #inv-card-cycle [style*="font-weight:600"]');
+  const cycleVals = [
+    avgAlloc != null ? Math.round(avgAlloc)+' days' : 'N/A',
+    avgInv   != null ? Math.round(avgInv)  +' days' : 'N/A',
+    avgPend  != null ? Math.round(avgPend) +' days' : 'N/A',
+  ];
+  // Find the 3 day value divs in the cycle section
+  const cycleDayDivs = document.querySelectorAll('#inv-card-cycle .inv-sec-body [style*="font-weight:600"][style*="color:#"]');
+  cycleDayDivs.forEach((el, i) => { if (cycleVals[i]) el.textContent = cycleVals[i]; });
+
+  // Redraw cycle donut
+  const cycleCanvas = document.querySelector('#inv-card-cycle canvas');
+  if (cycleCanvas && avgAlloc != null && avgInv != null && avgPend != null) {
+    const ctx = cycleCanvas.getContext('2d');
+    const w = cycleCanvas.width, h = cycleCanvas.height;
+    ctx.clearRect(0,0,w,h);
+    const cx=w/2, cy=h/2, r=w*0.46, ri=w*0.29, gap=0.03;
+    const vals=[avgAlloc,avgInv,avgPend], colors=['#7DD3FC','#6366F1','#2DD4BF'];
+    const total=vals.reduce((a,b)=>a+b,0);
+    let start=-Math.PI/2;
+    vals.forEach((v,i)=>{
+      const angle=(v/total)*Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start+gap,start+angle-gap);
+      ctx.closePath(); ctx.fillStyle=colors[i]; ctx.fill();
+      if(angle>0.25){
+        const mid=start+angle/2, lx=cx+Math.cos(mid)*(r+ri)/2, ly=cy+Math.sin(mid)*(r+ri)/2;
+        ctx.font='bold 11px Inter,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3; ctx.strokeText(Math.round(v/total*100)+'%',lx,ly);
+        ctx.fillStyle='#fff'; ctx.fillText(Math.round(v/total*100)+'%',lx,ly);
+      }
+      start+=angle;
+    });
+    ctx.beginPath(); ctx.arc(cx,cy,ri,0,Math.PI*2);
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#161c26';
+    ctx.fill();
+    // Update center text
+    const totalDays = Math.round(avgAlloc+avgInv+avgPend);
+    const centerEl = cycleCanvas.parentElement.querySelector('[style*="font-weight:600"]');
+    if (centerEl) centerEl.textContent = totalDays+' days';
+  }
+
+  // ── Update capital distribution donut + rows ──────────────────────────
+  // For period filters: use all active loads (pending BTC + inventory)
+  // For batch filter: proportionally attribute active capital to batch
+  const ad = inv.active_detail || {};
+  let allocV = ad.alloc_mxn || 0;
+  let invV   = ad.inv_mxn   || 0;
+  let pendV  = (ad.btc_pend_mxn||0) + (ad.rtc_pend_mxn||0);
+
+  if (period.startsWith('batch-')) {
+    const b = period.replace('batch-','').trim();
+    // Pending BTC loads attributed to this batch (proportional)
+    const batchPending = loads.filter(l=>(l.status||'').toUpperCase()==='PENDING');
+    pendV = batchPending.reduce((a,l)=>{
+      const parts = String(l.batch||'').split('|').map(x=>x.trim());
+      if (!parts.includes(b)) return a;
+      const frac = (l.batch_splits||{})[b] || 1;
+      return a + (l.total_sale||0)*frac;
+    }, 0);
+    // Inventory and allocation: use proportional share based on batch
+    // Simple approach: scale by batch's share of total liters purchased
+    const batchLoads = filtered; // already proportionally adjusted
+    const batchLiters = batchLoads.reduce((a,l)=>a+(l.liters||0),0);
+    const totalLiters = loads.reduce((a,l)=>a+(l.liters||0),0);
+    const frac = totalLiters > 0 ? batchLiters/totalLiters : 1;
+    allocV = allocV * frac;
+    invV   = invV   * frac;
+  } else if (period !== 'all') {
+    // For time periods, scale active capital proportionally to recovered capital
+    const allRecov = inv.recovered_mxn || 1;
+    const frac = allRecov > 0 ? Math.min(totalSale/allRecov, 1) : 1;
+    allocV = allocV * frac;
+    invV   = invV   * frac;
+    pendV  = pendV  * frac;
+  }
+
+  const totalActive = allocV + invV + pendV;
+  const capitalCanvas = document.querySelector('#inv-card-capital-dist canvas');
+  if (capitalCanvas && totalActive > 0) {
+    const ctx = capitalCanvas.getContext('2d');
+    const w=capitalCanvas.width, h=capitalCanvas.height;
+    ctx.clearRect(0,0,w,h);
+    const cx=w/2, cy=h/2, r=w*0.46, ri=w*0.29, gap=0.03;
+    const vals=[allocV,invV,pendV], colors=['#7DD3FC','#6366F1','#2DD4BF'];
+    const total=vals.reduce((a,b)=>a+b,0);
+    let start=-Math.PI/2;
+    vals.forEach((v,i)=>{
+      if(!v) return;
+      const angle=(v/total)*Math.PI*2;
+      ctx.beginPath(); ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start+gap,start+angle-gap);
+      ctx.closePath(); ctx.fillStyle=colors[i]; ctx.fill();
+      if(angle>0.25){
+        const mid=start+angle/2, lx=cx+Math.cos(mid)*(r+ri)/2, ly=cy+Math.sin(mid)*(r+ri)/2;
+        ctx.font='bold 11px Inter,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3; ctx.strokeText(Math.round(v/total*100)+'%',lx,ly);
+        ctx.fillStyle='#fff'; ctx.fillText(Math.round(v/total*100)+'%',lx,ly);
+      }
+      start+=angle;
+    });
+    ctx.beginPath(); ctx.arc(cx,cy,ri,0,Math.PI*2);
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#161c26';
+    ctx.fill();
+    // Update center
+    const centerEl = capitalCanvas.parentElement.querySelector('[style*="font-weight:600"]');
+    if (centerEl) centerEl.textContent = '$'+fm(Math.round(totalActive));
+  }
+
+  // Update capital distribution rows
+  const capRows = document.querySelectorAll('#inv-card-capital-dist [style*="font-weight:600"][style*="color:#"]');
+  const capVals = ['$'+fm(Math.round(allocV)), '$'+fm(Math.round(invV)), '$'+fm(Math.round(pendV))];
+  capRows.forEach((el,i) => { if(capVals[i]) el.textContent = capVals[i]; });
 }
 
 function addRound() {
