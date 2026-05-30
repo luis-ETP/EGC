@@ -1104,26 +1104,26 @@ function renderInvestor() {
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #A5F3FC;border-radius:0 5px 5px 0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #7DD3FC;border-radius:0 5px 5px 0">
             <div>
               <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
               <div style="font-size:0.6rem;color:var(--muted2)">Wired to supplier</div>
             </div>
-            <div style="font-size:0.9rem;font-weight:600;color:#A5F3FC">$${fm(allocV)}</div>
+            <div style="font-size:0.9rem;font-weight:600;color:#7DD3FC">$${fm(allocV)}</div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #06B6D4;border-radius:0 5px 5px 0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #6366F1;border-radius:0 5px 5px 0">
             <div>
               <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Inventory</div>
               <div style="font-size:0.6rem;color:var(--muted2)">At bulk plant</div>
             </div>
-            <div style="font-size:0.9rem;font-weight:600;color:#06B6D4">$${fm(invV)}</div>
+            <div style="font-size:0.9rem;font-weight:600;color:#6366F1">$${fm(invV)}</div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #0E7490;border-radius:0 5px 5px 0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #2DD4BF;border-radius:0 5px 5px 0">
             <div>
               <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Awaiting payment</div>
               <div style="font-size:0.6rem;color:var(--muted2)">Delivered, pending collection</div>
             </div>
-            <div style="font-size:0.9rem;font-weight:600;color:#0E7490">$${fm(pendV)}</div>
+            <div style="font-size:0.9rem;font-weight:600;color:#2DD4BF">$${fm(pendV)}</div>
           </div>
         </div>
       </div>
@@ -1148,31 +1148,31 @@ function renderInvestor() {
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #A5F3FC;border-radius:0 5px 5px 0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #7DD3FC;border-radius:0 5px 5px 0">
             <div>
               <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
               <div style="font-size:0.6rem;color:var(--muted2)">Wire to RTB</div>
             </div>
             <div style="text-align:right">
-              <div style="font-size:0.9rem;font-weight:600;color:#A5F3FC">${Math.round(inv.avg_alloc_days||0)} days</div>
+              <div style="font-size:0.9rem;font-weight:600;color:#7DD3FC">${Math.round(inv.avg_alloc_days||0)} days</div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #06B6D4;border-radius:0 5px 5px 0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #6366F1;border-radius:0 5px 5px 0">
             <div>
               <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Inventory</div>
               <div style="font-size:0.6rem;color:var(--muted2)">RTB to delivery</div>
             </div>
             <div style="text-align:right">
-              <div style="font-size:0.9rem;font-weight:600;color:#06B6D4">${Math.round(inv.avg_inv_days||0)} days</div>
+              <div style="font-size:0.9rem;font-weight:600;color:#6366F1">${Math.round(inv.avg_inv_days||0)} days</div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #0E7490;border-radius:0 5px 5px 0">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #2DD4BF;border-radius:0 5px 5px 0">
             <div>
               <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Payment</div>
               <div style="font-size:0.6rem;color:var(--muted2)">Delivery to collection</div>
             </div>
             <div style="text-align:right">
-              <div style="font-size:0.9rem;font-weight:600;color:#0E7490">${Math.round(inv.avg_pend_days||0)} days</div>
+              <div style="font-size:0.9rem;font-weight:600;color:#2DD4BF">${Math.round(inv.avg_pend_days||0)} days</div>
             </div>
           </div>
         </div>
@@ -1182,8 +1182,8 @@ function renderInvestor() {
   </div>`;
 
   // ── Cycle metrics ──
-  window._pendingDonut = { id: donutId, vals: [allocV, invV, pendV], colors: ['#A5F3FC','#06B6D4','#0E7490'] };
-  window._pendingDonut2 = { id: donutId2, vals: [inv.avg_alloc_days||0, inv.avg_inv_days||0, inv.avg_pend_days||0], colors: ['#A5F3FC','#06B6D4','#0E7490'] };
+  window._pendingDonut = { id: donutId, vals: [allocV, invV, pendV], colors: ['#7DD3FC','#6366F1','#2DD4BF'] };
+  window._pendingDonut2 = { id: donutId2, vals: [inv.avg_alloc_days||0, inv.avg_inv_days||0, inv.avg_pend_days||0], colors: ['#7DD3FC','#6366F1','#2DD4BF'] };
 
   // ── Investment rounds (collapsible, add round admin only) ──
   html += `<div id="inv-card-rounds" style="margin-top:1.1rem">
