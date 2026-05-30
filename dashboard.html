@@ -949,9 +949,9 @@ function renderInvestor() {
     .inv-view-btn{padding:0.28rem 0.75rem;border-radius:4px;font-size:0.7rem;font-weight:600;cursor:pointer;border:none;font-family:var(--font);letter-spacing:0.03em;transition:all 0.15s}
     .inv-view-btn.active{background:var(--surface3);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.3)}
     .inv-view-btn.inactive{background:transparent;color:var(--muted)}
-    .inv-eye-btn{display:none;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;flex-shrink:0;transition:all 0.15s}
-    .inv-eye-btn:hover{border-color:var(--muted)}
-    .inv-eye-btn.eye-hidden{background:rgba(248,81,73,0.08);border-color:rgba(248,81,73,0.3)}
+    .inv-eye-btn{display:none;align-items:center;justify-content:center;width:28px;height:28px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;flex-shrink:0;transition:all 0.15s;position:relative;z-index:20}
+    .inv-eye-btn:hover{border-color:var(--muted);background:var(--surface3)}
+    .inv-eye-btn.eye-hidden{background:rgba(248,81,73,0.12);border-color:rgba(248,81,73,0.4)}
     .inv-grayed{opacity:0.28;pointer-events:none;transition:opacity 0.2s}
     .inv-adder{display:none;align-items:center;gap:6px;font-size:0.7rem;color:var(--muted)}
     .inv-adder input{background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:0.25rem 0.5rem;color:var(--text);font-size:0.72rem;width:65px;text-align:right;font-family:var(--font)}
@@ -960,7 +960,8 @@ function renderInvestor() {
     .inv-adder-save:hover{background:rgba(74,124,220,0.28)}
     .inv-adder-save.saved{background:rgba(63,185,80,0.15);border-color:var(--green);color:var(--green)}
     .inv-kpi-wrap{position:relative}
-    .inv-kpi-wrap .inv-eye-btn{position:absolute;top:4px;right:4px;width:18px;height:18px}
+    .inv-kpi-wrap .inv-eye-btn{position:absolute;top:3px;right:3px;width:24px;height:24px;z-index:20}
+    .inv-eye-btn svg, .inv-eye-btn *{pointer-events:none}
   </style>`;
 
   const date = inv.as_of || '—';
@@ -1480,8 +1481,8 @@ function applyInvVisibility() {
       // Update eye icon state
       btn.classList.toggle('eye-hidden', isHidden);
       btn.innerHTML = isHidden
-        ? '<svg width="11" height="11" fill="none" stroke="#f85149" stroke-width="2"><line x1="2" y1="2" x2="9" y2="9"/><path d="M1 5.5s1.5-2.5 4-3"/><path d="M10 5.5s-1.5 2.5-4 3"/></svg>'
-        : '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 5.5s1.5-3.5 4.5-3.5S10 5.5 10 5.5s-1.5 3.5-4.5 3.5S1 5.5 1 5.5z"/><circle cx="5.5" cy="5.5" r="1.2"/></svg>';
+        ? '<svg width="11" height="11" fill="none" stroke="#f85149" stroke-width="2" style="pointer-events:none"><line x1="2" y1="2" x2="9" y2="9"/><path d="M1 5.5s1.5-2.5 4-3"/><path d="M10 5.5s-1.5 2.5-4 3"/></svg>'
+        : '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none"><path d="M1 5.5s1.5-3.5 4.5-3.5S10 5.5 10 5.5s-1.5 3.5-4.5 3.5S1 5.5 1 5.5z"/><circle cx="5.5" cy="5.5" r="1.2"/></svg>';
       // Gray out or restore the target element
       const target = document.getElementById(targetId);
       if (target) target.classList.toggle('inv-grayed', isHidden);
@@ -1506,8 +1507,8 @@ function invToggleVisibility(id) {
   if (btn) {
     btn.classList.toggle('eye-hidden', isHidden);
     btn.innerHTML = isHidden
-      ? '<svg width="11" height="11" fill="none" stroke="#f85149" stroke-width="2"><line x1="2" y1="2" x2="9" y2="9"/><path d="M1 5.5s1.5-2.5 4-3"/><path d="M10 5.5s-1.5 2.5-4 3"/></svg>'
-      : '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 5.5s1.5-3.5 4.5-3.5S10 5.5 10 5.5s-1.5 3.5-4.5 3.5S1 5.5 1 5.5z"/><circle cx="5.5" cy="5.5" r="1.2"/></svg>';
+      ? '<svg width="11" height="11" fill="none" stroke="#f85149" stroke-width="2" style="pointer-events:none"><line x1="2" y1="2" x2="9" y2="9"/><path d="M1 5.5s1.5-2.5 4-3"/><path d="M10 5.5s-1.5 2.5-4 3"/></svg>'
+      : '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none"><path d="M1 5.5s1.5-3.5 4.5-3.5S10 5.5 10 5.5s-1.5 3.5-4.5 3.5S1 5.5 1 5.5z"/><circle cx="5.5" cy="5.5" r="1.2"/></svg>';
     // Re-attach onclick since innerHTML replacement may affect it
     btn.onclick = function(e) { e.stopPropagation(); invToggleVisibility(id); };
   }
