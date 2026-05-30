@@ -1166,15 +1166,6 @@ function renderInvestor() {
               <div style="font-size:0.9rem;font-weight:600;color:#0E7490">${Math.round(inv.avg_pend_days||0)} days</div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #0E7490;border-radius:0 5px 5px 0">
-            <div>
-              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Payment</div>
-              <div style="font-size:0.6rem;color:var(--muted2)">Delivery to collection</div>
-            </div>
-            <div style="text-align:right">
-              <div style="font-size:0.9rem;font-weight:600;color:#0E7490">${Math.round(inv.avg_pend_days||0)} days</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -1375,11 +1366,18 @@ function renderInvestor() {
           var labelR = (r + ri) / 2;
           var lx = cx + Math.cos(midAngle) * labelR;
           var ly = cy + Math.sin(midAngle) * labelR;
-          ctx.fillStyle = '#ffffff';
+          var pct = Math.round(v/total*100) + '%';
           ctx.font = 'bold 11px Inter,sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(Math.round(v/total*100) + '%', lx, ly);
+          // Dark outline for visibility
+          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+          ctx.lineWidth = 3;
+          ctx.lineJoin = 'round';
+          ctx.strokeText(pct, lx, ly);
+          // White fill
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(pct, lx, ly);
         }
         start += angle;
       });
