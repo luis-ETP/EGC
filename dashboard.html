@@ -1013,12 +1013,19 @@ function renderInvestor() {
   const invPct    = totalActive ? ad.inv_mxn/totalActive : 0;
   const pendPct   = totalActive ? (ad.btc_pend_mxn+ad.rtc_pend_mxn)/totalActive : 0;
 
-  // Get available batches from btc_loads — split "1 | 2" style values
+  // Get available batches from btc_loads AND inventory
   const batchSet = new Set();
   (inv.btc_loads||[]).forEach(l => {
     if (l.batch) l.batch.split('|').forEach(b => { const t=b.trim(); if(t) batchSet.add(t); });
   });
-  const batches = [...batchSet].sort();
+  // Also add batches from inventory (RTB batches that may not have BTC loads yet)
+  const invData = dashData.inventory || {};
+  Object.values(invData).forEach(products => {
+    Object.values(products).forEach(batches => {
+      Object.keys(batches).forEach(b => { if(b) batchSet.add(b.trim()); });
+    });
+  });
+  const batches = [...batchSet].sort((a,b) => Number(a)-Number(b));
   const batchOptions = batches.map(b=>'<option value="batch-'+b+'">Batch '+b+'</option>').join('');
 
   html += `<div class="inv-section" id="sec-snapshot">
