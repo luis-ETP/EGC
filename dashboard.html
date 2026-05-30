@@ -1146,7 +1146,6 @@ function renderInvestor() {
             </div>
             <div style="text-align:right">
               <div style="font-size:0.9rem;font-weight:600;color:#A5F3FC">${Math.round(inv.avg_alloc_days||0)} days</div>
-              <div style="font-size:0.62rem;color:var(--muted)">${Math.round((inv.avg_alloc_days||0)/((inv.avg_alloc_days||0)+(inv.avg_inv_days||0)+(inv.avg_pend_days||0))*100)}% of cycle</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #06B6D4;border-radius:0 5px 5px 0">
@@ -1156,7 +1155,6 @@ function renderInvestor() {
             </div>
             <div style="text-align:right">
               <div style="font-size:0.9rem;font-weight:600;color:#06B6D4">${Math.round(inv.avg_inv_days||0)} days</div>
-              <div style="font-size:0.62rem;color:var(--muted)">${Math.round((inv.avg_inv_days||0)/((inv.avg_alloc_days||0)+(inv.avg_inv_days||0)+(inv.avg_pend_days||0))*100)}% of cycle</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #0E7490;border-radius:0 5px 5px 0">
@@ -1166,7 +1164,15 @@ function renderInvestor() {
             </div>
             <div style="text-align:right">
               <div style="font-size:0.9rem;font-weight:600;color:#0E7490">${Math.round(inv.avg_pend_days||0)} days</div>
-              <div style="font-size:0.62rem;color:var(--muted)">${Math.round((inv.avg_pend_days||0)/((inv.avg_alloc_days||0)+(inv.avg_inv_days||0)+(inv.avg_pend_days||0))*100)}% of cycle</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #0E7490;border-radius:0 5px 5px 0">
+            <div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Payment</div>
+              <div style="font-size:0.6rem;color:var(--muted2)">Delivery to collection</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:0.9rem;font-weight:600;color:#0E7490">${Math.round(inv.avg_pend_days||0)} days</div>
             </div>
           </div>
         </div>
@@ -1363,6 +1369,18 @@ function renderInvestor() {
         ctx.closePath();
         ctx.fillStyle = d.colors[i];
         ctx.fill();
+        // Draw % label in middle of segment
+        if (angle > 0.25) {
+          var midAngle = start + angle/2;
+          var labelR = (r + ri) / 2;
+          var lx = cx + Math.cos(midAngle) * labelR;
+          var ly = cy + Math.sin(midAngle) * labelR;
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 11px Inter,sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(Math.round(v/total*100) + '%', lx, ly);
+        }
         start += angle;
       });
       ctx.beginPath();
