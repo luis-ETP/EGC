@@ -1105,16 +1105,25 @@ function renderInvestor() {
         </div>
         <div style="display:flex;flex-direction:column;gap:4px">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #A5F3FC;border-radius:0 5px 5px 0">
-            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
-            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">$${fm(allocV)}</div>
+            <div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Allocation</div>
+              <div style="font-size:0.6rem;color:var(--muted2)">Wired to supplier</div>
+            </div>
+            <div style="font-size:0.9rem;font-weight:600;color:#A5F3FC">$${fm(allocV)}</div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #06B6D4;border-radius:0 5px 5px 0">
-            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Inventory</div>
-            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">$${fm(invV)}</div>
+            <div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Inventory</div>
+              <div style="font-size:0.6rem;color:var(--muted2)">At bulk plant</div>
+            </div>
+            <div style="font-size:0.9rem;font-weight:600;color:#06B6D4">$${fm(invV)}</div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #0E7490;border-radius:0 5px 5px 0">
-            <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Awaiting payment</div>
-            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">$${fm(pendV)}</div>
+            <div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Awaiting payment</div>
+              <div style="font-size:0.6rem;color:var(--muted2)">Delivered, pending collection</div>
+            </div>
+            <div style="font-size:0.9rem;font-weight:600;color:#0E7490">$${fm(pendV)}</div>
           </div>
         </div>
       </div>
