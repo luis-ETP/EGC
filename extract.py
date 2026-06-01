@@ -909,7 +909,51 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             pend_sd_num += gals_load * days
             pend_sd_den += gals_load
 
-    avg_alloc_days = round(alloc_num / alloc_den, 1) if alloc_den > 0 else None
+    # ── Per-load stage days ──────────────────────────────────────────────────
+    for load in btc_loads:
+        pickup_dt  = _parse_date(load['date']) if load['date'] else None
+        payment_dt = _parse_date(load['payment_date']) if load['payment_date'] else None
+        bol_src_str = load.get('bol_source', '')
+        src_bols = [b.strip() for b in bol_src_str.split('|') if b.strip()] if bol_src_str else []
+
+        # Inventory days: avg RTB→pickup across source BOLs
+        inv_days_load = None
+        if pickup_dt and src_bols:
+            days_list = []
+            for b in src_bols:
+                if b in bol_rtb_info and bol_rtb_info[b]['rtb_date']:
+                    d = max(0, (pickup_dt - bol_rtb_info[b]['rtb_date']).days)
+                    days_list.append(d)
+            if days_list:
+                inv_days_load = round(sum(days_list) / len(days_list), 1)
+
+        # Allocation days: avg wire→RTB across source BOLs
+        alloc_days_load = None
+        if src_bols:
+            days_list = []
+            for b in src_bols:
+                if b in bol_rtb_info:
+                    rtb_dt = bol_rtb_info[b]['rtb_date']
+                    inv_s  = bol_rtb_info[b]['invoice']
+                    wire_dt = None
+                    for part in [p.strip() for p in inv_s.split('|')]:
+                        if part in wire_date_by_inv:
+                            wire_dt = wire_date_by_inv[part]
+                            break
+                    if wire_dt and rtb_dt:
+                        days_list.append(max(0, (rtb_dt - wire_dt).days))
+            if days_list:
+                alloc_days_load = round(sum(days_list) / len(days_list), 1)
+
+        # Pending days: pickup→payment (or today)
+        pend_days_load = None
+        if pickup_dt:
+            end_dt = payment_dt if payment_dt else _TODAY
+            pend_days_load = max(0, (end_dt - pickup_dt).days)
+
+        load['alloc_days'] = alloc_days_load
+        load['inv_days']   = inv_days_load
+        load['pend_days']  = pend_days_load
     avg_inv_days   = round(inv_sd_num / inv_sd_den, 1) if inv_sd_den > 0 else None
     avg_pend_days  = round(pend_sd_num / pend_sd_den, 1) if pend_sd_den > 0 else None
     avg_cycle_days = round(sum(cycle_days_list) / len(cycle_days_list), 1) if cycle_days_list else None
