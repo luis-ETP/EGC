@@ -1621,23 +1621,21 @@ function invApplyFilter() {
     filtered = loads;
   } else if (period.startsWith('batch-')) {
     const b = period.replace('batch-','').trim();
-    // For loads that span batches, use proportional split
-    // Build a filtered list with adjusted margins based on batch fraction
     filtered = [];
     loads.forEach(l => {
       const splits = l.batch_splits || {};
       const batchParts = String(l.batch||'').split('|').map(x=>x.trim());
       if (!batchParts.includes(b)) return;
-      if (Object.keys(splits).length > 1 && splits[b] !== undefined) {
-        // Multi-batch load — clone with proportional values
+      const hasSplits = Object.keys(splits).length > 0;
+      if (hasSplits) {
+        // If splits exist but don't include this batch, the load's gallons are from another batch
+        if (splits[b] === undefined) return;
         const frac = splits[b];
         filtered.push(Object.assign({}, l, {
           total_sale:   (l.total_sale||0) * frac,
           total_cost:   (l.total_cost||0) * frac,
           total_margin: (l.total_margin||0) * frac,
           liters:       (l.liters||0) * frac,
-          _proportional: true,
-          _fraction: frac,
         }));
       } else {
         filtered.push(l);
