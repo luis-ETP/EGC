@@ -527,9 +527,22 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             yr = v.year if hasattr(v, 'year') else 0
             if not (2000 <= yr <= 2100):
                 return None
-            # Check if month and day look swapped (month > 12 is impossible, 
-            # but day ≤ 12 means ambiguous — trust it as-is since openpyxl
-            # reads Excel date serials correctly)
+            # Check if month and day could be swapped (both ≤ 12)
+            # If month > 12 it's already impossible to swap, trust it
+            # If day > 12, the date is unambiguous as-is
+            # If both ≤ 12, we can't tell here — return as-is and let
+            # contextual resolver handle strings; for datetimes we trust openpyxl
+            # UNLESS the date seems out of range (> today + 30 days), then try swap
+            from datetime import datetime as _dt2, timedelta
+            if v.month <= 12 and v.day <= 12:
+                today = _dt2.now()
+                if v > today + timedelta(days=30):
+                    # Try swapping month and day
+                    try:
+                        swapped = _dt2(v.year, v.day, v.month, v.hour, v.minute, v.second)
+                        if swapped <= today + timedelta(days=30):
+                            return swapped
+                    except: pass
             return v
         if isinstance(v, str):
             s = v.strip()
@@ -556,7 +569,19 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
 
         def _candidates(v):
             """Return (mm_dd, dd_mm) candidate datetimes for a string, or (dt, dt) if unambiguous."""
-            if hasattr(v, 'date'): return (v, v)
+            from datetime import timedelta
+            if hasattr(v, 'date'):
+                # Datetime object from openpyxl — check if month/day might be swapped
+                # (happens when Excel stores MM/DD as DD/MM serial)
+                if v.month <= 12 and v.day <= 12:
+                    today = _dt.now()
+                    if v > today + timedelta(days=30):
+                        try:
+                            swapped = _dt(v.year, v.day, v.month)
+                            if swapped <= today + timedelta(days=30):
+                                return (swapped, swapped)
+                        except: pass
+                return (v, v)
             if not isinstance(v, str): return (None, None)
             s = v.strip()
             parts = s.replace('-','/').split('/')
