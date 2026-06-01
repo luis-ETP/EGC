@@ -511,12 +511,18 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
 
     def _parse_date(v):
         """Parse a single date value — datetime passthrough or string parse."""
-        if hasattr(v, 'date'): return v
+        if hasattr(v, 'date'):
+            # Sanity check year for datetime objects too
+            yr = v.year if hasattr(v, 'year') else 0
+            return v if 2000 <= yr <= 2100 else None
         if isinstance(v, str):
             from datetime import datetime as _dt
             s = v.strip()
             for fmt in ('%m/%d/%Y','%d/%m/%Y','%Y-%m-%d'):
-                try: return _dt.strptime(s, fmt)
+                try:
+                    dt = _dt.strptime(s, fmt)
+                    if 2000 <= dt.year <= 2100:
+                        return dt
                 except: pass
         return None
 
@@ -540,6 +546,8 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             try:
                 a, b, yr = int(parts[0]), int(parts[1]), int(parts[2])
             except: return (None, None)
+            # Sanity check year — must be plausible
+            if yr < 2000 or yr > 2100: return (None, None)
             # Try MM/DD/YYYY and DD/MM/YYYY
             mm_dd = dd_mm = None
             try: mm_dd = _dt(yr, a, b)  # MM/DD
@@ -695,6 +703,10 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             customer       = str(row[lt_h.get('Customer',8)] or '')
             pickup_str     = pickup.strftime('%m/%d/%Y') if pickup else ''
             payment_str    = payment_date.strftime('%m/%d/%Y') if payment_date else ''
+
+            # Skip incomplete loads — no pickup and no status means still being set up
+            if not pickup_str and not status:
+                continue
 
             # Cash conversion cycle: earliest source RTB date → payment date
             cycle = None
