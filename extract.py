@@ -753,7 +753,11 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
                     for b, frac in splits.items():
                         pend_by_batch[b] = pend_by_batch.get(b, 0.0) + total_sale * frac
                 elif batch_src:
-                    pend_by_batch[batch_src] = pend_by_batch.get(batch_src, 0.0) + total_sale
+                    # Split multi-batch source equally if no BOL-level split available
+                    parts = [b.strip() for b in batch_src.split('|') if b.strip()]
+                    share = total_sale / len(parts) if parts else total_sale
+                    for b in parts:
+                        pend_by_batch[b] = pend_by_batch.get(b, 0.0) + share
         elif typ == 'RTC':
             if status == 'PAID':
                 rec_rtc_tc     += total_cost
@@ -783,7 +787,11 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             inv_mxn += val
             batch_key = str(row[fh.get('Batch', 6)] or '').strip()
             if batch_key:
-                inv_by_batch[batch_key] = inv_by_batch.get(batch_key, 0.0) + val
+                # Split "1 | 2" style keys and distribute equally
+                parts = [b.strip() for b in batch_key.split('|') if b.strip()]
+                share = val / len(parts) if parts else val
+                for b in parts:
+                    inv_by_batch[b] = inv_by_batch.get(b, 0.0) + share
     except Exception:
         # Fallback: simple RTB - BTC with avg cost if FIFO sheet unavailable
         inv_lit = max(0.0, rtb_total_lit - btc_total_lit)
