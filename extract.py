@@ -510,15 +510,33 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
         pass
 
     def _parse_date(v):
-        """Parse a single date value — datetime passthrough or string parse."""
+        """Parse a single date value — datetime passthrough, Excel serial, or string parse."""
+        from datetime import datetime as _dt, timedelta
+        # Excel serial number (integer or float like 55056)
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            try:
+                # Excel epoch is Dec 30 1899
+                serial = int(v)
+                if 40000 <= serial <= 60000:  # plausible range ~2009-2064
+                    dt = _dt(1899, 12, 30) + timedelta(days=serial)
+                    return dt
+            except: pass
+            return None
+        # datetime object from openpyxl
         if hasattr(v, 'date'):
-            # Sanity check year for datetime objects too
             yr = v.year if hasattr(v, 'year') else 0
-            return v if 2000 <= yr <= 2100 else None
+            if not (2000 <= yr <= 2100):
+                return None
+            # Check if month and day look swapped (month > 12 is impossible, 
+            # but day ≤ 12 means ambiguous — trust it as-is since openpyxl
+            # reads Excel date serials correctly)
+            return v
         if isinstance(v, str):
-            from datetime import datetime as _dt
             s = v.strip()
-            for fmt in ('%m/%d/%Y','%d/%m/%Y','%Y-%m-%d'):
+            # Handle Invoice-style dates like "2026-04-22 - 23:00:00" → use date part only
+            if ' - ' in s:
+                s = s.split(' - ')[0].strip()
+            for fmt in ('%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y'):
                 try:
                     dt = _dt.strptime(s, fmt)
                     if 2000 <= dt.year <= 2100:
