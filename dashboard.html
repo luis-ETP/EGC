@@ -1682,21 +1682,33 @@ function invApplyFilter() {
     });
   });
 
-  // ── Capital cycle: recompute from filtered loads using per-load stage days ──
+  // ── Capital cycle: use server-computed per-batch cycle days ──
   function wavg(loads, key) {
-    // Cap at 90 days max per stage to filter corrupt date calculations
     const valid = loads.filter(l => l[key] != null && l[key] >= 0 && l[key] <= 90 && (l.liters||0) > 0);
     const totL = valid.reduce((a,l)=>a+(l.liters||0), 0);
     if (!totL) return null;
     return Math.round(valid.reduce((a,l)=>a+l[key]*(l.liters||0), 0) / totL);
   }
-  const avgAlloc = wavg(filtered, 'alloc_days') ?? Math.round(inv.avg_alloc_days||0);
-  const avgInv   = wavg(filtered, 'inv_days')   ?? Math.round(inv.avg_inv_days||0);
-  const avgPend  = wavg(filtered, 'pend_days')  ?? Math.round(inv.avg_pend_days||0);
+  let avgAlloc, avgInv, avgPend;
+  if (period.startsWith('batch-')) {
+    const b = period.replace('batch-','').trim();
+    const cb = (inv.cycle_by_batch||{})[b] || {};
+    avgAlloc = cb.alloc_days != null ? Math.round(cb.alloc_days) : null;
+    avgInv   = cb.inv_days   != null ? Math.round(cb.inv_days)   : null;
+    avgPend  = cb.pend_days  != null ? Math.round(cb.pend_days)  : null;
+  } else {
+    avgAlloc = Math.round(inv.avg_alloc_days||0);
+    avgInv   = Math.round(inv.avg_inv_days||0);
+    avgPend  = Math.round(inv.avg_pend_days||0);
+  }
 
   // Update cycle rows - target by color
   const cycleColors = ['#7DD3FC','#6366F1','#2DD4BF'];
-  const cycleVals2 = [avgAlloc+' days', avgInv+' days', avgPend+' days'];
+  const cycleVals2 = [
+    avgAlloc != null ? avgAlloc+' days' : 'N/A',
+    avgInv   != null ? avgInv+' days'   : 'N/A',
+    avgPend  != null ? avgPend+' days'  : 'N/A'
+  ];
   cycleColors.forEach((color, i) => {
     const el = document.querySelector(`#inv-card-cycle [style*="color:${color}"]`);
     if (el) el.textContent = cycleVals2[i];
