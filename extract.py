@@ -951,9 +951,9 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             end_dt = payment_dt if payment_dt else _TODAY
             pend_days_load = max(0, (end_dt - pickup_dt).days)
 
-        load['alloc_days'] = alloc_days_load
-        load['inv_days']   = inv_days_load
-        load['pend_days']  = pend_days_load
+        load['alloc_days'] = alloc_days_load if alloc_days_load is not None and alloc_days_load <= 365 else None
+        load['inv_days']   = inv_days_load   if inv_days_load   is not None and inv_days_load   <= 365 else None
+        load['pend_days']  = pend_days_load  if pend_days_load  is not None and pend_days_load  <= 365 else None
 
     avg_alloc_days = round(alloc_num / alloc_den, 1) if alloc_den > 0 else None
     avg_inv_days   = round(inv_sd_num / inv_sd_den, 1) if inv_sd_den > 0 else None
