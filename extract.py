@@ -954,6 +954,8 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
         load['alloc_days'] = alloc_days_load
         load['inv_days']   = inv_days_load
         load['pend_days']  = pend_days_load
+
+    avg_alloc_days = round(alloc_num / alloc_den, 1) if alloc_den > 0 else None
     avg_inv_days   = round(inv_sd_num / inv_sd_den, 1) if inv_sd_den > 0 else None
     avg_pend_days  = round(pend_sd_num / pend_sd_den, 1) if pend_sd_den > 0 else None
     avg_cycle_days = round(sum(cycle_days_list) / len(cycle_days_list), 1) if cycle_days_list else None
