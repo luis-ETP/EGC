@@ -954,6 +954,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
         gals_load = load['liters'] / 3.785411784 if load['liters'] else 0
         bol_src_str = load.get('bol_source', '')
         src_bols = [b.strip() for b in bol_src_str.split('|') if b.strip()] if bol_src_str else []
+        splits = load.get('batch_splits') or {}
         if src_bols:
             gal_per = gals_load / len(src_bols)
             for b in src_bols:
@@ -961,7 +962,9 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
                     days = max(0, (pickup_dt - bol_rtb_info[b]['rtb_date']).days)
                     inv_sd_num += gal_per * days
                     inv_sd_den += gal_per
-                    _acc(inv_batch, bol_rtb_info[b].get('batch',''), gal_per * days, gal_per)
+                    # Attribute to the BOL's actual batch (consistent w/ inventory capital)
+                    inv_sd_den_batch = bol_rtb_info[b].get('batch','')
+                    _acc(inv_batch, inv_sd_den_batch, gal_per * days, gal_per)
     # Still in inventory: use today
     try:
         ws_fifo_sd = _wb_out["FIFO"]
@@ -984,6 +987,16 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
 
     # ── 3. Pending collection days: btc_pickup → payment (or today) ──
     pend_sd_num = pend_sd_den = 0.0
+    def _acc_splits(d, load, num_per_gal_day, gals):
+        """Accumulate using batch_splits if available (consistent w/ capital), else batch label."""
+        splits = load.get('batch_splits') or {}
+        if splits:
+            for b, frac in splits.items():
+                if b not in d: d[b] = [0.0, 0.0]
+                d[b][0] += num_per_gal_day * frac
+                d[b][1] += gals * frac
+        else:
+            _acc(d, load.get('batch',''), num_per_gal_day, gals)
     for load in btc_loads:
         pickup_dt  = _parse_date(load['date']) if load['date'] else None
         payment_dt = _parse_date(load['payment_date']) if load['payment_date'] else None
@@ -993,7 +1006,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             days = max(0, (end_dt - pickup_dt).days)
             pend_sd_num += gals_load * days
             pend_sd_den += gals_load
-            _acc(pend_batch, load.get('batch',''), gals_load * days, gals_load)
+            _acc_splits(pend_batch, load, gals_load * days, gals_load)
 
     # ── Per-load stage days ──────────────────────────────────────────────────
     for load in btc_loads:
