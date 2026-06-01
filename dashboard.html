@@ -1105,8 +1105,8 @@ function renderInvestor() {
         <div style="position:relative;width:160px;height:160px;flex-shrink:0">
           <canvas id="${donutId}" width="160" height="160"></canvas>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none">
-            <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Total</div>
-            <div style="font-size:0.9rem;font-weight:600;color:var(--text)">$${fm(totalActive + (inv.recovered_mxn||0))}</div>
+            <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Active</div>
+            <div style="font-size:0.9rem;font-weight:600;color:var(--text)">$${fm(totalActive)}</div>
             <div style="font-size:0.58rem;color:var(--muted)">MXN</div>
           </div>
         </div>
@@ -1132,12 +1132,12 @@ function renderInvestor() {
             </div>
             <div style="font-size:0.9rem;font-weight:600;color:#2DD4BF">$${fm(pendV)}</div>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4ADE80;border-radius:0 5px 5px 0">
+          <div id="inv-recovered-row" style="display:none;flex-direction:row;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4ADE80;border-radius:0 5px 5px 0">
             <div>
               <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Recovered</div>
               <div style="font-size:0.6rem;color:var(--muted2)">Fully collected</div>
             </div>
-            <div style="font-size:0.9rem;font-weight:600;color:#4ADE80">$${fm(inv.recovered_mxn||0)}</div>
+            <div id="inv-recovered-val" style="font-size:0.9rem;font-weight:600;color:#4ADE80">$${fm(inv.recovered_mxn||0)}</div>
           </div>
         </div>
       </div>
@@ -1196,7 +1196,7 @@ function renderInvestor() {
   </div>`;
 
   // ── Cycle metrics ──
-  window._pendingDonut = { id: donutId, vals: [allocV, invV, pendV, inv.recovered_mxn||0], colors: ['#7DD3FC','#6366F1','#2DD4BF','#4ADE80'] };
+  window._pendingDonut = { id: donutId, vals: [allocV, invV, pendV], colors: ['#7DD3FC','#6366F1','#2DD4BF'] };
   window._pendingDonut2 = { id: donutId2, vals: [inv.avg_alloc_days||0, inv.avg_inv_days||0, inv.avg_pend_days||0], colors: ['#7DD3FC','#6366F1','#2DD4BF'] };
 
   // ── Investment rounds (collapsible, add round admin only) ──
@@ -1762,13 +1762,22 @@ function invApplyFilter() {
 
   const totalActive = allocV + invV + pendV;
   const capitalCanvas = document.querySelector('#inv-card-capital-dist canvas');
+  const isBatch = period.startsWith('batch-');
+  const recovV = isBatch ? totalSale : 0;
+
+  // Show/hide recovered row
+  const recovRow = document.getElementById('inv-recovered-row');
+  const recovValEl = document.getElementById('inv-recovered-val');
+  if (recovRow) recovRow.style.display = isBatch ? 'flex' : 'none';
+  if (recovValEl && isBatch) recovValEl.textContent = '$'+fm(Math.round(recovV));
+
   if (capitalCanvas) {
-    const recovV = period === 'all' ? (inv.recovered_mxn||0) : totalSale;
     const ctx = capitalCanvas.getContext('2d');
     const w=capitalCanvas.width, h=capitalCanvas.height;
     ctx.clearRect(0,0,w,h);
     const cx=w/2, cy=h/2, r=w*0.46, ri=w*0.29, gap=0.03;
-    const vals=[allocV,invV,pendV,recovV], colors=['#7DD3FC','#6366F1','#2DD4BF','#4ADE80'];
+    const vals = isBatch ? [allocV,invV,pendV,recovV] : [allocV,invV,pendV];
+    const colors = isBatch ? ['#7DD3FC','#6366F1','#2DD4BF','#4ADE80'] : ['#7DD3FC','#6366F1','#2DD4BF'];
     const total=vals.reduce((a,b)=>a+b,0);
     if (total > 0) {
       let start=-Math.PI/2;
@@ -1789,16 +1798,14 @@ function invApplyFilter() {
       ctx.beginPath(); ctx.arc(cx,cy,ri,0,Math.PI*2);
       ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#161c26';
       ctx.fill();
-      // Update center
       const centerEl = capitalCanvas.parentElement.querySelector('[style*="font-weight:600"]');
       if (centerEl) centerEl.textContent = '$'+fm(Math.round(total));
     }
   }
 
-  // Update capital distribution rows (now 4 rows including recovered)
-  const capRows = document.querySelectorAll('#inv-card-capital-dist [style*="font-weight:600"][style*="color:#"]');
-  const recovV2 = period === 'all' ? (inv.recovered_mxn||0) : totalSale;
-  const capVals = ['$'+fm(Math.round(allocV)), '$'+fm(Math.round(invV)), '$'+fm(Math.round(pendV)), '$'+fm(Math.round(recovV2))];
+  // Update capital distribution rows (3 rows for to-date, 4 for batch)
+  const capRows = document.querySelectorAll('#inv-card-capital-dist [style*="font-weight:600"][style*="color:#7DD3FC"], #inv-card-capital-dist [style*="font-weight:600"][style*="color:#6366F1"], #inv-card-capital-dist [style*="font-weight:600"][style*="color:#2DD4BF"]');
+  const capVals = ['$'+fm(Math.round(allocV)), '$'+fm(Math.round(invV)), '$'+fm(Math.round(pendV))];
   capRows.forEach((el,i) => { if(capVals[i]) el.textContent = capVals[i]; });
 }
 
