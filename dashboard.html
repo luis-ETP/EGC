@@ -1037,9 +1037,9 @@ function renderInvestor() {
       <div style="display:flex;align-items:center;gap:10px">
         <select id="inv-period-filter" onchange="invApplyFilter()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:0.72rem;padding:0.25rem 0.5rem;border-radius:6px;cursor:pointer;font-family:var(--font)">
           <option value="all">To date</option>
-          <option value="30">Last 30 days</option>
-          <option value="60">Last 60 days</option>
-          <option value="90">Last 90 days</option>
+          <option value="30" style="display:none" disabled>Last 30 days</option>
+          <option value="60" style="display:none" disabled>Last 60 days</option>
+          <option value="90" style="display:none" disabled>Last 90 days</option>
         </select>
         <svg class="inv-chevron open" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" onclick="invToggle('snapshot')" style="cursor:pointer"><polyline points="4 6 8 10 12 6"/></svg>
       </div>
