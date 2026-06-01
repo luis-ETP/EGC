@@ -1036,7 +1036,7 @@ function renderInvestor() {
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <select id="inv-period-filter" onchange="invApplyFilter()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:0.72rem;padding:0.25rem 0.5rem;border-radius:6px;cursor:pointer;font-family:var(--font)">
-          <option value="all">All time</option>
+          <option value="all">To date</option>
           <option value="30">Last 30 days</option>
           <option value="60">Last 60 days</option>
           <option value="90">Last 90 days</option>
@@ -1094,10 +1094,10 @@ function renderInvestor() {
 
     <div id="inv-card-capital-dist">
       <div style="font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted2);margin:0 0 0.5rem;padding-bottom:0.35rem;border-bottom:1px solid var(--border);display:flex;align-items:center">
-        <span>Where the capital is right now</span>
+        <span>Where the capital is</span>
         <span class="inv-tooltip-wrap">
           <span class="inv-tooltip-icon">i</span>
-          <span class="inv-tooltip-text">Shows how the active capital ($${fm(totalActive)} MXN) is distributed across the three stages of the trade cycle at this moment.</span>
+          <span class="inv-tooltip-text">Full journey of capital across all stages — active stages show current position, recovered shows capital that has completed the full cycle.</span>
         </span>
         ${eyeIcon('inv-card-capital-dist')}
       </div>
@@ -1105,8 +1105,8 @@ function renderInvestor() {
         <div style="position:relative;width:160px;height:160px;flex-shrink:0">
           <canvas id="${donutId}" width="160" height="160"></canvas>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:none">
-            <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Active</div>
-            <div style="font-size:0.9rem;font-weight:600;color:var(--text)">$${fm(totalActive)}</div>
+            <div style="font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Total</div>
+            <div style="font-size:0.9rem;font-weight:600;color:var(--text)">$${fm(totalActive + (inv.recovered_mxn||0))}</div>
             <div style="font-size:0.58rem;color:var(--muted)">MXN</div>
           </div>
         </div>
@@ -1131,6 +1131,13 @@ function renderInvestor() {
               <div style="font-size:0.6rem;color:var(--muted2)">Delivered, pending collection</div>
             </div>
             <div style="font-size:0.9rem;font-weight:600;color:#2DD4BF">$${fm(pendV)}</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.65rem;background:var(--surface2);border-left:3px solid #4ADE80;border-radius:0 5px 5px 0">
+            <div>
+              <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em">Recovered</div>
+              <div style="font-size:0.6rem;color:var(--muted2)">Fully collected</div>
+            </div>
+            <div style="font-size:0.9rem;font-weight:600;color:#4ADE80">$${fm(inv.recovered_mxn||0)}</div>
           </div>
         </div>
       </div>
@@ -1189,7 +1196,7 @@ function renderInvestor() {
   </div>`;
 
   // ── Cycle metrics ──
-  window._pendingDonut = { id: donutId, vals: [allocV, invV, pendV], colors: ['#7DD3FC','#6366F1','#2DD4BF'] };
+  window._pendingDonut = { id: donutId, vals: [allocV, invV, pendV, inv.recovered_mxn||0], colors: ['#7DD3FC','#6366F1','#2DD4BF','#4ADE80'] };
   window._pendingDonut2 = { id: donutId2, vals: [inv.avg_alloc_days||0, inv.avg_inv_days||0, inv.avg_pend_days||0], colors: ['#7DD3FC','#6366F1','#2DD4BF'] };
 
   // ── Investment rounds (collapsible, add round admin only) ──
@@ -1769,39 +1776,43 @@ function invApplyFilter() {
 
   const totalActive = allocV + invV + pendV;
   const capitalCanvas = document.querySelector('#inv-card-capital-dist canvas');
-  if (capitalCanvas && totalActive > 0) {
+  if (capitalCanvas) {
+    const recovV = period === 'all' ? (inv.recovered_mxn||0) : totalSale;
     const ctx = capitalCanvas.getContext('2d');
     const w=capitalCanvas.width, h=capitalCanvas.height;
     ctx.clearRect(0,0,w,h);
     const cx=w/2, cy=h/2, r=w*0.46, ri=w*0.29, gap=0.03;
-    const vals=[allocV,invV,pendV], colors=['#7DD3FC','#6366F1','#2DD4BF'];
+    const vals=[allocV,invV,pendV,recovV], colors=['#7DD3FC','#6366F1','#2DD4BF','#4ADE80'];
     const total=vals.reduce((a,b)=>a+b,0);
-    let start=-Math.PI/2;
-    vals.forEach((v,i)=>{
-      if(!v) return;
-      const angle=(v/total)*Math.PI*2;
-      ctx.beginPath(); ctx.moveTo(cx,cy);
-      ctx.arc(cx,cy,r,start+gap,start+angle-gap);
-      ctx.closePath(); ctx.fillStyle=colors[i]; ctx.fill();
-      if(angle>0.25){
-        const mid=start+angle/2, lx=cx+Math.cos(mid)*(r+ri)/2, ly=cy+Math.sin(mid)*(r+ri)/2;
-        ctx.font='bold 11px Inter,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3; ctx.strokeText(Math.round(v/total*100)+'%',lx,ly);
-        ctx.fillStyle='#fff'; ctx.fillText(Math.round(v/total*100)+'%',lx,ly);
-      }
-      start+=angle;
-    });
-    ctx.beginPath(); ctx.arc(cx,cy,ri,0,Math.PI*2);
-    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#161c26';
-    ctx.fill();
-    // Update center
-    const centerEl = capitalCanvas.parentElement.querySelector('[style*="font-weight:600"]');
-    if (centerEl) centerEl.textContent = '$'+fm(Math.round(totalActive));
+    if (total > 0) {
+      let start=-Math.PI/2;
+      vals.forEach((v,i)=>{
+        if(!v) return;
+        const angle=(v/total)*Math.PI*2;
+        ctx.beginPath(); ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,r,start+gap,start+angle-gap);
+        ctx.closePath(); ctx.fillStyle=colors[i]; ctx.fill();
+        if(angle>0.25){
+          const mid=start+angle/2, lx=cx+Math.cos(mid)*(r+ri)/2, ly=cy+Math.sin(mid)*(r+ri)/2;
+          ctx.font='bold 11px Inter,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=3; ctx.strokeText(Math.round(v/total*100)+'%',lx,ly);
+          ctx.fillStyle='#fff'; ctx.fillText(Math.round(v/total*100)+'%',lx,ly);
+        }
+        start+=angle;
+      });
+      ctx.beginPath(); ctx.arc(cx,cy,ri,0,Math.PI*2);
+      ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#161c26';
+      ctx.fill();
+      // Update center
+      const centerEl = capitalCanvas.parentElement.querySelector('[style*="font-weight:600"]');
+      if (centerEl) centerEl.textContent = '$'+fm(Math.round(total));
+    }
   }
 
-  // Update capital distribution rows
+  // Update capital distribution rows (now 4 rows including recovered)
   const capRows = document.querySelectorAll('#inv-card-capital-dist [style*="font-weight:600"][style*="color:#"]');
-  const capVals = ['$'+fm(Math.round(allocV)), '$'+fm(Math.round(invV)), '$'+fm(Math.round(pendV))];
+  const recovV2 = period === 'all' ? (inv.recovered_mxn||0) : totalSale;
+  const capVals = ['$'+fm(Math.round(allocV)), '$'+fm(Math.round(invV)), '$'+fm(Math.round(pendV)), '$'+fm(Math.round(recovV2))];
   capRows.forEach((el,i) => { if(capVals[i]) el.textContent = capVals[i]; });
 }
 
