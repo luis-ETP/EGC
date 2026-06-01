@@ -655,14 +655,39 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
 
     # Build BOL → batch + liters from RTB rows for proportional batch splitting
     bol_batch_map = {}  # bol → {batch, liters}
+    # First get liters from Load Tracking RTB rows
+    bol_liters = {}
     for row in lt_rows[1:]:
         if not row[0]: continue
         if str(row[lt_h.get('Customer Groups',10)] or '').strip() != 'RTB': continue
         bol   = str(row[lt_h.get('BOL Number',30)] or '').strip()
-        batch = str(row[lt_h.get('Batch',57)] or '').strip()
         liters_rtb = _get(row, 'Delivered Net Liters') or _get(row, 'Net Liters')
         if bol and liters_rtb > 0:
-            bol_batch_map[bol] = {'batch': batch, 'liters': liters_rtb}
+            bol_liters[bol] = liters_rtb
+    # Batch assignment comes from Purchase to BOL-RTB (authoritative — has multi-batch splits)
+    try:
+        ws_pbr = wb["Purchase to BOL-RTB"]
+        pbr_rows = list(ws_pbr.iter_rows(values_only=True))
+        pbr_hdr = next((i for i,r in enumerate(pbr_rows) if r[0] and 'DashFuel' in str(r[0])), 6)
+        pbr_h = {str(v).strip():j for j,v in enumerate(pbr_rows[pbr_hdr]) if v}
+        for row in pbr_rows[pbr_hdr+1:]:
+            if not row[2]: break
+            bol = str(row[pbr_h.get('BOL',5)] or '').strip()
+            batch = str(row[pbr_h.get('Batch',4)] or '').strip()
+            pbr_liters = f(row[pbr_h.get('Liters',7)])
+            if bol:
+                # Use Purchase to BOL-RTB liters; fall back to LT liters
+                lit = pbr_liters if pbr_liters > 0 else bol_liters.get(bol, 0)
+                bol_batch_map[bol] = {'batch': batch, 'liters': lit}
+    except Exception:
+        # Fallback to Load Tracking batch if Purchase to BOL-RTB unavailable
+        for row in lt_rows[1:]:
+            if not row[0]: continue
+            if str(row[lt_h.get('Customer Groups',10)] or '').strip() != 'RTB': continue
+            bol   = str(row[lt_h.get('BOL Number',30)] or '').strip()
+            batch = str(row[lt_h.get('Batch',57)] or '').strip()
+            if bol and bol_liters.get(bol,0) > 0:
+                bol_batch_map[bol] = {'batch': batch, 'liters': bol_liters[bol]}
 
     # Build RTB dates map using contextually resolved dates
     rtb_date_rows = [(row, lt_h.get('BOL Number',30), lt_h.get('Pickup Date',3))
@@ -685,16 +710,20 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     btc_pickup_by_idx = {i: dt for i, dt in enumerate(btc_resolved_pkup)}
 
     def _compute_batch_splits(bol_source_str, bol_batch_map):
-        """Returns {batch_num: fraction} for a BTC load based on liters from each batch."""
+        """Returns {batch_num: fraction} for a BTC load based on liters from each batch.
+        Multi-batch BOLs (e.g. '2 | 3') split their liters equally across the batches."""
         if not bol_source_str: return {}
         src_bols = [b.strip() for b in bol_source_str.split('|')]
         batch_liters = {}
         for bol in src_bols:
             if bol not in bol_batch_map: continue
             info = bol_batch_map[bol]
-            # Normalize batch — take first part if "1 | 2" style
-            b = info['batch'].split('|')[0].strip()
-            batch_liters[b] = batch_liters.get(b, 0.0) + info['liters']
+            # A BOL may span multiple batches (e.g. "2 | 3") — split its liters
+            batches = [x.strip() for x in str(info['batch']).split('|') if x.strip()]
+            if not batches: continue
+            liters_per_batch = info['liters'] / len(batches)
+            for b in batches:
+                batch_liters[b] = batch_liters.get(b, 0.0) + liters_per_batch
         total = sum(batch_liters.values())
         if not total: return {}
         return {b: round(l/total, 6) for b, l in batch_liters.items()}
