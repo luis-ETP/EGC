@@ -484,6 +484,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     # ── 2. Allocation from Supplier Invoices — Status=ACTIVE rows ────────────
     # Col AA (27) = Status, Col Y (25) = Remainder Amount MXN, Col V (22) = Remainder Liters
     alloc_mxn = alloc_lit = 0.0
+    alloc_by_batch = {}  # batch -> mxn
     try:
         ws_si_alloc = wb["Supplier Invoices"]  # source has cached Status/Remainder formulas
         si_alloc_rows = list(ws_si_alloc.iter_rows(values_only=True))
@@ -494,12 +495,17 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             col_status  = sch.get("Status", 26)
             col_rem_mxn = sch.get("Remainder Amount MXN", 24)
             col_rem_lit = sch.get("Remainder Liters Paid and No BOL", 21)
+            col_batch   = sch.get("Batch", 0)
             for row in si_alloc_rows[si_hdr_idx + 1:]:
                 if not any(row): break
                 status = str(row[col_status] or '').strip().upper()
                 if status == 'ACTIVE':
-                    alloc_mxn += f(row[col_rem_mxn])
+                    amt = f(row[col_rem_mxn])
+                    alloc_mxn += amt
                     alloc_lit += f(row[col_rem_lit])
+                    batch_key = str(row[col_batch] or '').strip()
+                    if batch_key:
+                        alloc_by_batch[batch_key] = alloc_by_batch.get(batch_key, 0.0) + amt
     except Exception:
         pass
 
@@ -592,6 +598,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     btc_total_lit = 0.0
     btc_pend_mxn = btc_pend_lit = 0.0
     rtc_pend_mxn = rtc_pend_lit = 0.0
+    pend_by_batch = {}  # batch -> pending mxn
     rec_btc_tc = rec_btc_sale = rec_btc_margin = rec_btc_lit = 0.0
     rec_rtc_tc = rec_rtc_sale = rec_rtc_margin = rec_rtc_lit = 0.0
 
@@ -727,6 +734,14 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             else:
                 btc_pend_mxn   += total_sale
                 btc_pend_lit   += liters
+                # Track pending by batch
+                batch_src = str(row[lt_h.get('Batch Source', 60)] or '').strip()
+                splits = _compute_batch_splits(bol_source_str, bol_batch_map)
+                if splits:
+                    for b, frac in splits.items():
+                        pend_by_batch[b] = pend_by_batch.get(b, 0.0) + total_sale * frac
+                elif batch_src:
+                    pend_by_batch[batch_src] = pend_by_batch.get(batch_src, 0.0) + total_sale
         elif typ == 'RTC':
             if status == 'PAID':
                 rec_rtc_tc     += total_cost
@@ -741,6 +756,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
 
     # Use FIFO sheet remaining_l × cost_per_l for accurate FIFO-weighted cost
     inv_lit = inv_mxn = 0.0
+    inv_by_batch = {}  # batch -> mxn
     try:
         ws_fifo_inv = _wb_out["FIFO"]
         fifo_inv_rows = list(ws_fifo_inv.iter_rows(values_only=True))
@@ -750,8 +766,12 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             if str(row[fh.get('Type', 2)]).strip() != 'RTB': continue
             rem_l  = f(row[fh.get('Remaining L (BOL)', 13)])
             cost_l = f(row[fh.get('Cost / L (MXN)', 9)])
+            val    = rem_l * cost_l
             inv_lit += rem_l
-            inv_mxn += rem_l * cost_l
+            inv_mxn += val
+            batch_key = str(row[fh.get('Batch', 6)] or '').strip()
+            if batch_key:
+                inv_by_batch[batch_key] = inv_by_batch.get(batch_key, 0.0) + val
     except Exception:
         # Fallback: simple RTB - BTC with avg cost if FIFO sheet unavailable
         inv_lit = max(0.0, rtb_total_lit - btc_total_lit)
@@ -925,6 +945,10 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             "btc_pend_liters": btc_pend_lit,
             "total_mxn":       active_capital,
             "total_liters":    alloc_lit + inv_lit + btc_pend_lit + rtc_pend_lit,
+            # Per-batch breakdown for filter
+            "alloc_by_batch":  alloc_by_batch,
+            "inv_by_batch":    inv_by_batch,
+            "pend_by_batch":   pend_by_batch,
         },
         "recovered_detail": {
             "btc":   btc_rec,
