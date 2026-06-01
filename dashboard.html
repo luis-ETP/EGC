@@ -1686,7 +1686,8 @@ function invApplyFilter() {
 
   // ── Capital cycle: recompute from filtered loads using per-load stage days ──
   function wavg(loads, key) {
-    const valid = loads.filter(l => l[key] != null && (l.liters||0) > 0);
+    // Cap at 90 days max per stage to filter corrupt date calculations
+    const valid = loads.filter(l => l[key] != null && l[key] >= 0 && l[key] <= 90 && (l.liters||0) > 0);
     const totL = valid.reduce((a,l)=>a+(l.liters||0), 0);
     if (!totL) return null;
     return Math.round(valid.reduce((a,l)=>a+l[key]*(l.liters||0), 0) / totL);
