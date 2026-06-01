@@ -1684,28 +1684,24 @@ function invApplyFilter() {
     });
   });
 
-  // ── Update capital cycle donut + rows ──────────────────────────────────
-  // Avg days from filtered loads (all, not just paid — includes pending)
-  function wavg(loads, daysKey) {
-    const valid = loads.filter(l => l[daysKey] != null && l.liters > 0);
-    const totL = valid.reduce((a,l)=>a+l.liters,0);
+  // ── Capital cycle: recompute from filtered loads using per-load stage days ──
+  function wavg(loads, key) {
+    const valid = loads.filter(l => l[key] != null && (l.liters||0) > 0);
+    const totL = valid.reduce((a,l)=>a+(l.liters||0), 0);
     if (!totL) return null;
-    return valid.reduce((a,l)=>a+l[daysKey]*l.liters,0)/totL;
+    return Math.round(valid.reduce((a,l)=>a+l[key]*(l.liters||0), 0) / totL);
   }
-  const avgAlloc = wavg(filtered, 'avg_alloc_days') ?? wavg(loads, 'avg_alloc_days');
-  const avgInv   = wavg(filtered, 'avg_inv_days')   ?? wavg(loads, 'avg_inv_days');
-  const avgPend  = wavg(filtered, 'avg_pend_days')  ?? wavg(loads, 'avg_pend_days');
+  const avgAlloc = wavg(filtered, 'alloc_days') ?? Math.round(inv.avg_alloc_days||0);
+  const avgInv   = wavg(filtered, 'inv_days')   ?? Math.round(inv.avg_inv_days||0);
+  const avgPend  = wavg(filtered, 'pend_days')  ?? Math.round(inv.avg_pend_days||0);
 
-  // Update cycle rows
-  const cycleRows = document.querySelectorAll('#inv-card-cycle .inv-kpi-val, #inv-card-cycle [style*="font-weight:600"]');
-  const cycleVals = [
-    avgAlloc != null ? Math.round(avgAlloc)+' days' : 'N/A',
-    avgInv   != null ? Math.round(avgInv)  +' days' : 'N/A',
-    avgPend  != null ? Math.round(avgPend) +' days' : 'N/A',
-  ];
-  // Find the 3 day value divs in the cycle section
-  const cycleDayDivs = document.querySelectorAll('#inv-card-cycle .inv-sec-body [style*="font-weight:600"][style*="color:#"]');
-  cycleDayDivs.forEach((el, i) => { if (cycleVals[i]) el.textContent = cycleVals[i]; });
+  // Update cycle rows - target by color
+  const cycleColors = ['#7DD3FC','#6366F1','#2DD4BF'];
+  const cycleVals2 = [avgAlloc+' days', avgInv+' days', avgPend+' days'];
+  cycleColors.forEach((color, i) => {
+    const el = document.querySelector(`#inv-card-cycle [style*="color:${color}"]`);
+    if (el) el.textContent = cycleVals2[i];
+  });
 
   // Redraw cycle donut
   const cycleCanvas = document.querySelector('#inv-card-cycle canvas');
