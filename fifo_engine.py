@@ -235,8 +235,8 @@ def run_fifo(SRC, DST):
         if not alloc.get("insufficient"):
             # Only write cost columns when allocation was successful
             write_cell(ws_bol, ws_bol_r, i, 5,  alloc["batch_str"])
-            write_cell(ws_bol, ws_bol_r, i, 10, round(alloc["cost_usd"],   6))  # J Cost/Gal USD
-            write_cell(ws_bol, ws_bol_r, i, 12, round(alloc["cost_adder"], 6))  # L Cost/Gal+Adder
+            write_cell(ws_bol, ws_bol_r, i, 10, round(alloc["cost_usd"],   4))  # J Cost/Gal USD
+            write_cell(ws_bol, ws_bol_r, i, 12, round(alloc["cost_adder"], 4))  # L Cost/Gal+Adder
             # col 13 (M) Supply Cost DashFuel is now a formula — do not write
 
     # Write Net RTB Gallons, Remainder, and Liter formulas to Supplier Invoices
