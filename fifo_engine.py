@@ -15,27 +15,44 @@ def run_fifo(SRC, DST):
     FILL_COMPUTED = PatternFill("solid", fgColor="FF57F3")  # magenta highlight for changed cells
 
     def _norm(v):
-        """Normalize a value for comparison (handle floats, strings, None)."""
-        if v is None or v == "":
+        """Normalize a value for comparison (handle floats, strings, None, nbsp)."""
+        if v is None:
             return None
         if isinstance(v, (int, float)):
             try: return round(float(v), 4)
             except: return v
-        return str(v).strip()
+        s = str(v).replace('\xa0', ' ').strip()  # treat nbsp as space, trim
+        return s if s else None
 
     def write_cell(ws_out, ws_orig, row, col, value, num_fmt=None):
-        """Write value to output cell; highlight only if it differs from the master's original value."""
+        """Write value to output cell; highlight only if it differs from the master's original value.
+        Preserves the master's original text when the new value is numerically/semantically the same
+        (e.g. avoids turning '0002' into '2' when the underlying invoice is identical)."""
+        orig_val = ws_orig.cell(row=row, column=col).value
+
+        # For invoice/batch label values, if the new value matches the original after
+        # numeric normalization of each token, keep the original (preserve leading zeros,
+        # int-vs-text formatting). Handles orig being int/float/str.
+        if isinstance(value, str) and value and orig_val is not None and orig_val != "":
+            def _tok_norm(s):
+                out = []
+                for t in str(s).split('|'):
+                    t = t.strip()
+                    try: out.append(str(int(float(t))))
+                    except: out.append(t)
+                return out
+            if _tok_norm(value) == _tok_norm(orig_val):
+                value = orig_val  # identical content — keep master's formatting, no highlight
+
         c = ws_out.cell(row=row, column=col)
         c.value = value
         if num_fmt:
             c.number_format = num_fmt
-        orig_val = ws_orig.cell(row=row, column=col).value
         new_cmp  = _norm(value)
         orig_cmp = _norm(orig_val)
         if isinstance(value, str) and value.startswith("="):
-            # Formula: highlight if original was empty or a different formula string
-            if orig_cmp is None or (isinstance(orig_val, str) and orig_val.strip() != value.strip()):
-                c.fill = FILL_COMPUTED
+            # Formulas are structural (not copy-paste data) — write but never highlight
+            pass
         else:
             if new_cmp != orig_cmp:
                 c.fill = FILL_COMPUTED
