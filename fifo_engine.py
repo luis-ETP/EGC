@@ -11,7 +11,35 @@ def run_fifo(SRC, DST):
     wb   = load_workbook(DST)
 
     # Highlight fill for cells the engine computes (not in the raw input)
-    FILL_COMPUTED = PatternFill("solid", fgColor="FF57F3")  # magenta highlight for computed cells
+    # Highlight fill for cells whose computed value DIFFERS from the master input
+    FILL_COMPUTED = PatternFill("solid", fgColor="FF57F3")  # magenta highlight for changed cells
+
+    def _norm(v):
+        """Normalize a value for comparison (handle floats, strings, None)."""
+        if v is None or v == "":
+            return None
+        if isinstance(v, (int, float)):
+            try: return round(float(v), 4)
+            except: return v
+        return str(v).strip()
+
+    def write_cell(ws_out, ws_orig, row, col, value, num_fmt=None):
+        """Write value to output cell; highlight only if it differs from the master's original value."""
+        c = ws_out.cell(row=row, column=col)
+        c.value = value
+        if num_fmt:
+            c.number_format = num_fmt
+        orig_val = ws_orig.cell(row=row, column=col).value
+        new_cmp  = _norm(value)
+        orig_cmp = _norm(orig_val)
+        if isinstance(value, str) and value.startswith("="):
+            # Formula: highlight if original was empty or a different formula string
+            if orig_cmp is None or (isinstance(orig_val, str) and orig_val.strip() != value.strip()):
+                c.fill = FILL_COMPUTED
+        else:
+            if new_cmp != orig_cmp:
+                c.fill = FILL_COMPUTED
+        return c
 
     ws_inv_r = wb_r["Supplier Invoices"]
     ws_bol_r = wb_r["Purchase to BOL-RTB"]
@@ -186,12 +214,12 @@ def run_fifo(SRC, DST):
         bol_str = str(row[5]).strip() if row[5] else ""  # F(6) BOL, index 5
         alloc   = bol_alloc.get(bol_str, {})
         if not alloc: continue
-        c = ws_bol.cell(row=i, column=4); c.value = alloc["inv_str"]; c.fill = FILL_COMPUTED   # D Supplier Invoice
+        write_cell(ws_bol, ws_bol_r, i, 4, alloc["inv_str"])   # D Supplier Invoice
         if not alloc.get("insufficient"):
             # Only write cost columns when allocation was successful
-            c = ws_bol.cell(row=i, column=5);  c.value = alloc["batch_str"];            c.fill = FILL_COMPUTED
-            c = ws_bol.cell(row=i, column=10); c.value = round(alloc["cost_usd"],   6); c.fill = FILL_COMPUTED  # J Cost/Gal USD
-            c = ws_bol.cell(row=i, column=12); c.value = round(alloc["cost_adder"], 6); c.fill = FILL_COMPUTED  # L Cost/Gal+Adder
+            write_cell(ws_bol, ws_bol_r, i, 5,  alloc["batch_str"])
+            write_cell(ws_bol, ws_bol_r, i, 10, round(alloc["cost_usd"],   6))  # J Cost/Gal USD
+            write_cell(ws_bol, ws_bol_r, i, 12, round(alloc["cost_adder"], 6))  # L Cost/Gal+Adder
             # col 13 (M) Supply Cost DashFuel is now a formula — do not write
 
     # Write Net RTB Gallons, Remainder, and Liter formulas to Supplier Invoices
@@ -199,10 +227,10 @@ def run_fifo(SRC, DST):
     for inv in inv_entries.values():
         rem = inv["orig"] - inv["drawn"]
         r   = inv["excel_row"]
-        c = ws_inv.cell(row=r, column=23); c.value = round(inv["drawn"], 6); c.fill = FILL_COMPUTED
-        c = ws_inv.cell(row=r, column=24); c.value = round(rem, 6);          c.fill = FILL_COMPUTED
-        c = ws_inv.cell(row=r, column=21); c.value = f"=W{r}*3.7854";        c.fill = FILL_COMPUTED
-        c = ws_inv.cell(row=r, column=22); c.value = f"=X{r}*3.7854";        c.fill = FILL_COMPUTED
+        write_cell(ws_inv, ws_inv_r, r, 23, round(inv["drawn"], 6))
+        write_cell(ws_inv, ws_inv_r, r, 24, round(rem, 6))
+        write_cell(ws_inv, ws_inv_r, r, 21, f"=W{r}*3.7854")
+        write_cell(ws_inv, ws_inv_r, r, 22, f"=X{r}*3.7854")
 
     # ══════════════════════════════════════════════════════════════════════════════
     # STAGE 2 — RTB → BTC FIFO on Load Tracking (sheet order = master order)
@@ -266,11 +294,11 @@ def run_fifo(SRC, DST):
             })
             bol_remaining[bol] = net_liters
 
-            c = ws_lt.cell(row=i, column=44); c.value = supply_cost; c.fill = FILL_COMPUTED
-            c = ws_lt.cell(row=i, column=58); c.value = batch_str; c.fill = FILL_COMPUTED   # BF Batch
-            c = ws_lt.cell(row=i, column=59); c.value = inv_str; c.fill = FILL_COMPUTED     # BG Supplier Invoice
-            c = ws_lt.cell(row=i, column=60); c.value = ""; c.fill = FILL_COMPUTED          # BH BOL Source
-            c = ws_lt.cell(row=i, column=61); c.value = ""; c.fill = FILL_COMPUTED          # BI Batch Source
+            write_cell(ws_lt, ws_lt_r, i, 44, supply_cost)
+            write_cell(ws_lt, ws_lt_r, i, 58, batch_str)   # BF Batch
+            write_cell(ws_lt, ws_lt_r, i, 59, inv_str)     # BG Supplier Invoice
+            write_cell(ws_lt, ws_lt_r, i, 60, "")          # BH BOL Source
+            write_cell(ws_lt, ws_lt_r, i, 61, "")          # BI Batch Source
 
             queue_rem = sum(s["liters"] for s in inventory[key])
             fifo_log.append({
@@ -285,10 +313,10 @@ def run_fifo(SRC, DST):
 
         elif grp == "RTC":
             alloc     = bol_alloc.get(bol, {})
-            c = ws_lt.cell(row=i, column=58); c.value = alloc.get("batch_str", ""); c.fill = FILL_COMPUTED  # BF Batch
-            c = ws_lt.cell(row=i, column=59); c.value = alloc.get("inv_str", ""); c.fill = FILL_COMPUTED    # BG Supplier Invoice
-            c = ws_lt.cell(row=i, column=60); c.value = ""; c.fill = FILL_COMPUTED                           # BH BOL Source
-            c = ws_lt.cell(row=i, column=61); c.value = ""; c.fill = FILL_COMPUTED                           # BI Batch Source
+            write_cell(ws_lt, ws_lt_r, i, 58, alloc.get("batch_str", ""))  # BF Batch
+            write_cell(ws_lt, ws_lt_r, i, 59, alloc.get("inv_str", ""))    # BG Supplier Invoice
+            write_cell(ws_lt, ws_lt_r, i, 60, "")                           # BH BOL Source
+            write_cell(ws_lt, ws_lt_r, i, 61, "")                           # BI Batch Source
 
         elif grp == "BTC":
             remaining, allocations = net_liters, []
@@ -325,11 +353,11 @@ def run_fifo(SRC, DST):
             any_av = any(s.get("av_available", False) for s in (list(inventory.get(key, [])) or []))
             used_fallback = not any_av and existing_ar > 0
             final_cost  = existing_ar if used_fallback else round(cost_per_l, 6)
-            c = ws_lt.cell(row=i, column=44); c.value = final_cost; c.fill = FILL_COMPUTED
-            c = ws_lt.cell(row=i, column=58); c.value = ""; c.fill = FILL_COMPUTED           # BF Batch (blank for BTC)
-            c = ws_lt.cell(row=i, column=59); c.value = ""; c.fill = FILL_COMPUTED           # BG Supplier Invoice (blank for BTC)
-            c = ws_lt.cell(row=i, column=60); c.value = bols_str; c.fill = FILL_COMPUTED     # BH BOL Source
-            c = ws_lt.cell(row=i, column=61); c.value = batch_str; c.fill = FILL_COMPUTED    # BI Batch Source
+            write_cell(ws_lt, ws_lt_r, i, 44, final_cost)
+            write_cell(ws_lt, ws_lt_r, i, 58, "")           # BF Batch (blank for BTC)
+            write_cell(ws_lt, ws_lt_r, i, 59, "")           # BG Supplier Invoice (blank for BTC)
+            write_cell(ws_lt, ws_lt_r, i, 60, bols_str)     # BH BOL Source
+            write_cell(ws_lt, ws_lt_r, i, 61, batch_str)    # BI Batch Source
 
             fifo_log.append({
                 "type": "BTC", "ld": ld_num, "pickup": pickup,
