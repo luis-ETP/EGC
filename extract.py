@@ -132,7 +132,7 @@ def _extract_overall_summary(wb, wb_fifo=None):
     wtd_rate_num  = defaultdict(float)
     wtd_rate_den  = defaultdict(float)
     try:
-        ws_si3 = wb["Supplier Invoices"]  # wb = source workbook in this function
+        ws_si3 = (wb_fifo if wb_fifo is not None else wb)["Supplier Invoices"]  # FIFO output has fresh remainder
         si_rows3 = list(ws_si3.iter_rows(values_only=True))
         si_hdr3 = next((i for i, r in enumerate(si_rows3) if r[0] == "Batch" and len(r) > 2 and r[2] == "Supplier"), None)
         if si_hdr3 is not None:
@@ -142,7 +142,13 @@ def _extract_overall_summary(wb, wb_fifo=None):
             col_paid3 = sc3.get("Paid for Gallons", 6)
             col_rate3 = sc3.get("Rate (usd/gal)", 11)
 
-            # paid and rate per (sup_upper, inv_upper) — sum paid if same invoice appears multiple times
+            # Normalize invoice numbers so "2" and "0002" match
+            def _inv_norm(s):
+                s = str(s).strip().upper()
+                try: return str(int(float(s)))  # numeric → canonical int string
+                except: return s
+
+            # paid and rate per (sup_upper, inv_norm) — sum paid if same invoice appears multiple times
             inv_paid3 = defaultdict(float)
             inv_rate3 = {}
             for row in si_rows3[si_hdr3 + 1:]:
@@ -150,12 +156,12 @@ def _extract_overall_summary(wb, wb_fifo=None):
                 s   = str(row[col_sup3] or "").strip()
                 inv = str(row[col_inv3] or "").strip()
                 if not s or s == "Total": continue
-                key = (s.upper(), inv.upper())
+                key = (s.upper(), _inv_norm(inv))
                 inv_paid3[key] += f(row[col_paid3])
                 inv_rate3[key]  = f(row[col_rate3])  # rate same across dupes
 
-            # pulled per (sup_upper, inv_upper) from BOL-RTB
-            # split-invoice BOLs: assign all gallons to the LAST invoice in the split
+            # pulled per (sup_upper, inv_norm) from BOL-RTB
+            # split-invoice BOLs: split gallons equally across the invoices in the split
             pulled_inv3 = defaultdict(float)
             for row in bp_rows[bp_hdr_idx + 1:]:
                 if not any(row): break
@@ -164,19 +170,29 @@ def _extract_overall_summary(wb, wb_fifo=None):
                 s   = str(row[col_bp_sup] or "").strip().upper() if col_bp_sup is not None else ""
                 inv = str(row[col_bp_inv] or "").strip() if col_bp_inv is not None else ""
                 gal = f(row[col_bp_gal]) if col_bp_gal is not None else 0.0
-                parts = [p.strip().upper() for p in inv.split("|")]
-                pulled_inv3[(s, parts[-1])] += gal
+                parts = [_inv_norm(p) for p in inv.split("|") if p.strip()]
+                if not parts: continue
+                gal_per = gal / len(parts)
+                for p in parts:
+                    pulled_inv3[(s, p)] += gal_per
 
             # remaining per invoice → rem_alloc and wtd_rate per supplier
-            for (s_up, inv_up), paid in inv_paid3.items():
-                pulled = pulled_inv3.get((s_up, inv_up), 0.0)
-                rem  = max(0.0, paid - pulled)
-                rate = inv_rate3.get((s_up, inv_up), 0.0)
-                s_canonical = _match(s_up)
-                rem_alloc_gal[s_canonical] += rem
-                if rem > 0 and rate > 0:
-                    wtd_rate_num[s_canonical] += rate * rem
-                    wtd_rate_den[s_canonical] += rem
+            # Use the FIFO-engine-computed "Remainder Gallons Paid and No BOL" (col X/24)
+            # directly — it already accounts for proper FIFO allocation across split BOLs.
+            col_rem_gal3 = sc3.get("Remainder Gallons Paid and No BOL", 23)
+            col_rate3b   = sc3.get("Rate (usd/gal)", 11)
+            for row in si_rows3[si_hdr3 + 1:]:
+                if not any(row): break
+                s   = str(row[col_sup3] or "").strip()
+                if not s or s == "Total": continue
+                rem = f(row[col_rem_gal3])
+                rate = f(row[col_rate3b])
+                s_canonical = _match(s.upper())
+                if rem > 0:
+                    rem_alloc_gal[s_canonical] += rem
+                    if rate > 0:
+                        wtd_rate_num[s_canonical] += rate * rem
+                        wtd_rate_den[s_canonical] += rem
     except Exception:
         pass
 
