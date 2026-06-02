@@ -11,7 +11,7 @@ def run_fifo(SRC, DST):
     wb   = load_workbook(DST)
 
     # Highlight fill for cells the engine computes (not in the raw input)
-    FILL_COMPUTED = PatternFill("solid", fgColor="FFF2CC")  # light yellow
+    FILL_COMPUTED = PatternFill("solid", fgColor="FF57F3")  # magenta highlight for computed cells
 
     ws_inv_r = wb_r["Supplier Invoices"]
     ws_bol_r = wb_r["Purchase to BOL-RTB"]
