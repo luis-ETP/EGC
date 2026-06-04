@@ -972,19 +972,19 @@ function renderInvestor() {
   // Only reset markup from data — preserve viewMode and visibility across re-renders
   invMarkup = invMarkup || dashData.markup_usd || 0.02;
 
-  // Load config from API
-  if (isAdmin) {
-    fetch('/api/investor-config').then(r=>r.json()).then(cfg => {
-      // Defaults: forward view and load performance hidden from investor
-      invVisibility = Object.assign({'sec-forward': false, 'sec-loads': false}, cfg.visibility || {});
-      invMarkup = cfg.markup_usd || 0.02;
-      const adderInput = document.getElementById('inv-adder-input');
-      if (adderInput) adderInput.value = invMarkup;
-      applyInvVisibility();
-    }).catch(()=>{
-      invVisibility = {'sec-forward': false, 'sec-loads': false};
-    });
-  }
+  // Load config from API — for ALL roles. Admin uses it to drive eye toggles;
+  // the LPA/investor uses it to actually hide what the admin chose to hide.
+  fetch('/api/investor-config').then(r=>r.json()).then(cfg => {
+    // Defaults: forward view and load performance hidden from investor
+    invVisibility = Object.assign({'sec-forward': false, 'sec-loads': false}, cfg.visibility || {});
+    invMarkup = cfg.markup_usd || 0.02;
+    const adderInput = document.getElementById('inv-adder-input');
+    if (adderInput) adderInput.value = invMarkup;
+    applyInvVisibility();
+  }).catch(()=>{
+    invVisibility = {'sec-forward': false, 'sec-loads': false};
+    applyInvVisibility();
+  });
 
   html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;gap:1rem">
     <div>
@@ -1501,28 +1501,43 @@ function invSetView(mode) {
 }
 
 function applyInvVisibility() {
-  const isInvestor = invViewMode === 'investor';
-  // Get all visibility-controlled elements
-  const allIds = Object.keys(invVisibility);
-  // Also collect from eye buttons
-  document.querySelectorAll('[id^="eye-"]').forEach(btn => {
-    const targetId = btn.id.replace('eye-', '');
+  const isAdminView = IS_ADMIN && invViewMode !== 'investor';
+  // The actual investor (LPA) sees the final result: hidden items removed entirely.
+  // Admin in 'investor' preview sees them grayed (so they can still toggle).
+  const adminPreview = IS_ADMIN && invViewMode === 'investor';
+
+  // Drive off invVisibility keys (works even when no eye buttons exist, e.g. LPA)
+  Object.keys(invVisibility).forEach(targetId => {
     const isHidden = invVisibility[targetId] === false;
-    if (isInvestor) {
-      // Update eye icon state
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    if (adminPreview) {
+      // Admin previewing investor view: gray out (still visible + toggleable)
+      target.classList.toggle('inv-grayed', isHidden);
+      target.style.display = '';
+    } else if (IS_ADMIN) {
+      // Admin normal view: everything visible, no graying
+      target.classList.remove('inv-grayed');
+      target.style.display = '';
+    } else {
+      // Real investor (LPA): hidden items are fully removed
+      target.style.display = isHidden ? 'none' : '';
+      target.classList.remove('inv-grayed');
+    }
+  });
+
+  // Update eye icon states (admin preview only — investors have no eye buttons)
+  if (adminPreview) {
+    document.querySelectorAll('[id^="eye-"]').forEach(btn => {
+      const targetId = btn.id.replace('eye-', '');
+      const isHidden = invVisibility[targetId] === false;
       btn.classList.toggle('eye-hidden', isHidden);
       btn.innerHTML = isHidden
         ? '<svg width="11" height="11" fill="none" stroke="#f85149" stroke-width="2" style="pointer-events:none"><line x1="2" y1="2" x2="9" y2="9"/><path d="M1 5.5s1.5-2.5 4-3"/><path d="M10 5.5s-1.5 2.5-4 3"/></svg>'
         : '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none"><path d="M1 5.5s1.5-3.5 4.5-3.5S10 5.5 10 5.5s-1.5 3.5-4.5 3.5S1 5.5 1 5.5z"/><circle cx="5.5" cy="5.5" r="1.2"/></svg>';
-      // Gray out or restore the target element
-      const target = document.getElementById(targetId);
-      if (target) target.classList.toggle('inv-grayed', isHidden);
-    } else {
-      // Admin view: remove all graying
-      const target = document.getElementById(targetId);
-      if (target) target.classList.remove('inv-grayed');
-    }
-  });
+    });
+  }
 }
 
 function invToggleVisibility(id) {
