@@ -1232,7 +1232,31 @@ function renderInvestor() {
   </div></div>`;
   html += secFtr;
 
-  // ── SECTION 2: Forward view (rendered for all; visibility-gated for LPA) ──
+  // ── SECTION 1b: Cumulative realized profit chart ──────────────────────────
+  {
+    const ps = inv.profit_series || [];
+    const chartId = 'inv-profit-chart-' + Date.now();
+    html += `<div class="inv-section" id="sec-profit-chart">
+      <div class="inv-sec-hdr" style="cursor:default">
+        <div style="display:flex;align-items:center;gap:10px;flex:1">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted);flex-shrink:0"><polyline points="2 14 7 8 11 11 15 4"/><polyline points="11 4 15 4 15 8"/></svg>
+          <span style="font-size:0.82rem;font-weight:600;color:var(--text)">Cumulative realized profit</span>
+          ${eyeIcon('sec-profit-chart')}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="inv-profit-toggle" style="display:inline-flex;border:1px solid var(--border2);border-radius:6px;overflow:hidden">
+            <button id="pc-btn-gross" class="pc-btn active" onclick="setProfitMode('gross')" style="font-size:0.66rem;padding:0.25rem 0.6rem;background:var(--accent);color:#fff;border:none;cursor:pointer;font-family:var(--font)">Gross profit</button>
+            <button id="pc-btn-investor" class="pc-btn" onclick="setProfitMode('investor')" style="font-size:0.66rem;padding:0.25rem 0.6rem;background:transparent;color:var(--muted);border:none;cursor:pointer;font-family:var(--font)">Investor share</button>
+          </div>
+        </div>
+      </div>
+      <div class="inv-sec-body">
+        <div id="${chartId}" style="width:100%"></div>
+      </div>
+    </div>`;
+    window._pendingProfitChart = { id: chartId, series: ps, mode: 'gross' };
+  }
+
   {
     const stockoutDays = prj.loads_remaining * (inv.avg_days_between_loads || 3);
     const stockoutDate = new Date(Date.now() + stockoutDays*86400000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -1424,6 +1448,11 @@ function renderInvestor() {
     window._pendingDonut2 = null;
   })();
 
+  // Draw cumulative profit chart now that its container is in the DOM
+  if (window._pendingProfitChart) {
+    drawProfitChart(window._pendingProfitChart.id, window._pendingProfitChart.series, window._pendingProfitChart.mode);
+  }
+
   // Load rounds from API and refresh table
   fetch('/api/rounds').then(r=>r.json()).then(data => {
     if (data.rounds && data.rounds.length) {
@@ -1444,6 +1473,124 @@ function renderInvestor() {
       });
     });
   }
+}
+
+// ── Cumulative realized profit chart (SVG area + line) ──────────────────────
+function drawProfitChart(containerId, series, mode) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const valKey = mode === 'investor' ? 'cum_investor' : 'cum_profit';
+  const accent = mode === 'investor' ? '#4ADE80' : '#6366F1';
+  const accentDim = mode === 'investor' ? 'rgba(74,222,128,0.16)' : 'rgba(99,102,241,0.16)';
+
+  if (!series || series.length === 0) {
+    el.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);font-size:0.8rem">No realized profit yet — chart will populate as loads are collected.</div>';
+    return;
+  }
+
+  // Prepend a zero baseline point one day before the first payment
+  const pts = series.map(p => ({ t: new Date(p.date + 'T00:00:00'), v: p[valKey], load: p.load, add: (mode==='investor'? p.load_profit*0 : p.load_profit) }));
+  const first = pts[0];
+  const baseDate = new Date(first.t.getTime() - 86400000*2);
+  const data = [{ t: baseDate, v: 0, load: '', base:true }, ...pts];
+
+  // Geometry
+  const W = el.clientWidth || 760, H = 240;
+  const m = { top: 18, right: 18, bottom: 30, left: 64 };
+  const iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+
+  const t0 = data[0].t.getTime(), t1 = data[data.length-1].t.getTime();
+  const tSpan = (t1 - t0) || 1;
+  const vMax = Math.max(...data.map(d=>d.v), 1);
+  const vMin = Math.min(0, ...data.map(d=>d.v));
+  const vSpan = (vMax - vMin) || 1;
+
+  const X = t => m.left + ((t - t0) / tSpan) * iw;
+  const Y = v => m.top + ih - ((v - vMin) / vSpan) * ih;
+
+  // Build path
+  let line = '', area = '';
+  data.forEach((d,i) => {
+    const x = X(d.t.getTime()), y = Y(d.v);
+    line += (i===0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+  });
+  const x0 = X(data[0].t.getTime()), xN = X(data[data.length-1].t.getTime());
+  area = line + 'L' + xN.toFixed(1) + ',' + Y(vMin).toFixed(1) + ' L' + x0.toFixed(1) + ',' + Y(vMin).toFixed(1) + ' Z';
+
+  // Y gridlines / labels (4 ticks)
+  const fmtMoney = v => '$' + Math.round(v).toLocaleString('en-US');
+  const fmtMoneyShort = v => {
+    const a = Math.abs(v);
+    if (a >= 1e6) return '$' + (v/1e6).toFixed(1) + 'M';
+    if (a >= 1e3) return '$' + Math.round(v/1e3) + 'k';
+    return '$' + Math.round(v);
+  };
+  let grid = '';
+  const ticks = 4;
+  for (let i=0;i<=ticks;i++){
+    const v = vMin + (vSpan*i/ticks);
+    const y = Y(v);
+    grid += `<line x1="${m.left}" y1="${y.toFixed(1)}" x2="${m.left+iw}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1" opacity="0.5"/>`;
+    grid += `<text x="${m.left-8}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="Inter,sans-serif">${fmtMoneyShort(v)}</text>`;
+  }
+
+  // X labels (first, middle, last)
+  const fmtDate = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  let xlabels = '';
+  [data[1] ? data[1] : data[0], data[Math.floor(data.length/2)], data[data.length-1]].forEach(d => {
+    const x = X(d.t.getTime());
+    xlabels += `<text x="${x.toFixed(1)}" y="${H-10}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="Inter,sans-serif">${fmtDate(d.t)}</text>`;
+  });
+
+  // Data point dots + invisible hover targets w/ native tooltip
+  let dots = '';
+  data.forEach((d,i) => {
+    if (d.base) return;
+    const x = X(d.t.getTime()), y = Y(d.v);
+    dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="${accent}" stroke="var(--surface)" stroke-width="1.5"><title>${d.load} · ${fmtDate(d.t)}\n${fmtMoney(d.v)} cumulative</title></circle>`;
+  });
+
+  // Final value callout
+  const last = data[data.length-1];
+  const lx = X(last.t.getTime()), ly = Y(last.v);
+  const calloutX = Math.min(lx, m.left+iw-4);
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem">
+      <div style="font-size:0.62rem;color:var(--muted2)">${mode==='investor'?'Investor share of realized profit, accumulated as loads are collected':'Gross realized profit, accumulated as loads are collected'}</div>
+      <div style="font-size:0.95rem;font-weight:700;color:${accent}">${fmtMoney(last.v)} <span style="font-size:0.62rem;color:var(--muted);font-weight:500">MXN to date</span></div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <linearGradient id="pcgrad-${mode}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${accentDim}"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+        </linearGradient>
+      </defs>
+      ${grid}
+      <path d="${area}" fill="url(#pcgrad-${mode})"/>
+      <path d="${line}" fill="none" stroke="${accent}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+      ${xlabels}
+    </svg>`;
+}
+
+function setProfitMode(mode) {
+  if (!window._pendingProfitChart) {
+    // rebuild reference from current series stored on the element
+  }
+  const g = document.getElementById('pc-btn-gross');
+  const iv = document.getElementById('pc-btn-investor');
+  if (g && iv) {
+    const on = (btn) => { btn.style.background='var(--accent)'; btn.style.color='#fff'; btn.classList.add('active'); };
+    const off= (btn) => { btn.style.background='transparent'; btn.style.color='var(--muted)'; btn.classList.remove('active'); };
+    if (mode==='gross'){ on(g); off(iv);} else { on(iv); off(g);}
+  }
+  const series = (dashData.investment || {}).profit_series || [];
+  // find the chart container (id starts with inv-profit-chart-)
+  const cont = document.querySelector('[id^="inv-profit-chart-"]');
+  if (cont) drawProfitChart(cont.id, series, mode);
+  if (window._pendingProfitChart) window._pendingProfitChart.mode = mode;
 }
 
 // ── Investor Summary PDF export — PE-fund-grade formatted report ─────────────
@@ -1564,6 +1711,55 @@ function generateInvestorPDF() {
     }
   }
 
+  // Cumulative realized profit chart (print version — dark ink on white)
+  let profitChartHtml = '';
+  if (isVisible('sec-profit-chart')) {
+    const ps = (dashData.investment || {}).profit_series || [];
+    // Match the on-screen toggle (gross vs investor)
+    const pcMode = (window._pendingProfitChart && window._pendingProfitChart.mode) || 'gross';
+    const valKey = pcMode === 'investor' ? 'cum_investor' : 'cum_profit';
+    if (ps.length) {
+      const W=720, H=240, m={top:16,right:20,bottom:30,left:70};
+      const iw=W-m.left-m.right, ih=H-m.top-m.bottom;
+      const pts = ps.map(p=>({t:new Date(p.date+'T00:00:00').getTime(), v:p[valKey], load:p.load}));
+      const base = {t: pts[0].t - 86400000*2, v:0};
+      const data=[base,...pts];
+      const t0=data[0].t, t1=data[data.length-1].t, tSpan=(t1-t0)||1;
+      const vMax=Math.max(...data.map(d=>d.v),1), vMin=Math.min(0,...data.map(d=>d.v)), vSpan=(vMax-vMin)||1;
+      const X=t=>m.left+((t-t0)/tSpan)*iw, Y=v=>m.top+ih-((v-vMin)/vSpan)*ih;
+      let line='';
+      data.forEach((d,i)=>{ line += (i?'L':'M')+X(d.t).toFixed(1)+','+Y(d.v).toFixed(1)+' '; });
+      const area = line + 'L'+X(data[data.length-1].t).toFixed(1)+','+Y(vMin).toFixed(1)+' L'+X(data[0].t).toFixed(1)+','+Y(vMin).toFixed(1)+' Z';
+      const shortMoney=v=>{const a=Math.abs(v); if(a>=1e6)return '$'+(v/1e6).toFixed(1)+'M'; if(a>=1e3)return '$'+Math.round(v/1e3)+'k'; return '$'+Math.round(v);};
+      let grid='';
+      for(let i=0;i<=4;i++){ const v=vMin+vSpan*i/4, y=Y(v);
+        grid+=`<line x1="${m.left}" y1="${y.toFixed(1)}" x2="${m.left+iw}" y2="${y.toFixed(1)}" stroke="#e2e2e2" stroke-width="1"/>`;
+        grid+=`<text x="${m.left-8}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#888" font-family="Helvetica,Arial,sans-serif">${shortMoney(v)}</text>`;
+      }
+      const fmtD=t=>new Date(t).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      let xl='';
+      [data[1]||data[0], data[Math.floor(data.length/2)], data[data.length-1]].forEach(d=>{
+        xl+=`<text x="${X(d.t).toFixed(1)}" y="${H-9}" text-anchor="middle" font-size="9" fill="#888" font-family="Helvetica,Arial,sans-serif">${fmtD(d.t)}</text>`;
+      });
+      let dots='';
+      data.forEach(d=>{ if(d.v===0&&d===base)return; dots+=`<circle cx="${X(d.t).toFixed(1)}" cy="${Y(d.v).toFixed(1)}" r="3" fill="#1a2744"/>`; });
+      const lastV = data[data.length-1].v;
+      const fmtMoney=v=>'$'+Math.round(v).toLocaleString('en-US');
+      profitChartHtml = `<div class="section"><h2>Cumulative Realized Profit</h2>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:8px;color:#888">${pcMode==='investor'?'Investor share of realized profit, accumulated as loads are collected':'Gross realized profit, accumulated as loads are collected'}</div>
+          <div style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;font-weight:700;color:#1a2744">${fmtMoney(lastV)} <span style="font-size:8px;color:#999;font-weight:400">MXN to date</span></div>
+        </div>
+        <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">
+          <defs><linearGradient id="pcgradpdf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(26,39,68,0.12)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/></linearGradient></defs>
+          ${grid}
+          <path d="${area}" fill="url(#pcgradpdf)"/>
+          <path d="${line}" fill="none" stroke="#1a2744" stroke-width="2" stroke-linejoin="round"/>
+          ${dots}${xl}
+        </svg></div>`;
+    }
+  }
+
   const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${fundName} — Investor Summary</title>
   <style>
     @page { size: letter; margin: 0.6in 0.65in; }
@@ -1627,6 +1823,7 @@ function generateInvestorPDF() {
       </div>
     </div>
 
+    ${profitChartHtml}
     ${forwardHtml}
     ${loadsHtml}
 
