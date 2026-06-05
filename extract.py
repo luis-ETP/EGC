@@ -1145,6 +1145,32 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
     tot_tc  = rec_btc_tc  + rec_rtc_tc
     tot_rec = _rec(tot_tc, recovered_mxn, total_margin, tot_lit)
 
+    # ── Cumulative realized profit series (by payment date of PAID loads) ──────
+    # Each point = the running total of realized gross profit once a load is collected.
+    paid_dated = []
+    for l in btc_loads:
+        if str(l.get('status','')).upper() != 'PAID':
+            continue
+        pd = _parse_date(l.get('payment_date')) if l.get('payment_date') else None
+        if pd is None:
+            continue
+        paid_dated.append((pd, l.get('total_margin', 0) or 0, l.get('load',''), l.get('liters',0) or 0))
+    paid_dated.sort(key=lambda x: x[0])
+    profit_series = []
+    run_profit = 0.0
+    run_liters = 0.0
+    for pd, margin, load_id, liters in paid_dated:
+        run_profit += margin
+        run_liters += liters
+        profit_series.append({
+            "date":            pd.strftime('%Y-%m-%d'),
+            "load":            load_id,
+            "load_profit":     round(margin, 2),
+            "cum_profit":      round(run_profit, 2),
+            "cum_investor":    round(run_profit * inv_share_pct, 2),
+            "cum_liters":      round(run_liters, 0),
+        })
+
     return {
         "as_of":               as_of_str,
         "commits":             commits,
@@ -1184,6 +1210,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
         "avg_inv_days":            avg_inv_days,
         "avg_pend_days":           avg_pend_days,
         "cycle_by_batch":          cycle_by_batch,
+        "profit_series":           profit_series,
         "btc_loads":               btc_loads,
         "projections": {
             "loads_remaining":      loads_remaining,
