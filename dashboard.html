@@ -452,7 +452,7 @@ function renderOverview() {
   // _pulled kept in data for table use
   let html = `
   <div style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem">Purchasing</div>
-  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem">
     <div class="kpi blue">
       <div class="kpi-label">Total Wired Amount</div>
       <div class="kpi-value">${fmtUSD(tv('_wired'))}</div>
@@ -467,6 +467,11 @@ function renderOverview() {
       <div class="kpi-label">Remaining Gallons in Allocation</div>
       <div class="kpi-value">${fmtNum(tv('_rem_alloc'))}</div>
       <div class="kpi-sub">gallons paid, pending BOL</div>
+    </div>
+    <div class="kpi orange">
+      <div class="kpi-label">Remaining Allocation Value</div>
+      <div class="kpi-value">${fmtUSD((tv('_rem_alloc') || 0) * (tv('_wtd_rate') || 0))}</div>
+      <div class="kpi-sub">USD paid, pending BOL</div>
     </div>
   </div>
   <div style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.5rem">Inventory</div>
