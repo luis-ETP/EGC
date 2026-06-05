@@ -820,6 +820,23 @@ function renderInvestor() {
     d.total_margin   = tot.margin;
     d.investor_share = tot.margin * (d.inv_share_pct || 0.40);
     d.recovered_detail = rd;
+
+    // Re-apply markup to the cumulative profit series: each load's margin is
+    // reduced by mu × liters, then re-accumulated so the chart reflects the LP view.
+    if (Array.isArray(d.profit_series)) {
+      const sharePct = d.inv_share_pct || 0.40;
+      let runGross = 0, runInv = 0;
+      d.profit_series = d.profit_series.map(p => {
+        const adjLoadProfit = (p.load_profit || 0) - mu * (p.load_liters || 0);
+        runGross += adjLoadProfit;
+        runInv = runGross * sharePct;
+        return Object.assign({}, p, {
+          load_profit: Math.round(adjLoadProfit * 100) / 100,
+          cum_profit:  Math.round(runGross * 100) / 100,
+          cum_investor: Math.round(runInv * 100) / 100,
+        });
+      });
+    }
     return d;
   }
 
@@ -1576,9 +1593,6 @@ function drawProfitChart(containerId, series, mode) {
 }
 
 function setProfitMode(mode) {
-  if (!window._pendingProfitChart) {
-    // rebuild reference from current series stored on the element
-  }
   const g = document.getElementById('pc-btn-gross');
   const iv = document.getElementById('pc-btn-investor');
   if (g && iv) {
@@ -1586,8 +1600,10 @@ function setProfitMode(mode) {
     const off= (btn) => { btn.style.background='transparent'; btn.style.color='var(--muted)'; btn.classList.remove('active'); };
     if (mode==='gross'){ on(g); off(iv);} else { on(iv); off(g);}
   }
-  const series = (dashData.investment || {}).profit_series || [];
-  // find the chart container (id starts with inv-profit-chart-)
+  // Use the series stored on the pending chart (already markup-adjusted for the
+  // current view); fall back to raw server data only if unavailable.
+  const series = (window._pendingProfitChart && window._pendingProfitChart.series)
+    || ((dashData.investment || {}).profit_series || []);
   const cont = document.querySelector('[id^="inv-profit-chart-"]');
   if (cont) drawProfitChart(cont.id, series, mode);
   if (window._pendingProfitChart) window._pendingProfitChart.mode = mode;
@@ -1714,7 +1730,10 @@ function generateInvestorPDF() {
   // Cumulative realized profit chart (print version — dark ink on white)
   let profitChartHtml = '';
   if (isVisible('sec-profit-chart')) {
-    const ps = (dashData.investment || {}).profit_series || [];
+    // Use the markup-adjusted series stored on the pending chart (matches the
+    // current investor/LPA view); fall back to raw only if unavailable.
+    const ps = (window._pendingProfitChart && window._pendingProfitChart.series)
+      || ((dashData.investment || {}).profit_series || []);
     // Match the on-screen toggle (gross vs investor)
     const pcMode = (window._pendingProfitChart && window._pendingProfitChart.mode) || 'gross';
     const valKey = pcMode === 'investor' ? 'cum_investor' : 'cum_profit';
