@@ -1008,6 +1008,10 @@ function renderInvestor() {
         <button class="inv-view-btn active" id="inv-btn-admin" onclick="invSetView('admin')">Admin view</button>
         <button class="inv-view-btn inactive" id="inv-btn-investor" onclick="invSetView('investor')">Investor view</button>
       </div>` : ''}
+      <button onclick="generateInvestorPDF()" title="Download PDF report" style="display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:0.72rem;font-weight:600;padding:0.4rem 0.7rem;border-radius:6px;cursor:pointer;font-family:var(--font)">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M6.5 1.5v6M4 5.5l2.5 2.5L9 5.5M2 9.5v1a1 1 0 001 1h7a1 1 0 001-1v-1"/></svg>
+        Download PDF
+      </button>
       <div style="font-size:0.7rem;color:var(--muted)">${dashData.filename||''}</div>
     </div>
   </div>`;
@@ -1440,6 +1444,207 @@ function renderInvestor() {
       });
     });
   }
+}
+
+// ── Investor Summary PDF export — PE-fund-grade formatted report ─────────────
+function generateInvestorPDF() {
+  const inv = dashData.investment || {};
+  const txt = (id) => { const e=document.getElementById(id); return e ? e.textContent.trim() : ''; };
+
+  // Determine which sections appear in the PDF (respect admin/LPA visibility config)
+  const isVisible = (secId) => {
+    if (invVisibility[secId] === false) return false; // admin chose to hide → exclude from PDF too
+    const el = document.getElementById(secId);
+    if (!el) return false;
+    return getComputedStyle(el).display !== 'none';
+  };
+  const kpiVisible = (kid) => invVisibility[kid] !== false;
+
+  // Pull the LIVE displayed KPI values (already reflect markup, view, batch filter)
+  const kpiDefs = [
+    {key:'capital-deployed',  label:'Capital Deployed',  sub:'Committed capital'},
+    {key:'capital-at-work',   label:'Capital at Work',   sub:'Active and deployed'},
+    {key:'capital-recovered', label:'Capital Recovered', sub:'Full proceeds collected'},
+    {key:'revolved-multiple', label:'Revolved Multiple', sub:'Since inception'},
+    {key:'total-profit',      label:'Total Profit',      sub:'Gross generated'},
+    {key:'investor-share',    label:'Investor Share',    sub:'Net to LP'},
+    {key:'return-per-cycle',  label:'Return per Cycle',  sub:'On recovered capital'},
+  ];
+  const kpis = kpiDefs.map(k => {
+    const node = document.getElementById('kpi-'+k.key);
+    if (!node) return null;
+    if (!kpiVisible('kpi-'+k.key)) return null;
+    const valEl = node.querySelector('.inv-kpi-val');
+    return { label:k.label, val: valEl ? valEl.textContent.trim() : '', sub:k.sub };
+  }).filter(Boolean);
+
+  // Capital snapshot — distribution rows + cycle rows (read live from DOM)
+  const capSection = document.getElementById('inv-card-capital-dist');
+  const cycleSection = document.getElementById('inv-card-cycle');
+
+  // Capital distribution rows: find each value div, climb to its row, read the label
+  const distData = [];
+  if (capSection) {
+    capSection.querySelectorAll('div[style*="font-weight:600"]').forEach(d => {
+      const style = d.getAttribute('style')||'';
+      if (!/color:#/.test(style)) return;
+      if (d.id === 'inv-recovered-val') return; // handled separately
+      const row = d.closest('div[style*="background"]');
+      if (!row) return;
+      const lblEl = row.querySelector('div');
+      const label = lblEl ? lblEl.textContent.trim().split('\n')[0].trim() : '';
+      if (label) distData.push({ label, value: d.textContent.trim() });
+    });
+  }
+  // Recovered row (only if currently shown)
+  const recovRow = document.getElementById('inv-recovered-row');
+  let recovered = null;
+  if (recovRow && getComputedStyle(recovRow).display !== 'none') {
+    recovered = txt('inv-recovered-val');
+  }
+
+  // Cycle rows
+  const cycleColors = ['#7DD3FC','#6366F1','#2DD4BF'];
+  const cycleLabels = ['Allocation (wire to RTB)','Inventory (RTB to delivery)','Payment (delivery to collection)'];
+  const cycleData = [];
+  if (cycleSection) {
+    cycleColors.forEach((c,i) => {
+      const el = cycleSection.querySelector(`[style*="color:${c}"]`);
+      if (el) cycleData.push({ label: cycleLabels[i], value: el.textContent.trim() });
+    });
+  }
+
+  // Period / batch context
+  const filterSel = document.getElementById('inv-period-filter');
+  const periodLabel = filterSel ? (filterSel.options[filterSel.selectedIndex]?.text || 'To date') : 'To date';
+
+  const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  const fundName = 'EGC';
+  const viewerTag = (ROLE === 'admin') ? 'Internal — Admin Copy' : 'Limited Partner Copy';
+
+  // Build the print document
+  const w = window.open('', '_blank');
+  if (!w) { alert('Please allow pop-ups to download the PDF.'); return; }
+
+  const kpiCards = kpis.map(k => `
+    <div class="kpi">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-val">${k.val}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+  const distRowsHtml = distData.map(r => `
+    <tr><td class="rl">${r.label}</td><td class="rv">${r.value}</td></tr>`).join('')
+    + (recovered ? `<tr><td class="rl">Recovered</td><td class="rv">${recovered}</td></tr>` : '');
+
+  const cycleRowsHtml = cycleData.map(r => `
+    <tr><td class="rl">${r.label}</td><td class="rv">${r.value}</td></tr>`).join('');
+
+  // Forward view (if visible)
+  let forwardHtml = '';
+  if (isVisible('sec-forward')) {
+    const fwd = document.querySelectorAll('#sec-forward .fwd-card');
+    if (fwd.length) {
+      const cards = [...fwd].map(c => {
+        const lbl = c.querySelector('.fwd-label')?.textContent.trim()||'';
+        const val = c.querySelector('.fwd-val')?.textContent.trim()||'';
+        const note= c.querySelector('.fwd-note')?.textContent.trim()||'';
+        return `<div class="kpi"><div class="kpi-label">${lbl}</div><div class="kpi-val" style="font-size:15px">${val}</div><div class="kpi-sub">${note}</div></div>`;
+      }).join('');
+      forwardHtml = `<div class="section"><h2>Forward View &amp; Projections</h2><div class="kpi-grid">${cards}</div></div>`;
+    }
+  }
+
+  // Load performance table (if visible)
+  let loadsHtml = '';
+  if (isVisible('sec-loads')) {
+    const tbl = document.querySelector('#sec-loads table');
+    if (tbl) {
+      loadsHtml = `<div class="section"><h2>Load Performance Detail</h2><table class="data">${tbl.innerHTML}</table></div>`;
+    }
+  }
+
+  const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${fundName} — Investor Summary</title>
+  <style>
+    @page { size: letter; margin: 0.6in 0.65in; }
+    * { box-sizing: border-box; }
+    body { font-family: Georgia, 'Times New Roman', serif; color:#1a1a2e; margin:0; font-size:10.5px; line-height:1.5; }
+    .cover { border-bottom:3px double #1a2744; padding-bottom:16px; margin-bottom:20px; }
+    .brand { font-family:'Helvetica Neue',Arial,sans-serif; font-size:26px; font-weight:700; letter-spacing:3px; color:#1a2744; }
+    .brand-sub { font-family:'Helvetica Neue',Arial,sans-serif; font-size:8.5px; letter-spacing:2px; text-transform:uppercase; color:#8a7a55; margin-top:2px; }
+    .doc-title { font-size:19px; font-weight:700; margin-top:14px; color:#1a2744; }
+    .doc-meta { font-family:'Helvetica Neue',Arial,sans-serif; font-size:9px; color:#666; margin-top:6px; display:flex; gap:20px; }
+    .doc-meta b { color:#1a2744; font-weight:600; }
+    .confidential { font-family:'Helvetica Neue',Arial,sans-serif; font-size:7.5px; letter-spacing:1.5px; text-transform:uppercase; color:#b03030; border:1px solid #b03030; padding:2px 7px; border-radius:3px; display:inline-block; margin-top:10px; }
+    h2 { font-family:'Helvetica Neue',Arial,sans-serif; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:#1a2744; border-bottom:1px solid #c9b88a; padding-bottom:5px; margin:22px 0 12px; }
+    .section { margin-bottom:8px; page-break-inside:avoid; }
+    .kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .kpi { border:1px solid #ddd; border-top:2px solid #1a2744; border-radius:3px; padding:9px 11px; background:#fafafa; }
+    .kpi-label { font-family:'Helvetica Neue',Arial,sans-serif; font-size:7.5px; text-transform:uppercase; letter-spacing:0.8px; color:#777; }
+    .kpi-val { font-size:16px; font-weight:700; color:#1a2744; margin:3px 0 1px; font-family:'Helvetica Neue',Arial,sans-serif; }
+    .kpi-sub { font-size:7.5px; color:#999; font-family:'Helvetica Neue',Arial,sans-serif; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+    table.kv { width:100%; border-collapse:collapse; }
+    table.kv td { padding:6px 4px; border-bottom:1px solid #eee; font-family:'Helvetica Neue',Arial,sans-serif; }
+    table.kv .rl { font-size:9.5px; color:#444; }
+    table.kv .rv { font-size:11px; font-weight:700; color:#1a2744; text-align:right; }
+    table.data { width:100%; border-collapse:collapse; font-family:'Helvetica Neue',Arial,sans-serif; font-size:8px; }
+    table.data th { background:#1a2744; color:#fff; padding:5px 6px; text-align:left; font-size:7.5px; text-transform:uppercase; letter-spacing:0.5px; }
+    table.data td { padding:4px 6px; border-bottom:1px solid #eee; }
+    .subhead { font-family:'Helvetica Neue',Arial,sans-serif; font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#8a7a55; margin:0 0 6px; }
+    .footer { margin-top:26px; border-top:1px solid #ccc; padding-top:8px; font-family:'Helvetica Neue',Arial,sans-serif; font-size:7px; color:#999; line-height:1.4; }
+    .disclaimer { font-family:'Helvetica Neue',Arial,sans-serif; font-size:6.8px; color:#aaa; margin-top:6px; line-height:1.35; }
+  </style></head>
+  <body>
+    <div class="cover">
+      <div class="brand">${fundName}</div>
+      <div class="brand-sub">Energy Capital · Fuel Trading Strategy</div>
+      <div class="doc-title">Investor Performance Summary</div>
+      <div class="doc-meta">
+        <span><b>Reporting Basis:</b> ${periodLabel}</span>
+        <span><b>Currency:</b> MXN &amp; USD</span>
+        <span><b>As of:</b> ${today}</span>
+      </div>
+      <div class="confidential">Private &amp; Confidential · ${viewerTag}</div>
+    </div>
+
+    <div class="section">
+      <h2>Performance Overview</h2>
+      <div class="kpi-grid">${kpiCards}</div>
+    </div>
+
+    <div class="section">
+      <h2>Capital Position &amp; Cycle</h2>
+      <div class="two-col">
+        <div>
+          <div class="subhead">Where the Capital Is</div>
+          <table class="kv">${distRowsHtml}</table>
+        </div>
+        <div>
+          <div class="subhead">Capital Cycle (avg. days per stage)</div>
+          <table class="kv">${cycleRowsHtml}</table>
+        </div>
+      </div>
+    </div>
+
+    ${forwardHtml}
+    ${loadsHtml}
+
+    <div class="footer">
+      <div>${fundName} Energy Capital — Investor Performance Summary · Generated ${today} · Reporting basis: ${periodLabel}</div>
+      <div class="disclaimer">
+        This document is private and confidential and is intended solely for the named recipient. It does not constitute an offer to sell or a solicitation of an offer to buy any security or interest. Figures are derived from internal trade and treasury records, are unaudited, and are subject to revision. Past performance is not indicative of future results. Capital at risk.
+      </div>
+    </div>
+
+    <script>
+      window.onload = function(){ setTimeout(function(){ window.print(); }, 350); };
+    <\/script>
+  </body></html>`;
+
+  w.document.open();
+  w.document.write(doc);
+  w.document.close();
 }
 
 function invSetView(mode) {
