@@ -1501,10 +1501,11 @@ function invSetView(mode) {
 }
 
 function applyInvVisibility() {
-  const isAdminView = IS_ADMIN && invViewMode !== 'investor';
+  // Derive admin from global ROLE (the function-scoped admin flag isn't visible here)
+  const isAdmin = (typeof ROLE !== 'undefined') && ROLE === 'admin';
   // The actual investor (LPA) sees the final result: hidden items removed entirely.
   // Admin in 'investor' preview sees them grayed (so they can still toggle).
-  const adminPreview = IS_ADMIN && invViewMode === 'investor';
+  const adminPreview = isAdmin && invViewMode === 'investor';
 
   // Drive off invVisibility keys (works even when no eye buttons exist, e.g. LPA)
   Object.keys(invVisibility).forEach(targetId => {
@@ -1516,7 +1517,7 @@ function applyInvVisibility() {
       // Admin previewing investor view: gray out (still visible + toggleable)
       target.classList.toggle('inv-grayed', isHidden);
       target.style.display = '';
-    } else if (IS_ADMIN) {
+    } else if (isAdmin) {
       // Admin normal view: everything visible, no graying
       target.classList.remove('inv-grayed');
       target.style.display = '';
