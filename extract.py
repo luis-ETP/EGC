@@ -1166,6 +1166,7 @@ def _extract_investment_summary(wb, wb_fifo=None, uploaded_at=None):
             "date":            pd.strftime('%Y-%m-%d'),
             "load":            load_id,
             "load_profit":     round(margin, 2),
+            "load_liters":     round(liters, 0),
             "cum_profit":      round(run_profit, 2),
             "cum_investor":    round(run_profit * inv_share_pct, 2),
             "cum_liters":      round(run_liters, 0),
