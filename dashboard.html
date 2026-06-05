@@ -825,14 +825,20 @@ function renderInvestor() {
     // reduced by mu × liters, then re-accumulated so the chart reflects the LP view.
     if (Array.isArray(d.profit_series)) {
       const sharePct = d.inv_share_pct || 0.40;
+      // Build load-id → liters lookup from btc_loads (always has correct liters since
+      // margins are derived from them). Falls back when profit_series.load_liters = 0,
+      // which happens if the column name in the spreadsheet didn't match on extraction.
+      const _btcLit = {};
+      (d.btc_loads || []).forEach(l => { if (l.load) _btcLit[l.load] = l.liters || 0; });
       let runGross = 0, runInv = 0;
       d.profit_series = d.profit_series.map(p => {
-        const adjLoadProfit = (p.load_profit || 0) - mu * (p.load_liters || 0);
+        const lits = (p.load_liters > 0) ? p.load_liters : (_btcLit[p.load] || 0);
+        const adjLoadProfit = (p.load_profit || 0) - mu * lits;
         runGross += adjLoadProfit;
         runInv = runGross * sharePct;
         return Object.assign({}, p, {
-          load_profit: Math.round(adjLoadProfit * 100) / 100,
-          cum_profit:  Math.round(runGross * 100) / 100,
+          load_profit:  Math.round(adjLoadProfit * 100) / 100,
+          cum_profit:   Math.round(runGross * 100) / 100,
           cum_investor: Math.round(runInv * 100) / 100,
         });
       });
@@ -1913,9 +1919,13 @@ function invSetView(mode) {
     if (window._pendingProfitChart && (dashData.investment || {}).profit_series) {
       const rawSeries = dashData.investment.profit_series;
       const sharePct  = rawInv.inv_share_pct || 0.40;
+      // Same btc_loads fallback as applyMarkup — in case load_liters is 0 in stored data
+      const _btcLit = {};
+      (rawInv.btc_loads || []).forEach(l => { if (l.load) _btcLit[l.load] = l.liters || 0; });
       let runGross = 0, runInv = 0;
       const adjSeries = rawSeries.map(p => {
-        const adj = (p.load_profit || 0) - mu * (p.load_liters || 0);
+        const lits = (p.load_liters > 0) ? p.load_liters : (_btcLit[p.load] || 0);
+        const adj = (p.load_profit || 0) - mu * lits;
         runGross += adj;
         runInv = runGross * sharePct;
         return Object.assign({}, p, {
