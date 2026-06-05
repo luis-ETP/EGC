@@ -992,7 +992,10 @@ function renderInvestor() {
 
   // ── View toggle state (admin only) ───────────────────────────────────────
   // Only reset markup from data — preserve viewMode and visibility across re-renders
-  invMarkup = invMarkup || dashData.markup_usd || 0.02;
+  // Always prefer the fresh backend value; only keep existing invMarkup if it
+  // was set by the user (markup_usd absent) so edits survive re-renders.
+  if (dashData.markup_usd != null) invMarkup = dashData.markup_usd;
+  else if (!invMarkup) invMarkup = 0.02;
 
   // Load config from API — for ALL roles. Admin uses it to drive eye toggles;
   // the LPA/investor uses it to actually hide what the admin chose to hide.
@@ -1906,6 +1909,25 @@ function invSetView(mode) {
       const key = (card.dataset.key||'').toLowerCase();
       if (updates[key]) card.querySelector('.inv-kpi-val').textContent = updates[key];
     });
+    // ── Re-draw profit chart with markup-adjusted series ──────────────────────
+    if (window._pendingProfitChart && (dashData.investment || {}).profit_series) {
+      const rawSeries = dashData.investment.profit_series;
+      const sharePct  = rawInv.inv_share_pct || 0.40;
+      let runGross = 0, runInv = 0;
+      const adjSeries = rawSeries.map(p => {
+        const adj = (p.load_profit || 0) - mu * (p.load_liters || 0);
+        runGross += adj;
+        runInv = runGross * sharePct;
+        return Object.assign({}, p, {
+          load_profit:  Math.round(adj      * 100) / 100,
+          cum_profit:   Math.round(runGross * 100) / 100,
+          cum_investor: Math.round(runInv   * 100) / 100,
+        });
+      });
+      window._pendingProfitChart.series = adjSeries;
+      const _pcEl = document.getElementById(window._pendingProfitChart.id);
+      if (_pcEl) drawProfitChart(window._pendingProfitChart.id, adjSeries, window._pendingProfitChart.mode);
+    }
   } else {
     // Restore real numbers
     const rawInv = dashData.investment || {};
@@ -1920,6 +1942,13 @@ function invSetView(mode) {
       const key = (card.dataset.key||'').toLowerCase();
       if (updates[key]) card.querySelector('.inv-kpi-val').textContent = updates[key];
     });
+    // ── Restore raw profit series ──────────────────────────────────────────────
+    if (window._pendingProfitChart && (dashData.investment || {}).profit_series) {
+      const rawSeries = dashData.investment.profit_series;
+      window._pendingProfitChart.series = rawSeries;
+      const _pcEl = document.getElementById(window._pendingProfitChart.id);
+      if (_pcEl) drawProfitChart(window._pendingProfitChart.id, rawSeries, window._pendingProfitChart.mode);
+    }
   }
 
   // Apply/remove graying
@@ -2680,3 +2709,4 @@ else if (ROLE === 'investor') showTab('investor');
 </script>
 </body>
 </html>
+
