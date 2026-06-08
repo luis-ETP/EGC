@@ -796,8 +796,8 @@ function renderInvestor() {
 
   function applyMarkup(src) {
     if (!MARKUP) return src;
-    const avgFx = getAvgFx();
-    const mu = MARKUP_USD * avgFx / L_PER_GAL;
+    const avgFx = getAvgFx();          // still needed for usdgal display metric
+    const mu = MARKUP_USD;             // now stored as MXN/L directly — no conversion needed
     const d  = JSON.parse(JSON.stringify(src));
     const rd = d.recovered_detail || {};
     function mu_load(ld) {
@@ -1041,8 +1041,8 @@ function renderInvestor() {
       ${isAdmin ? `
       <div class="inv-adder" id="inv-adder">
         <span>Markup</span>
-        <input id="inv-adder-input" type="number" step="0.01" value="${invMarkup}" min="0">
-        <span>USD/gal</span>
+        <input id="inv-adder-input" type="number" step="0.0001" value="${invMarkup}" min="0">
+        <span>MXN/L</span>
         <button class="inv-adder-save" id="inv-adder-save" onclick="invSaveMarkup()">Save</button>
       </div>
       <div class="inv-view-toggle">
@@ -1908,8 +1908,7 @@ function invSetView(mode) {
   if (isInvestor) {
     // Apply markup to KPI vals
     const rawInv = dashData.investment || {};
-    const avgFx = (() => { const rows=(dashData.bol_tab||{}).rows||[]; const v=rows.map(r=>r.fx_rate).filter(x=>x>0); return v.length?v.reduce((a,b)=>a+b,0)/v.length:17.30; })();
-    const mu = invMarkup * avgFx / 3.7854;
+    const mu = invMarkup;             // MXN/L directly — no FX conversion
     const rd = rawInv.recovered_detail || {};
     const btcLit = (rd.btc||{}).liters || 0;
     const rtcLit = (rd.rtc||{}).liters || 0;
