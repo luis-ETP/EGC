@@ -1835,10 +1835,63 @@ function generateInvestorPDF() {
   // Load performance table (if visible)
   let loadsHtml = '';
   if (isVisible('sec-loads')) {
+    const loads = inv.btc_loads || [];
+    const _totL = loads.reduce((s,l)=>s+(l.liters||0),0);
+    const _totM = loads.reduce((s,l)=>s+(l.total_margin||0),0);
+    const _totS = loads.reduce((s,l)=>s+(l.total_sale||0),0);
+    const _wtdML  = _totL>0 ? _totM/_totL : 0;
+    const _wtdPct = _totS>0 ? _totM/_totS : 0;
+    const _shr    = inv.inv_share_pct || 0.40;
+    const _fd4 = v => v!=null ? Number(v).toFixed(4) : '—';
+    const _fpct = v => (v*100).toFixed(2)+'%';
+
+    // Customer type mix
+    const _cmap = {};
+    loads.forEach(l => {
+      const n = (l.customer||'').toUpperCase();
+      const t = /gasolinera|station/i.test(n)?'Gas Station':/industri|petroquim|quimic/i.test(n)?'Industrial':'Fuel Distributor';
+      _cmap[t] = (_cmap[t]||0)+(l.liters||0);
+    });
+    const _cent  = Object.entries(_cmap).sort((a,b)=>b[1]-a[1]);
+    const _ccols = ['#6366F1','#7DD3FC','#2DD4BF','#F59E0B','#EC4899'];
+
+    // SVG pie for PDF (canvas doesn't render in print windows)
+    const _pie = (() => {
+      const r=38,cx=45,cy=45,ri=22; let start=-Math.PI/2,paths='',total=_totL||1;
+      _cent.forEach((e,i)=>{
+        const ang=(e[1]/total)*Math.PI*2;
+        const x1=cx+Math.cos(start)*r,y1=cy+Math.sin(start)*r;
+        const x2=cx+Math.cos(start+ang)*r,y2=cy+Math.sin(start+ang)*r;
+        if(_cent.length===1){paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${_ccols[i]}"/>`;}
+        else{paths+=`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${ang>Math.PI?1:0},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${_ccols[i]}"/>`;}
+        start+=ang;
+      });
+      return `<svg width="90" height="90" viewBox="0 0 90 90">${paths}<circle cx="${cx}" cy="${cy}" r="${ri}" fill="white"/></svg>`;
+    })();
+
+    const _custRows = _cent.map((e,i)=>
+      `<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${_ccols[i]};margin-right:4px"></span>${e[0]}</td><td style="text-align:right">${_totL>0?Math.round(e[1]/_totL*100):0}%</td></tr>`
+    ).join('');
+
     const tbl = document.querySelector('#sec-loads table');
-    if (tbl) {
-      loadsHtml = `<div class="section"><h2>Load Performance Detail</h2><table class="data">${tbl.innerHTML}</table></div>`;
-    }
+    loadsHtml = `<div class="section"><h2>Load Performance Detail</h2>
+      <div class="two-col" style="margin-bottom:14px;gap:12px">
+        <div>
+          <div class="subhead" style="margin-bottom:8px">Performance Metrics</div>
+          <table class="kv">
+            <tr><td class="rl">Wtd Avg Margin/L (Overall)</td><td class="rv">${_fd4(_wtdML)} MXN/L</td></tr>
+            <tr><td class="rl">Wtd Avg Margin % (Overall)</td><td class="rv">${_fpct(_wtdPct)}</td></tr>
+            <tr><td class="rl">Investor Margin/L (${(_shr*100).toFixed(0)}% share)</td><td class="rv">${_fd4(_wtdML*_shr)} MXN/L</td></tr>
+            <tr><td class="rl">Investor Margin % (${(_shr*100).toFixed(0)}% share)</td><td class="rv">${_fpct(_wtdPct*_shr)}</td></tr>
+          </table>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          ${_pie}
+          <div><div class="subhead" style="margin-bottom:6px">Customer Type Mix</div><table class="kv">${_custRows}</table></div>
+        </div>
+      </div>
+      ${tbl ? `<table class="data">${tbl.innerHTML}</table>` : ''}
+    </div>`;
   }
 
   // Cumulative realized profit chart (print version — dark ink on white)
