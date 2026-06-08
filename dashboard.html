@@ -843,6 +843,21 @@ function renderInvestor() {
         });
       });
     }
+    // Adjust per-load cost/margin in btc_loads so the Load Performance table reflects markup
+    if (Array.isArray(d.btc_loads)) {
+      d.btc_loads = d.btc_loads.map(l => {
+        const lits     = l.liters || 0;
+        const adjTotal = (l.total_margin || 0) - mu * lits;
+        const adjML    = lits > 0 ? adjTotal / lits : 0;
+        const adjPct   = l.total_sale > 0 ? adjTotal / l.total_sale : (l.margin_pct || 0);
+        return Object.assign({}, l, {
+          cost_l:       Math.round(((l.cost_l || 0) + mu) * 10000) / 10000,
+          margin_l:     Math.round(adjML   * 10000) / 10000,
+          margin_pct:   adjPct,
+          total_margin: Math.round(adjTotal * 100) / 100,
+        });
+      });
+    }
     return d;
   }
 
@@ -1938,6 +1953,23 @@ function invSetView(mode) {
       const _pcEl = document.getElementById(window._pendingProfitChart.id);
       if (_pcEl) drawProfitChart(window._pendingProfitChart.id, adjSeries, window._pendingProfitChart.mode);
     }
+    // ── Re-render Load Performance table with markup-adjusted values ──────────
+    const _tbody = document.querySelector('#sec-loads table tbody');
+    if (_tbody) {
+      const _fm4 = v => v != null ? Number(v).toFixed(4) : '—';
+      const _fmn = v => Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+      _tbody.innerHTML = (rawInv.btc_loads || []).map(l => {
+        const lits = l.liters || 0;
+        const aT   = (l.total_margin||0) - mu*lits;
+        const aML  = lits>0 ? aT/lits : 0;
+        const aCL  = (l.cost_l||0) + mu;
+        const aPct = l.total_sale>0 ? aT/l.total_sale : (l.margin_pct||0);
+        const mc   = aPct>0.05?'pill-g':aPct>0.01?'pill-a':'pill-r';
+        const sc   = (l.status||'').toUpperCase()==='PAID'?'pill-g':'pill-p';
+        const tc   = aT>=0?'':'color:var(--red)';
+        return `<tr><td style="font-weight:500">${l.load}</td><td style="color:var(--muted);font-size:0.78rem">${(l.customer||'').replace('BTC - ','')}</td><td style="color:var(--muted);font-size:0.78rem">${l.date||''}</td><td style="color:var(--muted);font-size:0.78rem">${l.payment_date||'—'}</td><td style="text-align:right">${_fmn(l.liters)}</td><td style="text-align:right">${_fm4(l.price_l)}</td><td style="text-align:right">${_fm4(aCL)}</td><td style="text-align:right;${tc}">${_fm4(aML)}</td><td style="text-align:right"><span class="load-pill ${mc}">${(aPct*100).toFixed(2)}%</span></td><td style="text-align:right;${tc};font-weight:500">$${_fmn(aT)}</td><td><span class="load-pill ${sc}">${l.status||''}</span></td></tr>`;
+      }).join('');
+    }
   } else {
     // Restore real numbers
     const rawInv = dashData.investment || {};
@@ -1958,6 +1990,18 @@ function invSetView(mode) {
       window._pendingProfitChart.series = rawSeries;
       const _pcEl = document.getElementById(window._pendingProfitChart.id);
       if (_pcEl) drawProfitChart(window._pendingProfitChart.id, rawSeries, window._pendingProfitChart.mode);
+    }
+    // ── Restore Load Performance table to raw values ──────────────────────────
+    const _tbody = document.querySelector('#sec-loads table tbody');
+    if (_tbody) {
+      const _fm4 = v => v != null ? Number(v).toFixed(4) : '—';
+      const _fmn = v => Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+      _tbody.innerHTML = (rawInv.btc_loads || []).map(l => {
+        const mc = (l.margin_pct||0)>0.05?'pill-g':(l.margin_pct||0)>0.01?'pill-a':'pill-r';
+        const sc = (l.status||'').toUpperCase()==='PAID'?'pill-g':'pill-p';
+        const tc = (l.total_margin||0)>=0?'':'color:var(--red)';
+        return `<tr><td style="font-weight:500">${l.load}</td><td style="color:var(--muted);font-size:0.78rem">${(l.customer||'').replace('BTC - ','')}</td><td style="color:var(--muted);font-size:0.78rem">${l.date||''}</td><td style="color:var(--muted);font-size:0.78rem">${l.payment_date||'—'}</td><td style="text-align:right">${_fmn(l.liters)}</td><td style="text-align:right">${_fm4(l.price_l)}</td><td style="text-align:right">${_fm4(l.cost_l)}</td><td style="text-align:right;${tc}">${_fm4(l.margin_l)}</td><td style="text-align:right"><span class="load-pill ${mc}">${((l.margin_pct||0)*100).toFixed(2)}%</span></td><td style="text-align:right;${tc};font-weight:500">$${_fmn(l.total_margin)}</td><td><span class="load-pill ${sc}">${l.status||''}</span></td></tr>`;
+      }).join('');
     }
   }
 
