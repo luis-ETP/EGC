@@ -784,7 +784,7 @@ function renderInvestor() {
   }
 
   const MARKUP     = dashData.markup === true || invViewMode === 'investor';
-  const MARKUP_USD = invViewMode === 'investor' ? invMarkup : (dashData.markup_usd || 0.02);
+  const MARKUP_USD = invViewMode === 'investor' ? invMarkup : (dashData.markup_usd != null ? dashData.markup_usd : 0.02);
   const L_PER_GAL  = 3.7854;
   const IS_ADMIN   = ROLE === 'admin';
 
@@ -998,7 +998,8 @@ function renderInvestor() {
     .inv-grayed{opacity:0.28;pointer-events:none;transition:opacity 0.2s}
     .inv-grayed .inv-eye-btn{pointer-events:all !important;opacity:1 !important}
     .inv-adder{display:none;align-items:center;gap:6px;font-size:0.7rem;color:var(--muted)}
-    .inv-adder input{background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:0.25rem 0.5rem;color:var(--text);font-size:0.72rem;width:65px;text-align:right;font-family:var(--font)}
+    .inv-adder input{background:var(--surface2);border:1px solid var(--border2);border-radius:5px;padding:0.25rem 0.5rem;color:var(--text);font-size:0.72rem;width:65px;text-align:right;font-family:var(--font);-moz-appearance:textfield}
+    .inv-adder input::-webkit-outer-spin-button,.inv-adder input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
     .inv-adder input:focus{outline:none;border-color:var(--accent)}
     .inv-adder-save{background:rgba(74,124,220,0.15);border:1px solid var(--accent);color:var(--accent);border-radius:5px;padding:0.25rem 0.6rem;font-size:0.7rem;font-weight:600;cursor:pointer;font-family:var(--font);transition:background 0.15s}
     .inv-adder-save:hover{background:rgba(74,124,220,0.28)}
@@ -1016,14 +1017,14 @@ function renderInvestor() {
   // Always prefer the fresh backend value; only keep existing invMarkup if it
   // was set by the user (markup_usd absent) so edits survive re-renders.
   if (dashData.markup_usd != null) invMarkup = dashData.markup_usd;
-  else if (!invMarkup) invMarkup = 0.02;
+  else if (invMarkup == null) invMarkup = 0.02;
 
   // Load config from API — for ALL roles. Admin uses it to drive eye toggles;
   // the LPA/investor uses it to actually hide what the admin chose to hide.
   fetch('/api/investor-config').then(r=>r.json()).then(cfg => {
     // Defaults: forward view and load performance hidden from investor
     invVisibility = Object.assign({'sec-forward': false, 'sec-loads': false}, cfg.visibility || {});
-    invMarkup = cfg.markup_usd || 0.02;
+    invMarkup = cfg.markup_usd != null ? cfg.markup_usd : 0.02;
     const adderInput = document.getElementById('inv-adder-input');
     if (adderInput) adderInput.value = invMarkup;
     applyInvVisibility();
