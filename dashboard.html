@@ -1107,7 +1107,7 @@ function renderInvestor() {
     : inv.avg_cycle_days != null ? inv.avg_cycle_days + ' days' : 'N/A';
   const roiStr   = rd.total ? fp(rd.total.roi) : 'N/A';
   const kpis = [
-    {label:'Capital deployed',  val:'$'+fm(inv.total_committed_usd)+' USD', sub:'committed capital',                           green:false, key:'capital deployed'},
+    {label:'Capital deployed',  val:'$'+fm(inv.total_committed_mxn)+' MXN', sub:'committed capital',                           green:false, key:'capital deployed'},
     {label:'Capital at work',   val:'$'+fm(totalActive)+' MXN',             sub:'active and deployed',                          green:false, key:'capital at work'},
     {label:'Capital recovered', val:'$'+fm(inv.recovered_mxn)+' MXN',       sub:'full proceeds collected',                      green:true,  key:'capital recovered'},
     {label:'Revolved multiple', val:Number(inv.revolved||0).toFixed(2)+'×', sub:'since inception',                              green:true,  key:'revolved multiple'},
