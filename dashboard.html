@@ -1407,28 +1407,35 @@ function renderInvestor() {
 
     html += `<div class="table-wrap"><table>
       <thead><tr>
-        <th>Load</th><th>Customer</th><th>Delivery</th><th>Payment</th><th style="text-align:right">Liters</th>
-        <th style="text-align:right">Price/L</th><th style="text-align:right">Cost/L</th>
-        <th style="text-align:right">Margin/L</th><th style="text-align:right">Margin %</th>
-        <th style="text-align:right">Total margin</th><th>Status</th>
-      </tr></thead><tbody>`;
-
+        <th style="width:5rem">Load</th>
+        <th style="max-width:100px">Customer</th>
+        <th style="width:5.5rem">Delivery</th>
+        <th style="width:5.5rem">Payment</th>
+        <th style="text-align:right">Liters</th>
+        <th style="text-align:right;color:var(--muted)">Price/L</th>
+        <th style="text-align:right;color:var(--muted)">Cost/L</th>
+        <th style="text-align:right">Margin/L</th>
+        <th style="text-align:right">Margin %</th>
+        <th style="text-align:right">Total Margin</th>
+        <th style="width:4.5rem">Status</th>
+      </tr></thead><tbody>`;\n
     loads.forEach(l => {
       const mp = l.margin_pct;
       const mc = mp > 0.05 ? 'pill-g' : mp > 0.01 ? 'pill-a' : 'pill-r';
       const sc = l.status.toUpperCase() === 'PAID' ? 'pill-g' : 'pill-p';
-      const tc = l.total_margin >= 0 ? '' : 'color:var(--red)';
+      const tc = l.total_margin >= 0 ? 'color:var(--green)' : 'color:var(--red)';
+      const cust = l.customer.replace('BTC - ','');
       html += `<tr>
-        <td style="font-weight:500">${l.load}</td>
-        <td style="color:var(--muted);font-size:0.78rem">${l.customer.replace('BTC - ','')}</td>
-        <td style="color:var(--muted);font-size:0.78rem">${l.date}</td>
-        <td style="color:var(--muted);font-size:0.78rem">${l.payment_date||'—'}</td>
-        <td style="text-align:right">${fm(l.liters)}</td>
-        <td style="text-align:right">${fd4(l.price_l)}</td>
-        <td style="text-align:right">${fd4(l.cost_l)}</td>
-        <td style="text-align:right;${tc}">${fd4(l.margin_l)}</td>
+        <td style="font-weight:600;white-space:nowrap">${l.load}</td>
+        <td style="color:var(--muted);font-size:0.68rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${cust}">${cust}</td>
+        <td style="color:var(--muted2);font-size:0.70rem;white-space:nowrap">${l.date}</td>
+        <td style="color:var(--muted2);font-size:0.70rem;white-space:nowrap">${l.payment_date||'—'}</td>
+        <td style="text-align:right;font-weight:600">${fm(l.liters)}</td>
+        <td style="text-align:right;color:var(--muted);font-size:0.78rem">${fd4(l.price_l)}</td>
+        <td style="text-align:right;color:var(--muted);font-size:0.78rem">${fd4(l.cost_l)}</td>
+        <td style="text-align:right;font-weight:700;${tc}">${fd4(l.margin_l)}</td>
         <td style="text-align:right"><span class="load-pill ${mc}">${(l.margin_pct*100).toFixed(2)}%</span></td>
-        <td style="text-align:right;${tc};font-weight:500">$${fm(l.total_margin)}</td>
+        <td style="text-align:right;font-weight:700;${tc}">$${fm(l.total_margin)}</td>
         <td><span class="load-pill ${sc}">${l.status}</span></td>
       </tr>`;
     });
@@ -2084,7 +2091,9 @@ function invSetView(mode) {
         const mc   = aPct>0.05?'pill-g':aPct>0.01?'pill-a':'pill-r';
         const sc   = (l.status||'').toUpperCase()==='PAID'?'pill-g':'pill-p';
         const tc   = aT>=0?'':'color:var(--red)';
-        return `<tr><td style="font-weight:500">${l.load}</td><td style="color:var(--muted);font-size:0.78rem">${(l.customer||'').replace('BTC - ','')}</td><td style="color:var(--muted);font-size:0.78rem">${l.date||''}</td><td style="color:var(--muted);font-size:0.78rem">${l.payment_date||'—'}</td><td style="text-align:right">${_fmn(l.liters)}</td><td style="text-align:right">${_fm4(l.price_l)}</td><td style="text-align:right">${_fm4(aCL)}</td><td style="text-align:right;${tc}">${_fm4(aML)}</td><td style="text-align:right"><span class="load-pill ${mc}">${(aPct*100).toFixed(2)}%</span></td><td style="text-align:right;${tc};font-weight:500">$${_fmn(aT)}</td><td><span class="load-pill ${sc}">${l.status||''}</span></td></tr>`;
+        const _cust = (l.customer||'').replace('BTC - ','');
+        const tc = aT>=0?'color:var(--green)':'color:var(--red)';
+        return `<tr><td style="font-weight:600;white-space:nowrap">${l.load}</td><td style="color:var(--muted);font-size:0.68rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_cust}">${_cust}</td><td style="color:var(--muted2);font-size:0.70rem;white-space:nowrap">${l.date||''}</td><td style="color:var(--muted2);font-size:0.70rem;white-space:nowrap">${l.payment_date||'—'}</td><td style="text-align:right;font-weight:600">${_fmn(l.liters)}</td><td style="text-align:right;color:var(--muted);font-size:0.78rem">${_fm4(l.price_l)}</td><td style="text-align:right;color:var(--muted);font-size:0.78rem">${_fm4(aCL)}</td><td style="text-align:right;font-weight:700;${tc}">${_fm4(aML)}</td><td style="text-align:right"><span class="load-pill ${mc}">${(aPct*100).toFixed(2)}%</span></td><td style="text-align:right;font-weight:700;${tc}">$${_fmn(aT)}</td><td><span class="load-pill ${sc}">${l.status||''}</span></td></tr>`;
       }).join('');
     }
   } else {
@@ -2117,7 +2126,9 @@ function invSetView(mode) {
         const mc = (l.margin_pct||0)>0.05?'pill-g':(l.margin_pct||0)>0.01?'pill-a':'pill-r';
         const sc = (l.status||'').toUpperCase()==='PAID'?'pill-g':'pill-p';
         const tc = (l.total_margin||0)>=0?'':'color:var(--red)';
-        return `<tr><td style="font-weight:500">${l.load}</td><td style="color:var(--muted);font-size:0.78rem">${(l.customer||'').replace('BTC - ','')}</td><td style="color:var(--muted);font-size:0.78rem">${l.date||''}</td><td style="color:var(--muted);font-size:0.78rem">${l.payment_date||'—'}</td><td style="text-align:right">${_fmn(l.liters)}</td><td style="text-align:right">${_fm4(l.price_l)}</td><td style="text-align:right">${_fm4(l.cost_l)}</td><td style="text-align:right;${tc}">${_fm4(l.margin_l)}</td><td style="text-align:right"><span class="load-pill ${mc}">${((l.margin_pct||0)*100).toFixed(2)}%</span></td><td style="text-align:right;${tc};font-weight:500">$${_fmn(l.total_margin)}</td><td><span class="load-pill ${sc}">${l.status||''}</span></td></tr>`;
+        const _cust = (l.customer||'').replace('BTC - ','');
+        const tc = (l.total_margin||0)>=0?'color:var(--green)':'color:var(--red)';
+        return `<tr><td style="font-weight:600;white-space:nowrap">${l.load}</td><td style="color:var(--muted);font-size:0.68rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_cust}">${_cust}</td><td style="color:var(--muted2);font-size:0.70rem;white-space:nowrap">${l.date||''}</td><td style="color:var(--muted2);font-size:0.70rem;white-space:nowrap">${l.payment_date||'—'}</td><td style="text-align:right;font-weight:600">${_fmn(l.liters)}</td><td style="text-align:right;color:var(--muted);font-size:0.78rem">${_fm4(l.price_l)}</td><td style="text-align:right;color:var(--muted);font-size:0.78rem">${_fm4(l.cost_l)}</td><td style="text-align:right;font-weight:700;${tc}">${_fm4(l.margin_l)}</td><td style="text-align:right"><span class="load-pill ${mc}">${((l.margin_pct||0)*100).toFixed(2)}%</span></td><td style="text-align:right;font-weight:700;${tc}">$${_fmn(l.total_margin)}</td><td><span class="load-pill ${sc}">${l.status||''}</span></td></tr>`;
       }).join('');
     }
   }
