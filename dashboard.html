@@ -1035,7 +1035,7 @@ function renderInvestor() {
 
   html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;gap:1rem">
     <div>
-      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">EGC · Investor Performance Report</div>
+      <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted)">Elevar Global Commodities · Investor Performance Report</div>
       <div style="font-size:0.7rem;color:var(--muted);margin-top:2px;font-style:italic">All figures in MXN &amp; Liters · ${date}</div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
@@ -1713,7 +1713,7 @@ function generateInvestorPDF() {
   const periodLabel = filterSel ? (filterSel.options[filterSel.selectedIndex]?.text || 'To date') : 'To date';
 
   const today = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  const fundName = 'EGC';
+  const fundName = 'Elevar Global Commodities';
   const viewerTag = (ROLE === 'admin') ? 'Internal — Admin Copy' : 'Limited Partner Copy';
 
   // Build the print document
@@ -1873,7 +1873,7 @@ function generateInvestorPDF() {
   <body>
     <div class="cover">
       <div class="brand">${fundName}</div>
-      <div class="brand-sub">Energy Capital · Fuel Trading Strategy</div>
+      <div class="brand-sub">Refined Fuels · Trading Strategy</div>
       <div class="doc-title">Investor Performance Summary</div>
       <div class="doc-meta">
         <span><b>Reporting Basis:</b> ${periodLabel}</span>
@@ -1896,7 +1896,7 @@ function generateInvestorPDF() {
     ${loadsHtml}
 
     <div class="footer">
-      <div>${fundName} Energy Capital — Investor Performance Summary · Generated ${today} · Reporting basis: ${periodLabel}</div>
+      <div>${fundName} — Investor Performance Summary · Generated ${today} · Reporting basis: ${periodLabel}</div>
       <div class="disclaimer">
         This document is private and confidential and is intended solely for the named recipient. It does not constitute an offer to sell or a solicitation of an offer to buy any security or interest. Figures are derived from internal trade and treasury records, are unaudited, and are subject to revision. Past performance is not indicative of future results. Capital at risk.
       </div>
