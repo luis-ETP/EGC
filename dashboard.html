@@ -1855,20 +1855,6 @@ function generateInvestorPDF() {
     const _cent  = Object.entries(_cmap).sort((a,b)=>b[1]-a[1]);
     const _ccols = ['#6366F1','#7DD3FC','#2DD4BF','#F59E0B','#EC4899'];
 
-    // SVG pie for PDF (canvas doesn't render in print windows)
-    const _pie = (() => {
-      const r=38,cx=45,cy=45,ri=22; let start=-Math.PI/2,paths='',total=_totL||1;
-      _cent.forEach((e,i)=>{
-        const ang=(e[1]/total)*Math.PI*2;
-        const x1=cx+Math.cos(start)*r,y1=cy+Math.sin(start)*r;
-        const x2=cx+Math.cos(start+ang)*r,y2=cy+Math.sin(start+ang)*r;
-        if(_cent.length===1){paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${_ccols[i]}"/>`;}
-        else{paths+=`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${ang>Math.PI?1:0},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${_ccols[i]}"/>`;}
-        start+=ang;
-      });
-      return `<svg width="90" height="90" viewBox="0 0 90 90">${paths}<circle cx="${cx}" cy="${cy}" r="${ri}" fill="white"/></svg>`;
-    })();
-
     const _custRows = _cent.map((e,i)=>
       `<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${_ccols[i]};margin-right:4px"></span>${e[0]}</td><td style="text-align:right">${_totL>0?Math.round(e[1]/_totL*100):0}%</td></tr>`
     ).join('');
