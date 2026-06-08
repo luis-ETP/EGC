@@ -1871,9 +1871,9 @@ function generateInvestorPDF() {
             <tr><td class="rl">Investor Margin % (${(_shr*100).toFixed(0)}% share)</td><td class="rv">${_fpct(_wtdPct*_shr)}</td></tr>
           </table>
         </div>
-        <div style="display:flex;align-items:flex-start;gap:10px">
-          ${_pie}
-          <div><div class="subhead" style="margin-bottom:6px">Customer Type Mix</div><table class="kv">${_custRows}</table></div>
+        <div>
+          <div class="subhead" style="margin-bottom:6px">Customer Type Mix</div>
+          <table class="kv">${_custRows}</table>
         </div>
       </div>
       ${tbl ? `<table class="data">${tbl.innerHTML}</table>` : ''}
