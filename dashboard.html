@@ -1317,7 +1317,10 @@ function renderInvestor() {
     html += `<div class="fwd-grid">
       <div class="fwd-card">
         <div class="fwd-label">Loads remaining in inventory
-          <span title="US loads = ${Math.round(prj.inv_liters / (7500 * 3.7854))}" style="cursor:help;margin-left:5px;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--muted2);color:var(--muted2);font-size:0.6rem;font-weight:700;vertical-align:middle">i</span>
+          <span class="inv-tooltip-wrap">
+            <span class="inv-tooltip-icon">i</span>
+            <span class="inv-tooltip-text">US loads = ${Math.round(prj.inv_liters / (7500 * 3.7854))} (equivalent at 7,500 gal/load avg)</span>
+          </span>
         </div>
         <div class="fwd-val">${prj.loads_remaining} loads</div>
         <div class="fwd-note">${fm(prj.inv_liters)} L at bulk plant</div>
