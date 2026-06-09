@@ -2090,7 +2090,6 @@ function invSetView(mode) {
         const aPct = l.total_sale>0 ? aT/l.total_sale : (l.margin_pct||0);
         const mc   = aPct>0.05?'pill-g':aPct>0.01?'pill-a':'pill-r';
         const sc   = (l.status||'').toUpperCase()==='PAID'?'pill-g':'pill-p';
-        const tc   = aT>=0?'':'color:var(--red)';
         const _cust = (l.customer||'').replace('BTC - ','');
         const tc = aT>=0?'color:var(--green)':'color:var(--red)';
         return `<tr><td style="font-weight:600;white-space:nowrap">${l.load}</td><td style="color:var(--muted);font-size:0.68rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_cust}">${_cust}</td><td style="color:var(--muted2);font-size:0.70rem;white-space:nowrap">${l.date||''}</td><td style="color:var(--muted2);font-size:0.70rem;white-space:nowrap">${l.payment_date||'—'}</td><td style="text-align:right;font-weight:600">${_fmn(l.liters)}</td><td style="text-align:right;color:var(--muted);font-size:0.78rem">${_fm4(l.price_l)}</td><td style="text-align:right;color:var(--muted);font-size:0.78rem">${_fm4(aCL)}</td><td style="text-align:right;font-weight:700;${tc}">${_fm4(aML)}</td><td style="text-align:right"><span class="load-pill ${mc}">${(aPct*100).toFixed(2)}%</span></td><td style="text-align:right;font-weight:700;${tc}">$${_fmn(aT)}</td><td><span class="load-pill ${sc}">${l.status||''}</span></td></tr>`;
@@ -2125,7 +2124,6 @@ function invSetView(mode) {
       _tbody.innerHTML = (rawInv.btc_loads || []).map(l => {
         const mc = (l.margin_pct||0)>0.05?'pill-g':(l.margin_pct||0)>0.01?'pill-a':'pill-r';
         const sc = (l.status||'').toUpperCase()==='PAID'?'pill-g':'pill-p';
-        const tc = (l.total_margin||0)>=0?'':'color:var(--red)';
         const _cust = (l.customer||'').replace('BTC - ','');
         const tc = (l.total_margin||0)>=0?'color:var(--green)':'color:var(--red)';
         return `<tr><td style="font-weight:600;white-space:nowrap">${l.load}</td><td style="color:var(--muted);font-size:0.68rem;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_cust}">${_cust}</td><td style="color:var(--muted2);font-size:0.70rem;white-space:nowrap">${l.date||''}</td><td style="color:var(--muted2);font-size:0.70rem;white-space:nowrap">${l.payment_date||'—'}</td><td style="text-align:right;font-weight:600">${_fmn(l.liters)}</td><td style="text-align:right;color:var(--muted);font-size:0.78rem">${_fm4(l.price_l)}</td><td style="text-align:right;color:var(--muted);font-size:0.78rem">${_fm4(l.cost_l)}</td><td style="text-align:right;font-weight:700;${tc}">${_fm4(l.margin_l)}</td><td style="text-align:right"><span class="load-pill ${mc}">${((l.margin_pct||0)*100).toFixed(2)}%</span></td><td style="text-align:right;font-weight:700;${tc}">$${_fmn(l.total_margin)}</td><td><span class="load-pill ${sc}">${l.status||''}</span></td></tr>`;
